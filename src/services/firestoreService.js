@@ -10,7 +10,7 @@ export async function updateTeamNames(teamNames) {
     console.log(teamNames);
     Object.keys(teamNames).forEach(async function (key, index) {
         const teamRef = doc(db, "teams", key);
-        await setDoc(teamRef, { name: teamNames[key] });
+        await setDoc(teamRef, { name: teamNames[key], wins: 0, losses: 0, score: 0 });
     })
 }
 
@@ -66,10 +66,25 @@ export async function addTeamGame(team1, team2, gameday) {
     }
 }
 
-export async function saveScore(gameday, matchKey, team, value) {
+export async function saveScore(gameday, matchKey, team, value, opponent) {
     const gamedayRef = doc(db, "gamedays", gameday.toString());
+    const gamedaySnap = await getDoc(gamedayRef);
     await updateDoc(gamedayRef, {
         [`${matchKey}.score_${team}`]: Number(value)
+    });
+
+    const matchScore = value - gamedaySnap.data()[`${matchKey}`][`score_${opponent}`];
+    console.log(matchScore);
+    const teamRef = doc(db, "teams", team);
+    const teamSnap = await getDoc(teamRef);
+    await updateDoc(teamRef, {
+        score: teamSnap.data().score - matchScore
+    });
+
+    const opponentRef = doc(db, "teams", opponent);
+    const opponentSnap = await getDoc(opponentRef);
+    await updateDoc(opponentRef, {
+        score: opponentSnap.data().score + matchScore
     });
 }
 

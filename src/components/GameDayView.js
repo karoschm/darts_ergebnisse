@@ -12,7 +12,7 @@ export default function GameDayView({ gameday, teamNames }) {
         loadMatches();
     }, [gameday]);
 
-    function handleScoreChange(gameday, matchKey, team, value) {
+    function handleScoreChange(gameday, matchKey, team, value, opponent) {
         setMatches(prev => ({
             ...prev,
             [matchKey]: {
@@ -20,7 +20,7 @@ export default function GameDayView({ gameday, teamNames }) {
                 [`score_${team}`]: value
             }
         }));
-        saveScore(gameday, matchKey, team, value);
+        saveScore(gameday, matchKey, team, value, opponent);
     }
 
     function enterResult(gameday, matchKey) {
@@ -56,8 +56,8 @@ export default function GameDayView({ gameday, teamNames }) {
                                     type="number"
                                     style={{ width: "60px", textAlign: "center" }}
                                     value={scoreTeam1}
-                                    onChange={e => handleScoreChange(gameday, mNumber, team1, e.target.value)}
-                                    onBlur={e => saveScore(gameday, mNumber, team1, e.target.value)}
+                                    onChange={e => handleScoreChange(gameday, mNumber, team1, e.target.value, team2)}
+                                    onBlur={e => saveScore(gameday, mNumber, team1, e.target.value, team2)}
                                     min={0}
                                     max={501}
                                 />
@@ -80,8 +80,8 @@ export default function GameDayView({ gameday, teamNames }) {
                                     type="number"
                                     style={{ width: "60px", textAlign: "center" }}
                                     value={scoreTeam2}
-                                    onChange={e => handleScoreChange(gameday, mNumber, team2, e.target.value)}
-                                    onBlur={e => saveScore(gameday, mNumber, team2, e.target.value)}
+                                    onChange={e => handleScoreChange(gameday, mNumber, team2, e.target.value, team1)}
+                                    onBlur={e => saveScore(gameday, mNumber, team2, e.target.value, team1)}
                                     min={0}
                                     max={501}
                                 />
