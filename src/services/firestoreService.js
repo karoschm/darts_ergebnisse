@@ -48,22 +48,10 @@ export async function getGamedayMatches(gameday) {
 
 export async function addTeamGame(team1, team2, gameday) {
     const team1Ref = doc(db, "teams", team1);
-    const team1Snap = await getDoc(team1Ref);
-    const team1Matches = team1Snap.data().matches || {};
-    if (!(gameday in team1Matches)) {
-        await setDoc(team1Ref, { matches: { [gameday]: team2 } }, { merge: true });
-    } else if (team1Matches[gameday] !== team2) {
-        await setDoc(team1Ref, { matches: { [gameday]: team2 } }, { merge: true });
-    }
+    await setDoc(team1Ref, { matches: { [gameday + 1]: { opponent: team2, result: 0 } } }, { merge: true });
 
     const team2Ref = doc(db, "teams", team2);
-    const team2Snap = await getDoc(team2Ref);
-    const team2Matches = team2Snap.data().matches || {};
-    if (!(gameday in team2Matches)) {
-        await setDoc(team2Ref, { matches: { [gameday]: team1 } }, { merge: true });
-    } else if (team2Matches[gameday] !== team1) {
-        await setDoc(team2Ref, { matches: { [gameday]: team1 } }, { merge: true });
-    }
+    await setDoc(team2Ref, { matches: { [gameday + 1]: { opponent: team1, result: 0 } } }, { merge: true });
 }
 
 export async function saveScore(gameday, matchKey, team, value, opponent) {
@@ -74,17 +62,24 @@ export async function saveScore(gameday, matchKey, team, value, opponent) {
     });
 
     const matchScore = value - gamedaySnap.data()[`${matchKey}`][`score_${opponent}`];
-    console.log(matchScore);
     const teamRef = doc(db, "teams", team);
     const teamSnap = await getDoc(teamRef);
+    const teamScores = Object.entries(teamSnap.data().matches).map(([idx, match]) => match.result);
     await updateDoc(teamRef, {
-        score: teamSnap.data().score - matchScore
+        [`matches.${gameday}.result`]: -1 * matchScore,
+        wins: teamScores.filter(s => s > 0).length,
+        losses: teamScores.filter(s => s < 0).length,
+        score: teamScores.reduce((a, b) => a + b)
     });
 
     const opponentRef = doc(db, "teams", opponent);
     const opponentSnap = await getDoc(opponentRef);
+    const opponentScores = Object.entries(opponentSnap.data().matches).map(([idx, match]) => match.result);
     await updateDoc(opponentRef, {
-        score: opponentSnap.data().score + matchScore
+        [`matches.${gameday}.result`]: matchScore, 
+        wins: opponentScores.filter(s => s > 0).length,
+        losses: opponentScores.filter(s => s < 0).length,
+        score: opponentScores.reduce((a, b) => a + b)
     });
 }
 
