@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { useTournament } from "../../context/TournamentContext";
-import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus } from "../../services/firestoreService";
+import { useTournament } from "../../../context/TournamentContext";
+import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus } from "../../../services/firestoreService";
 
 export default function MatchdayTabs({ md }) {
     const { currentTournamentId } = useTournament();

@@ -1,7 +1,5 @@
 import logo from './logo.svg';
 import './App.css';
-import MainPage from './pages/MainPage/MainPage';
-import TournamentSetup from './components/Setup/TournamentSetup';
 import { TournamentProvider } from './context/TournamentContext';
 import AppRoutes from './AppRoutes';
 

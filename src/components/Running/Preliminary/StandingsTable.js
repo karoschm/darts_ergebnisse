@@ -2,7 +2,7 @@ export default function StandingsTable({ teams }) {
     function getTableOrder() {
         const sortedTeams = Object.values(teams).sort((a, b) => {
             if (b.wins !== a.wins) return b.wins - a.wins;
-            if (b.own_score !== a.own_score) return b.own_score - a.own_score;
+            if (b.own_score !== a.own_score) return a.own_score - b.own_score;
             return b.opponent_score - a.opponent_score;
         });
         return sortedTeams;
@@ -18,11 +18,13 @@ export default function StandingsTable({ teams }) {
                 alignContent: "center"
             }}>
                 <thead>
-                    <td>Platzierung</td>
-                    <td>Team</td>
-                    <td>Siege</td>
-                    <td>Niederlagen</td>
-                    <td>Punkteverhältnis</td>
+                    <tr>
+                    <th>Platzierung</th>
+                    <th>Team</th>
+                    <th>Siege</th>
+                    <th>Niederlagen</th>
+                    <th>Punkteverhältnis</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {getTableOrder().map((team, index) => (

@@ -1,9 +1,10 @@
 import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab"; import { useEffect } from "react";
+import Tab from "@mui/material/Tab";
+import { useEffect } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { useTournament } from "../../context/TournamentContext";
-import { addTeamGame, getNumberMatchdays, saveSchedule, subscribeTeams, subscribeTournamentStatus, updateTournamentStatus } from "../../services/firestoreService";
+import { useTournament } from "../../../context/TournamentContext";
+import { addTeamGame, generateQuarterfinals, getNumberMatchdays, saveSchedule, subscreibeAllMatchdays, subscribeTeams, subscribeTournamentStatus, updateTournamentStatus } from "../../../services/firestoreService";
 import StandingsTable from "./StandingsTable";
 import MatchdayTabs from "./MatchdayTabs";
 
@@ -14,6 +15,7 @@ export default function Preliminary() {
     const [status, setStatus] = useState("");
     const [preliminaryTabValue, setPreliminaryTabValue] = useState(0);
     const [numberMatchdays, setNumberMatchdays] = useState(0);
+    const [allMatchdaysPlayed, setAllMatchdaysPlayed] = useState(false);
 
     useEffect(() => {
         if (!currentTournamentId) return;
@@ -32,6 +34,24 @@ export default function Preliminary() {
             );
             unsubscribes.push(unsubscribeStatus);
 
+            const unsubscribeAllMatchdays = subscreibeAllMatchdays(
+                currentTournamentId,
+                (matchdays) => {
+                    if (matchdays.length === 0) {
+                        setAllMatchdaysPlayed(false);
+                        return;
+                    }
+        
+                    const allPlayed = matchdays.every(md => {
+                        const matches = md.matches || {};
+                        return Object.values(matches).every(match => match.played === true);
+                    });
+        
+                    setAllMatchdaysPlayed(allPlayed);
+                }
+            );
+            unsubscribes.push(unsubscribeAllMatchdays);
+
             setNumberMatchdays(await getNumberMatchdays(currentTournamentId));
 
             return () => {
@@ -41,12 +61,17 @@ export default function Preliminary() {
         fetchData();
     }, []);
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-    }
-
     const handlePreliminaryTabChange = (event, newTabValue) => {
         setPreliminaryTabValue(newTabValue);
+    }
+
+    const handleStartPreliminary = () => {
+        updateTournamentStatus(currentTournamentId, "group");
+    }
+
+    const handleFinishPreliminary = () => {
+        generateQuarterfinals(currentTournamentId);
+        updateTournamentStatus(currentTournamentId, "qf");
     }
 
     function generateRoundRobinSchedule(teamIDs) {
@@ -113,13 +138,8 @@ export default function Preliminary() {
         });
     }
 
-    const handleStartPreliminary = () => {
-        updateTournamentStatus(currentTournamentId, "group");
-    }
-
     return (
         <form
-            onSubmit={handleSubmit}
             style={{
                 flex: 1,
                 minWidth: 0,
@@ -170,6 +190,14 @@ export default function Preliminary() {
                     )}
                 </div>
             ))}
+            <br/>
+            <br/>
+            <button
+                onClick={handleFinishPreliminary}
+                disabled={!allMatchdaysPlayed || (status !== "group")}
+            >
+                Vorrunde abschließen
+            </button>
         </form>
     );
 }

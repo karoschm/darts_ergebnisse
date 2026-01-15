@@ -35,7 +35,7 @@ export default function TeamSetup() {
 
         await updateTeamNames(currentTournamentId, teamNames);
 
-        navigate("/group");
+        navigate("/running");
         // updateTournamentStatus(currentTournamentId, "group");
     };
 

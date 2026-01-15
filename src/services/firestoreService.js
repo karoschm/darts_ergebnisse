@@ -159,11 +159,65 @@ export async function saveScore(tournamentID, md, matchKey, team1, newScore, tea
     });
 }
 
+export async function saveKOScore(tournamentID, stage, matchKey, team, newScore, opponent, winLegs) {
+    const koStageRef = doc(db, "tournaments", tournamentID, "knockout", stage);
+    const koStageSnap = await getDoc(koStageRef);
+    const opp_score = koStageSnap.data().matches[`${matchKey}`][`legs_${opponent}`]
+
+    await updateDoc(koStageRef, {
+        [`matches.${matchKey}.legs_${team}`]: newScore,
+        [`matches.${matchKey}.played`]: newScore === winLegs || opp_score === winLegs
+    });
+}
+
 export async function setMatchPlayed(tournamentID, md, matchKey) {
     const matchdayRef = doc(db, "tournaments", tournamentID, "matchdays", md.toString());
     await updateDoc(matchdayRef, {
         [`matches.${matchKey}.played`]: true
     });
+}
+
+export async function generateQuarterfinals(tournamentID) {
+    const teamsSnap = await getDocs(
+        collection(db, "tournaments", tournamentID, "teams")
+    );
+
+    const teams = teamsSnap.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+    }));
+
+    // Sortierung exakt wie Tabelle
+    teams.sort((a, b) => {
+        if (b.wins !== a.wins) return b.wins - a.wins;
+        if (b.own_score !== a.own_score) return b.own_score - a.own_score;
+        return b.opponent_score - a.opponent_score;
+    });
+
+    const qualified = teams.slice(0, 8);
+
+    const matches = {
+        QF1: { 
+            team1: qualified[0].id, team2: qualified[7].id, 
+            [`legs_${qualified[0].id}`]: 0, [`legs_${qualified[7].id}`]: 0, played: false
+        },
+        QF2: { 
+            team1: qualified[1].id, team2: qualified[6].id,
+            [`legs_${qualified[1].id}`]: 0, [`legs_${qualified[6].id}`]: 0, played: false
+        },
+        QF3: {
+            team1: qualified[2].id, team2: qualified[5].id,
+            [`legs_${qualified[2].id}`]: 0, [`legs_${qualified[5].id}`]: 0, played: false
+        },
+        QF4: {
+            team1: qualified[3].id, team2: qualified[4].id, 
+            [`legs_${qualified[3].id}`]: 0, [`legs_${qualified[4].id}`]: 0, played: false }
+    };
+
+    await setDoc(
+        doc(db, "tournaments", tournamentID, "knockout", "quarterfinals"),
+        { matches }
+    );
 }
 
 export function subscribeTeams(tournamentID, callback) {
@@ -178,8 +232,8 @@ export function subscribeTeams(tournamentID, callback) {
     });
 }
 
-export function subscribeMatchday(tournamentId, md, callback) {
-    const matchdayRef = doc(db, "tournaments", tournamentId, "matchdays", md);
+export function subscribeMatchday(tournamentID, md, callback) {
+    const matchdayRef = doc(db, "tournaments", tournamentID, "matchdays", md);
 
     return onSnapshot(matchdayRef, snap => {
         if (!snap.exists()) {
@@ -190,12 +244,36 @@ export function subscribeMatchday(tournamentId, md, callback) {
     });
 }
 
-export function subscribeTournamentStatus(tournamentId, callback) {
-    const tournamentRef = doc(db, "tournaments", tournamentId);
+export function subscreibeAllMatchdays(tournamentID, callback) {
+    const matchdaysRef = collection(db, "tournaments", tournamentID, "matchdays");
+
+    return onSnapshot(matchdaysRef, snapshot => {
+        const matchdays = snapshot.docs.map(doc => ({
+            id: doc.id,
+            ...doc.data()
+        }));
+        callback(matchdays);
+    });
+}
+
+export function subscribeTournamentStatus(tournamentID, callback) {
+    const tournamentRef = doc(db, "tournaments", tournamentID);
 
     return onSnapshot(tournamentRef, snap => {
         if (!snap.exists()) return;
         callback(snap.data().status);
+    });
+}
+
+export function subscribeKnockoutRound(tournamentID, stage, callback) {
+    const koStageRef = doc(db, "tournaments", tournamentID, "knockout", stage);
+
+    return onSnapshot(koStageRef, snap => {
+        if (!snap.exists()) {
+            callback({ matches: {} }); // Falls Runde noch nicht existiert
+            return;
+        }
+        callback(snap.data());
     });
 }
 
