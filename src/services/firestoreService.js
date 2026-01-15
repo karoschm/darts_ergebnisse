@@ -190,6 +190,15 @@ export function subscribeMatchday(tournamentId, md, callback) {
     });
 }
 
+export function subscribeTournamentStatus(tournamentId, callback) {
+    const tournamentRef = doc(db, "tournaments", tournamentId);
+
+    return onSnapshot(tournamentRef, snap => {
+        if (!snap.exists()) return;
+        callback(snap.data().status);
+    });
+}
+
 // export async function getAllTeams() {
 //     const snapshot = await getDocs(collection(db, "teams"));
 //     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));

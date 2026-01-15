@@ -1,16 +1,18 @@
 import { useState, useEffect } from "react";
 import { useTournament } from "../../context/TournamentContext";
-import { getAllTeams, getMatchdayMatches, saveScore, setMatchPlayed, subscribeMatchday } from "../../services/firestoreService";
+import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus } from "../../services/firestoreService";
 
 export default function MatchdayTabs({ md }) {
     const { currentTournamentId } = useTournament();
     const [matches, setMatches] = useState({});
     const [teamNames, setTeamNames] = useState({});
+    const [status, setStatus] = useState("");
 
     useEffect(() => {
         if (!currentTournamentId) return;
 
-        let unsubscribe;
+        let unsubscribeMatchday;
+        let unsubscribeStatus;
 
         async function init() {
             // Teamnamen einmal laden
@@ -22,19 +24,25 @@ export default function MatchdayTabs({ md }) {
             setTeamNames(names);
 
             // Matchday live abonnieren
-            unsubscribe = subscribeMatchday(
+            unsubscribeMatchday = subscribeMatchday(
                 currentTournamentId,
                 md,
                 (liveMatches) => {
                     setMatches(liveMatches);
                 }
             );
+
+            unsubscribeStatus = subscribeTournamentStatus(
+                currentTournamentId,
+                setStatus
+            );
         }
 
         init();
 
         return () => {
-            if (unsubscribe) unsubscribe();
+            if (unsubscribeMatchday) unsubscribeMatchday();
+            if (unsubscribeStatus) unsubscribeStatus();
         };
     }, [currentTournamentId, md]);
 
@@ -81,6 +89,7 @@ export default function MatchdayTabs({ md }) {
                                 <input
                                     type="number"
                                     style={{ width: "60px", textAlign: "center" }}
+                                    disabled={status !== "group"}
                                     value={scoreTeam1}
                                     onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value), team2)}
                                     onBlur={e => saveScore(currentTournamentId, md, mNumber, team1, Number(e.target.value), team2)}
@@ -105,6 +114,7 @@ export default function MatchdayTabs({ md }) {
                                 <input
                                     type="number"
                                     style={{ width: "60px", textAlign: "center" }}
+                                    disabled={status !== "group"}
                                     value={scoreTeam2}
                                     onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value), team1)}
                                     onBlur={e => saveScore(currentTournamentId, md, mNumber, team2, Number(e.target.value), team1)}
@@ -132,7 +142,12 @@ export default function MatchdayTabs({ md }) {
                             </td>
 
                             <td style={{ padding: "8px" }}>
-                                <button onClick={e => enterResult(mNumber)}>Ergebnis eintragen</button>
+                                <button 
+                                    onClick={() => enterResult(mNumber)}
+                                    disabled={status !== "group"}
+                                >
+                                    Ergebnis eintragen
+                                </button>
                             </td>
 
                         </tr>

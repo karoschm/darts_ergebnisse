@@ -36,7 +36,7 @@ export default function TeamSetup() {
         await updateTeamNames(currentTournamentId, teamNames);
 
         navigate("/group");
-        updateTournamentStatus(currentTournamentId, "group")
+        // updateTournamentStatus(currentTournamentId, "group");
     };
 
     const handleInputChange = async (id, value) => {

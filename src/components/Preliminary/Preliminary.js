@@ -3,7 +3,7 @@ import Tab from "@mui/material/Tab"; import { useEffect } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTournament } from "../../context/TournamentContext";
-import { addTeamGame, getNumberMatchdays, saveSchedule, subscribeTeams } from "../../services/firestoreService";
+import { addTeamGame, getNumberMatchdays, saveSchedule, subscribeTeams, subscribeTournamentStatus, updateTournamentStatus } from "../../services/firestoreService";
 import StandingsTable from "./StandingsTable";
 import MatchdayTabs from "./MatchdayTabs";
 
@@ -11,20 +11,32 @@ export default function Preliminary() {
     const navigate = useNavigate();
     const { currentTournamentId } = useTournament();
     const [teams, setTeams] = useState({});
+    const [status, setStatus] = useState("");
     const [preliminaryTabValue, setPreliminaryTabValue] = useState(0);
     const [numberMatchdays, setNumberMatchdays] = useState(0);
 
     useEffect(() => {
         if (!currentTournamentId) return;
 
+        const unsubscribes = [];
+
         async function fetchData() {
-            const unsubscribe = subscribeTeams(currentTournamentId, (liveTeams) => {
+            const unsubscribeTeams = subscribeTeams(currentTournamentId, (liveTeams) => {
                 setTeams(liveTeams);
             });
+            unsubscribes.push(unsubscribeTeams);
+
+            const unsubscribeStatus = subscribeTournamentStatus(
+                currentTournamentId,
+                setStatus
+            );
+            unsubscribes.push(unsubscribeStatus);
 
             setNumberMatchdays(await getNumberMatchdays(currentTournamentId));
 
-            return () => unsubscribe();
+            return () => {
+                unsubscribes.forEach(unsub => unsub());
+            };
         }
         fetchData();
     }, []);
@@ -101,6 +113,9 @@ export default function Preliminary() {
         });
     }
 
+    const handleStartPreliminary = () => {
+        updateTournamentStatus(currentTournamentId, "group");
+    }
 
     return (
         <form
@@ -121,8 +136,17 @@ export default function Preliminary() {
             <StandingsTable teams={teams} />
             <br></br>
             <br></br>
-            <button onClick={handleMakeSchedule}>
-                Vorrunde erstellen
+            <button
+                onClick={handleMakeSchedule}
+                disabled={status !== "setup"}
+            >
+                Vorrundenspielplan generieren
+            </button>
+            <button
+                onClick={handleStartPreliminary}
+                disabled={status !== "setup"}
+            >
+                Vorrunde beginnen
             </button>
             <br></br>
             <Tabs
