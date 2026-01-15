@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTournament } from "../../context/TournamentContext";
-import { getAllTeams, updateTeamNames } from "../../services/firestoreService";
+import { getAllTeams, updateTeamNames, updateTournamentStatus } from "../../services/firestoreService";
 
 export default function TeamSetup() {
     const navigate = useNavigate();
@@ -36,6 +36,7 @@ export default function TeamSetup() {
         await updateTeamNames(currentTournamentId, teamNames);
 
         navigate("/group");
+        updateTournamentStatus(currentTournamentId, "group")
     };
 
     const handleInputChange = async (id, value) => {
