@@ -1,18 +1,61 @@
-import { collection, doc, addDoc, setDoc, getDoc, getDocs, deleteDoc, query, where, updateDoc } from "firebase/firestore";
+import { keyboard } from "@testing-library/user-event/dist/keyboard";
+import { collection, doc, addDoc, setDoc, getDoc, getDocs, deleteDoc, query, where, updateDoc, writeBatch } from "firebase/firestore";
 import { db } from "../firebase";
 
-export async function getAllTeams() {
-    const snapshot = await getDocs(collection(db, "teams"));
+export async function addTournament(numberTeams, numberMatchdays) {
+    const ref = await addDoc(collection(db, "tournaments"), { 
+        status: "setup", 
+        teamCount: {numberTeams}, 
+        matchdays: {numberMatchdays}, 
+        createdAt: new Date().toISOString() 
+    });
+    await createTeams(ref.id, numberTeams);
+    return ref.id;
+}
+
+async function createTeams(tournamentID, numberTeams) {
+    const batch = writeBatch(db);
+
+    for (let i = 1; i <= numberTeams; i++) {
+        const id = `A${i}`;
+        const ref = doc(db, "tournaments", tournamentID, "teams", id);
+
+        batch.set(ref, {
+            name: "",
+            wins: 0, 
+            losses: 0,
+            own_score: 0,
+            opponent_score: 0
+        });
+    }
+
+    await batch.commit();
+}
+
+export async function getAllTeams(tournamentID) {
+    const snapshot = await getDocs(collection(db, "tournaments", tournamentID, "teams"));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 
-export async function updateTeamNames(teamNames) {
-    console.log(teamNames);
-    Object.keys(teamNames).forEach(async function (key, index) {
-        const teamRef = doc(db, "teams", key);
-        await setDoc(teamRef, { name: teamNames[key], wins: 0, losses: 0, score: 0 });
+export async function updateTeamNames(tournamentID, teamNames) {
+    Object.entries(teamNames).forEach(async ([id, name]) => {
+        const teamRef = doc(db, "tournaments", tournamentID, "teams", id);
+        await updateDoc(teamRef, { name: name });
     })
 }
+
+// export async function getAllTeams() {
+//     const snapshot = await getDocs(collection(db, "teams"));
+//     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+// }
+
+// export async function updateTeamNames(teamNames) {
+//     console.log(teamNames);
+//     Object.keys(teamNames).forEach(async function (key, index) {
+//         const teamRef = doc(db, "teams", key);
+//         await setDoc(teamRef, { name: teamNames[key], wins: 0, losses: 0, score: 0 });
+//     })
+// }
 
 export async function saveSchedule(schedule) {
     schedule.map(async (day, idx) => {
