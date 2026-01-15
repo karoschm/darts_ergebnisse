@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
-import { getAllTeams, saveKOScore, subscribeKnockoutRound, subscribeTournamentStatus, updateTournamentStatus } from "../../../services/firestoreService";
+import { generateSemifinals, getAllTeams, saveKOScore, subscribeKnockoutRound, subscribeTournamentStatus, updateAllKOsPlayed, updateTournamentStatus } from "../../../services/firestoreService";
 
 export default function QuarterfinalTab() {
     const { currentTournamentId } = useTournament();
@@ -16,7 +16,6 @@ export default function QuarterfinalTab() {
 
         let unsubscribeKnockout;
         let unsubscribeStatus;
-        let unsubscribeQFsPlayed;
 
         async function init() {
             // Teamnamen einmal laden
@@ -65,8 +64,32 @@ export default function QuarterfinalTab() {
         saveKOScore(currentTournamentId, "quarterfinals", matchKey, team, newScore, opponent, winLegs);
     }
 
+    function handleWinLegsChange(newWinLegs) {
+        setWinLegs(newWinLegs);
+        updateAllKOsPlayed(currentTournamentId, "quarterfinals", newWinLegs);
+    }
+
+    function getQuarterFinalWinners() {
+        const winners = [];
+    
+        Object.values(quarterFinals.matches).forEach(match => {
+            if (!match.played) return; // Sicherheit
+
+            const team1 = match.team1;
+            const team2 = match.team2;
+    
+            if (match[`legs_${team1}`] > match[`legs_${team2}`]) {
+                winners.push(team1);
+            } else {
+                winners.push(team2);
+            }
+        });
+    
+        return winners; // Array mit IDs der siegreichen Teams
+    }
+
     const handleFinishQuarterfinal = () => {
-        // generateSemifinals(currentTournamentId);
+        generateSemifinals(currentTournamentId, getQuarterFinalWinners());
         updateTournamentStatus(currentTournamentId, "sf");
     }
 
@@ -85,7 +108,8 @@ export default function QuarterfinalTab() {
             <input
                 type={"number"}
                 value={winLegs}
-                onChange={e => setWinLegs(Number(e.target.value))}
+                disabled={status !== "qf"}
+                onChange={e => handleWinLegsChange(Number(e.target.value))}
             />
             <br/>
             {status !== "group" && (
@@ -111,6 +135,7 @@ export default function QuarterfinalTab() {
                                             <input
                                                 type={"number"}
                                                 value={match[`legs_${match.team1}`]}
+                                                disabled={status !== "qf"}
                                                 onChange={e => handleLegScoreChange(matchId, match.team1, Number(e.target.value), match.team2)}
                                                 min={0}
                                                 max={winLegs}
@@ -123,6 +148,7 @@ export default function QuarterfinalTab() {
                                             <input
                                                 type={"number"}
                                                 value={match[`legs_${match.team2}`]}
+                                                disabled={status !== "qf"}
                                                 onChange={e => handleLegScoreChange(matchId, match.team2, Number(e.target.value), match.team1)}
                                                 min={0}
                                                 max={winLegs}

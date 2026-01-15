@@ -62,14 +62,17 @@ export default function Preliminary() {
     }, []);
 
     const handlePreliminaryTabChange = (event, newTabValue) => {
+        event.preventDefault();
         setPreliminaryTabValue(newTabValue);
     }
 
-    const handleStartPreliminary = () => {
+    const handleStartPreliminary = (e) => {
+        e.preventDefault();
         updateTournamentStatus(currentTournamentId, "group");
     }
 
-    const handleFinishPreliminary = () => {
+    const handleFinishPreliminary = (e) => {
+        e.preventDefault();
         generateQuarterfinals(currentTournamentId);
         updateTournamentStatus(currentTournamentId, "qf");
     }
@@ -128,7 +131,8 @@ export default function Preliminary() {
         return fullSchedule.slice(0, numberMatchdays);
     }
 
-    const handleMakeSchedule = () => {
+    const handleMakeSchedule = (e) => {
+        e.preventDefault();
         const newSchedule = generateSchedule();
         saveSchedule(currentTournamentId, newSchedule);
         newSchedule.map((teams, matchday) => {
@@ -136,6 +140,7 @@ export default function Preliminary() {
                 addTeamGame(currentTournamentId, team1, team2, matchday);
             });
         });
+        console.log(newSchedule);
     }
 
     return (

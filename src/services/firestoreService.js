@@ -1,3 +1,4 @@
+import { async } from "@firebase/util";
 import { collection, doc, addDoc, setDoc, getDoc, getDocs, deleteDoc, query, where, updateDoc, writeBatch, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 
@@ -166,8 +167,26 @@ export async function saveKOScore(tournamentID, stage, matchKey, team, newScore,
 
     await updateDoc(koStageRef, {
         [`matches.${matchKey}.legs_${team}`]: newScore,
-        [`matches.${matchKey}.played`]: newScore === winLegs || opp_score === winLegs
+        [`matches.${matchKey}.played`]: (newScore === winLegs || opp_score === winLegs) && newScore !== opp_score
     });
+}
+
+export async function updateAllKOsPlayed(tournamentID, stage, winLegs) {
+    const koStageRef = doc(db, "tournaments", tournamentID, "knockout", stage);
+    const koStageSnap = await getDoc(koStageRef);
+    const koStageMatches = koStageSnap.data().matches;
+    Object.entries(koStageMatches).map(([matchKey, m]) => {
+        const team1 = m.team1;
+        const team2 = m.team2
+        const team1_score = m[`legs_${team1}`];
+        const team2_score = m[`legs_${team2}`];
+
+        updateDoc(koStageRef, {
+            [`matches.${matchKey}.played`]: ((team1_score > team2_score && team1_score === winLegs)
+                || (team2_score > team1_score && team2_score === winLegs))
+                && team1_score !== team2_score
+        })
+    })
 }
 
 export async function setMatchPlayed(tournamentID, md, matchKey) {
@@ -197,11 +216,11 @@ export async function generateQuarterfinals(tournamentID) {
     const qualified = teams.slice(0, 8);
 
     const matches = {
-        QF1: { 
-            team1: qualified[0].id, team2: qualified[7].id, 
+        QF1: {
+            team1: qualified[0].id, team2: qualified[7].id,
             [`legs_${qualified[0].id}`]: 0, [`legs_${qualified[7].id}`]: 0, played: false
         },
-        QF2: { 
+        QF2: {
             team1: qualified[1].id, team2: qualified[6].id,
             [`legs_${qualified[1].id}`]: 0, [`legs_${qualified[6].id}`]: 0, played: false
         },
@@ -210,12 +229,53 @@ export async function generateQuarterfinals(tournamentID) {
             [`legs_${qualified[2].id}`]: 0, [`legs_${qualified[5].id}`]: 0, played: false
         },
         QF4: {
-            team1: qualified[3].id, team2: qualified[4].id, 
-            [`legs_${qualified[3].id}`]: 0, [`legs_${qualified[4].id}`]: 0, played: false }
+            team1: qualified[3].id, team2: qualified[4].id,
+            [`legs_${qualified[3].id}`]: 0, [`legs_${qualified[4].id}`]: 0, played: false
+        }
     };
 
     await setDoc(
         doc(db, "tournaments", tournamentID, "knockout", "quarterfinals"),
+        { matches }
+    );
+}
+
+export async function generateSemifinals(tournamentID, qfWinners) {
+    if (qfWinners.length !== 4) throw new Error("Es müssen 4 Teams für das Halbfinale sein");
+
+    const matches = {
+        SF1: { team1: qfWinners[0], team2: qfWinners[3], [`legs_${qfWinners[0]}`]: 0, [`legs_${qfWinners[3]}`]: 0, played: false },
+        SF2: { team1: qfWinners[1], team2: qfWinners[2], [`legs_${qfWinners[1]}`]: 0, [`legs_${qfWinners[2]}`]: 0, played: false }
+    };
+
+    await setDoc(
+        doc(db, "tournaments", tournamentID, "knockout", "semifinals"),
+        { matches }
+    );
+}
+
+export async function generateFinal(tournamentID, sfWinners, sfLosers) {
+    if (sfWinners.length !== 2) throw new Error("Es müssen 2 Teams für das Finale sein");
+
+    const matches = {
+        final: {
+            team1: sfWinners[0],
+            team2: sfWinners[1],
+            [`legs_${sfWinners[0]}`]: 0,
+            [`legs_${sfWinners[1]}`]: 0,
+            played: false
+        },
+        place3: {
+            team1: sfLosers[0],
+            team2: sfLosers[1],
+            [`legs_${sfLosers[0]}`]: 0,
+            [`legs_${sfLosers[1]}`]: 0,
+            played: false
+        }
+    };
+
+    await setDoc(
+        doc(db, "tournaments", tournamentID, "knockout", "final"),
         { matches }
     );
 }
