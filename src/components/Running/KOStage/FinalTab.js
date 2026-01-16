@@ -57,7 +57,7 @@ export default function FinalTab() {
             if (unsubscribeKnockout) unsubscribeKnockout();
             if (unsubscribeStatus) unsubscribeStatus();
         };
-    }, [currentTournamentId]);
+    }, [status, currentTournamentId]);
 
     function handleLegScoreChange(matchKey, team, newScore, opponent) {
         setFinals(prev => ({

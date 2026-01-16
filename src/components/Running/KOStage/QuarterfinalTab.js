@@ -55,7 +55,7 @@ export default function QuarterfinalTab() {
             if (unsubscribeKnockout) unsubscribeKnockout();
             if (unsubscribeStatus) unsubscribeStatus();
         };
-    }, [currentTournamentId]);
+    }, [status, currentTournamentId]);
 
     function handleLegScoreChange(matchKey, team, newScore, opponent) {
         setQuarterfinals(prev => ({

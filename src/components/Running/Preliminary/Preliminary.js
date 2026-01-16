@@ -59,7 +59,7 @@ export default function Preliminary() {
             };
         }
         fetchData();
-    }, []);
+    }, [status, currentTournamentId]);
 
     const handlePreliminaryTabChange = (event, newTabValue) => {
         event.preventDefault();

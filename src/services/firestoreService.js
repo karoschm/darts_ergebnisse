@@ -387,7 +387,6 @@ export function subscribeTournamentStatus(tournamentID, callback) {
 
     return onSnapshot(tournamentRef, snap => {
         if (!snap.exists()) return;
-        console.log("Tournament snapshot:", snap.data());
         callback(snap.data().status);
     });
 }
@@ -403,84 +402,3 @@ export function subscribeKnockoutRound(tournamentID, stage, callback) {
         callback(snap.data());
     });
 }
-
-// export async function getAllTeams() {
-//     const snapshot = await getDocs(collection(db, "teams"));
-//     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-// }
-
-// export async function updateTeamNames(teamNames) {
-//     console.log(teamNames);
-//     Object.keys(teamNames).forEach(async function (key, index) {
-//         const teamRef = doc(db, "teams", key);
-//         await setDoc(teamRef, { name: teamNames[key], wins: 0, losses: 0, score: 0 });
-//     })
-// }
-
-// export async function saveSchedule(schedule) {
-//     schedule.map(async (day, idx) => {
-//         const gameday = String(idx + 1);
-//         const gamedayRef = doc(db, "gamedays", gameday);
-//         const gamedaySnap = await getDoc(gamedayRef);
-
-//         if (gamedaySnap.exists()) {
-//             deleteDoc(gamedayRef);
-//         }
-
-//         const matchesObject = Object.fromEntries(
-//             day.map(([t1, t2], i) => [
-//                 `match_${i.toString()}`,
-//                 { team1: t1, team2: t2, [`score_${t1}`]: -1, [`score_${t2}`]: -1, played: false }
-//             ])
-//         );
-
-//         await setDoc(doc(db, "gamedays", gameday), matchesObject);
-//     });
-// }
-
-export async function getGamedayMatches(gameday) {
-    const gamedayRef = doc(db, "gamedays", gameday);
-    const gamedaySnap = await getDoc(gamedayRef);
-
-    if (!gamedaySnap.exists()) return [];
-
-    const data = gamedaySnap.data();
-
-    return data;
-}
-
-// export async function saveScore(gameday, matchKey, team, value, opponent) {
-//     const gamedayRef = doc(db, "gamedays", gameday.toString());
-//     const gamedaySnap = await getDoc(gamedayRef);
-//     await updateDoc(gamedayRef, {
-//         [`${matchKey}.score_${team}`]: Number(value)
-//     });
-
-//     const matchScore = value - gamedaySnap.data()[`${matchKey}`][`score_${opponent}`];
-//     const teamRef = doc(db, "teams", team);
-//     const teamSnap = await getDoc(teamRef);
-//     const teamScores = Object.entries(teamSnap.data().matches).map(([idx, match]) => match.result);
-//     await updateDoc(teamRef, {
-//         [`matches.${gameday}.result`]: -1 * matchScore,
-//         wins: teamScores.filter(s => s > 0).length,
-//         losses: teamScores.filter(s => s < 0).length,
-//         score: teamScores.reduce((a, b) => a + b)
-//     });
-
-//     const opponentRef = doc(db, "teams", opponent);
-//     const opponentSnap = await getDoc(opponentRef);
-//     const opponentScores = Object.entries(opponentSnap.data().matches).map(([idx, match]) => match.result);
-//     await updateDoc(opponentRef, {
-//         [`matches.${gameday}.result`]: matchScore,
-//         wins: opponentScores.filter(s => s > 0).length,
-//         losses: opponentScores.filter(s => s < 0).length,
-//         score: opponentScores.reduce((a, b) => a + b)
-//     });
-// }
-
-// export async function setMatchPlayed(gameday, matchKey) {
-//     const gamedayRef = doc(db, "gamedays", gameday.toString());
-//     await updateDoc(gamedayRef, {
-//         [`${matchKey}.played`]: true
-//     });
-// }
