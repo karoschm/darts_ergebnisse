@@ -161,12 +161,14 @@ export default function Preliminary() {
             <br></br>
             <br></br>
             <button
+                key={"make_schedule"}
                 onClick={handleMakeSchedule}
                 disabled={status !== "setup"}
             >
                 Vorrundenspielplan generieren
             </button>
             <button
+                key={"start_preliminary"}
                 onClick={handleStartPreliminary}
                 disabled={status !== "setup"}
             >
@@ -174,12 +176,13 @@ export default function Preliminary() {
             </button>
             <br></br>
             <Tabs
+                key={"preliminary_tabs"}
                 value={preliminaryTabValue}
                 onChange={handlePreliminaryTabChange}
                 variant="fullWidth"
             >
                 {[...Array(numberMatchdays).keys()].map(md => (
-                    <Tab label={md + 1} value={md} />
+                    <Tab key={`tab_${md + 1}`} label={md + 1} value={md} />
                 ))
                 }
             </Tabs>
@@ -197,6 +200,7 @@ export default function Preliminary() {
             <br/>
             <br/>
             <button
+                key={"end_preliminary"}
                 onClick={handleFinishPreliminary}
                 disabled={!allMatchdaysPlayed || (status !== "group")}
             >

@@ -63,7 +63,7 @@ export async function getAllTeams(tournamentID) {
 export async function updateTeamNames(tournamentID, teamNames) {
     Object.entries(teamNames).forEach(async ([id, name]) => {
         const teamRef = doc(db, "tournaments", tournamentID, "teams", id);
-        await updateDoc(teamRef, { name: name });
+        await updateDoc(teamRef, { name: name ? name : id });
     })
 }
 
