@@ -136,9 +136,9 @@ export default function QuarterfinalTab() {
                         </thead>
                         {qfReady ? (
                             <tbody>
-                                {Object.entries(quarterfinals.matches).
-                                    sort(([mId1, m1], [mId2, m2]) => mId1.localeCompare(mId2)).
-                                    map(([matchId, match]) => (
+                                {Object.entries(quarterfinals.matches)
+                                    .sort(([mId1, m1], [mId2, m2]) => mId1.localeCompare(mId2))
+                                    .map(([matchId, match]) => (
                                         <tr key={matchId}>
                                             <td>{matchId}</td>
                                             <td>

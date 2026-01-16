@@ -1,4 +1,4 @@
-import { collection, doc, addDoc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, onSnapshot } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 
 export async function addTournament(tournamentName, numberTeams, numberMatchdays) {
@@ -196,8 +196,8 @@ export async function updateAllKOsPlayed(tournamentID, stage, winLegs) {
             [`matches.${matchKey}.played`]: ((team1_score > team2_score && team1_score === winLegs)
                 || (team2_score > team1_score && team2_score === winLegs))
                 && team1_score !== team2_score
-        })
-    })
+        });
+    });
 }
 
 export async function setMatchPlayed(tournamentID, md, matchKey) {

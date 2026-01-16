@@ -75,25 +75,6 @@ export default function FinalTab() {
         updateAllKOsPlayed(currentTournamentId, "final", newWinLegs);
     }
 
-    function getFinalWinners() {
-        const winners = { final: "", place3: "" };
-
-        Object.entries(finals.matches).forEach(([matchId, match]) => {
-            if (!match.played) return; // Sicherheit
-
-            const team1 = match.team1;
-            const team2 = match.team2;
-
-            if (match[`legs_${team1}`] > match[`legs_${team2}`]) {
-                winners[matchId] = team1;
-            } else {
-                winners[matchId] = team2;
-            }
-        });
-
-        return winners; // Array mit IDs der siegreichen Teams
-    }
-
     const handleFinishFinal = (e) => {
         e.preventDefault();
         updateRankingFinals(currentTournamentId);

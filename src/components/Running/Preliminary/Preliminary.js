@@ -2,14 +2,12 @@ import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
 import { useEffect } from "react";
 import { useState } from "react";
-import { useNavigate } from "react-router-dom";
 import { useTournament } from "../../../context/TournamentContext";
 import { addTeamGame, generateQuarterfinals, getNumberMatchdays, saveSchedule, subscribeAllMatchdays, subscribeTeams, subscribeTournamentStatus, updateTournamentStatus } from "../../../services/firestoreService";
 import StandingsTable from "./StandingsTable";
 import MatchdayTabs from "./MatchdayTabs";
 
 export default function Preliminary() {
-    const navigate = useNavigate();
     const { currentTournamentId } = useTournament();
     const [teams, setTeams] = useState({});
     const [status, setStatus] = useState("");
