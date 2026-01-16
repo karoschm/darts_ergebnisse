@@ -38,7 +38,7 @@ export default function TournamentSetup() {
                 type={"number"}
                 value={numberTeams}
                 onChange={e => setNumberTeams(e.target.value)}
-                min={2}
+                min={8}
             />
             <br></br>
             <br></br>
