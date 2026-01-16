@@ -33,13 +33,13 @@ export default function TeamSetup() {
             Object.entries(teamNames).map(([key, value]) => [key, value.trim()])
         );
 
-        await updateTeamNames(currentTournamentId, teamNames);
+        await updateTeamNames(currentTournamentId, trimmedNames);
 
         navigate(`/tournament/${currentTournamentId}/running`);
     };
 
     const handleInputChange = async (id, value) => {
-        setTeamNames(prev => ({ ...prev, [id]: value}));
+        setTeamNames(prev => ({ ...prev, [id]: value }));
     };
 
     return (
@@ -63,19 +63,21 @@ export default function TeamSetup() {
                 alignContent: "center"
             }}>
                 <tbody>
-                    {Object.values(teams).sort((a, b) => Number(a.id.slice(1)) > Number(b.id.slice(1))).map(team =>
-                        <tr>
-                            <td>
-                                <label>{team.id}</label>
-                            </td>
-                            <td>
-                                <input
-                                    value={teamNames[team.id]}
-                                    onChange={e => handleInputChange(team.id, e.target.value)}
-                                />
-                            </td>
-                        </tr>
-                    )}
+                    {Object.values(teams)
+                        .sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
+                        .map(team =>
+                            <tr>
+                                <td>
+                                    <label>{team.id}</label>
+                                </td>
+                                <td>
+                                    <input
+                                        value={teamNames[team.id]}
+                                        onChange={e => handleInputChange(team.id, e.target.value)}
+                                    />
+                                </td>
+                            </tr>
+                        )}
                 </tbody>
             </table>
             <button type="submit">
