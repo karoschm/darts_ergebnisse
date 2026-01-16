@@ -140,7 +140,6 @@ export default function Preliminary() {
                 addTeamGame(currentTournamentId, team1, team2, matchday);
             });
         });
-        console.log(newSchedule);
     }
 
     return (

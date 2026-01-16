@@ -9,7 +9,11 @@ export default function SemifinalTab() {
     const [semifinals, setSemifinals] = useState({ matches: {} })
     const [allSFsPlayed, setAllSFsPlayed] = useState(false);
     const [teamNames, setTeamNames] = useState({});
-    const [winLegs, setWinLegs] = useState(5);
+    const [winLegs, setWinLegs] = useState(4);
+
+    const sfMatches = semifinals?.matches?.SF1;
+
+    const sfReady = Boolean(sfMatches?.team1 && sfMatches?.team2);
 
     useEffect(() => {
         if (!currentTournamentId) return;
@@ -31,7 +35,7 @@ export default function SemifinalTab() {
                 "semifinals",
                 (data) => {
                     setSemifinals(data);
-        
+
                     // Abgeleitet: prüfen, ob alle Matches played === true
                     const matches = data.matches || {};
                     const allPlayed = Object.values(matches).every(match => match.played === true);
@@ -70,14 +74,14 @@ export default function SemifinalTab() {
     }
 
     function getSemiFinalWinners() {
-        const winnersLosers = {"winners": [], "losers": []};
-    
+        const winnersLosers = { "winners": [], "losers": [] };
+
         Object.values(semifinals.matches).forEach(match => {
             if (!match.played) return; // Sicherheit
 
             const team1 = match.team1;
             const team2 = match.team2;
-    
+
             if (match[`legs_${team1}`] > match[`legs_${team2}`]) {
                 winnersLosers["winners"].push(team1);
                 winnersLosers["losers"].push(team2);
@@ -86,14 +90,12 @@ export default function SemifinalTab() {
                 winnersLosers["losers"].push(team1);
             }
         });
-    
+
         return winnersLosers; // Array mit IDs der siegreichen Teams
     }
 
     const handleFinishSemifinal = () => {
-        const {winners, losers} = getSemiFinalWinners();
-        console.log(winners);
-        console.log(losers);
+        const { winners, losers } = getSemiFinalWinners();
         generateFinal(currentTournamentId, winners, losers);
         updateTournamentStatus(currentTournamentId, "final");
     }
@@ -116,7 +118,7 @@ export default function SemifinalTab() {
                 disabled={status !== "sf"}
                 onChange={e => handleWinLegsChange(Number(e.target.value))}
             />
-            <br/>
+            <br />
             {status !== "group" && (
                 <div>
                     <table>
@@ -130,40 +132,75 @@ export default function SemifinalTab() {
                                 <th>Legs</th>
                             </tr>
                         </thead>
-                        <tbody>
-                            {Object.entries(semifinals.matches).
-                                sort(([mId1, m1], [mId2, m2]) => mId1.localeCompare(mId2)).
-                                map(([matchId, match]) => (
-                                    <tr key={matchId}>
-                                        <td>{matchId}</td>
-                                        <td>
-                                            <input
-                                                type={"number"}
-                                                value={match[`legs_${match.team1}`]}
-                                                disabled={status !== "sf"}
-                                                onChange={e => handleLegScoreChange(matchId, match.team1, Number(e.target.value), match.team2)}
-                                                min={0}
-                                                max={winLegs}
-                                            />
-                                        </td>
-                                        <td>{teamNames[match.team1]}</td>
-                                        <td>vs</td>
-                                        <td>{teamNames[match.team2]}</td>
-                                        <td>
-                                            <input
-                                                type={"number"}
-                                                value={match[`legs_${match.team2}`]}
-                                                disabled={status !== "sf"}
-                                                onChange={e => handleLegScoreChange(matchId, match.team2, Number(e.target.value), match.team1)}
-                                                min={0}
-                                                max={winLegs}
-                                            />
-                                        </td>
-                                    </tr>
-                                ))}
-                        </tbody>
+                        {sfReady ? (
+                            <tbody>
+                                {Object.entries(semifinals.matches).
+                                    sort(([mId1, m1], [mId2, m2]) => mId1.localeCompare(mId2)).
+                                    map(([matchId, match]) => (
+                                        <tr key={matchId}>
+                                            <td>{matchId}</td>
+                                            <td>
+                                                <input
+                                                    type={"number"}
+                                                    value={match[`legs_${match.team1}`]}
+                                                    disabled={status !== "sf"}
+                                                    onChange={e => 
+                                                        handleLegScoreChange(
+                                                            matchId,
+                                                            match.team1,
+                                                            Number(e.target.value),
+                                                            match.team2
+                                                            )
+                                                        }
+                                                    min={0}
+                                                    max={winLegs}
+                                                />
+                                            </td>
+                                            <td>{teamNames[match.team1]}</td>
+                                            <td>vs</td>
+                                            <td>{teamNames[match.team2]}</td>
+                                            <td>
+                                                <input
+                                                    type={"number"}
+                                                    value={match[`legs_${match.team2}`]}
+                                                    disabled={status !== "sf"}
+                                                    onChange={e => 
+                                                        handleLegScoreChange(
+                                                            matchId,
+                                                            match.team2,
+                                                            Number(e.target.value),
+                                                            match.team1
+                                                            )
+                                                        }
+                                                    min={0}
+                                                    max={winLegs}
+                                                />
+                                            </td>
+                                        </tr>
+                                    ))}
+                            </tbody>
+                        ) : (
+                            <tbody>
+                                <tr>
+                                    <td>SF1</td>
+                                    <td />
+                                    <td>Sieger QF1</td>
+                                    <td>vs</td>
+                                    <td>Sieger QF4</td>
+                                    <td />
+                                </tr>
+                                <tr>
+                                    <td>SF2</td>
+                                    <td />
+                                    <td>Sieger QF2</td>
+                                    <td>vs</td>
+                                    <td>Sieger QF3</td>
+                                    <td />
+                                </tr>
+                            </tbody>
+                        )}
                     </table>
-                    <br/>
+                    <br />
                     <button
                         onClick={handleFinishSemifinal}
                         disabled={!allSFsPlayed || (status !== "sf")}

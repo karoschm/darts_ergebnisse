@@ -1,5 +1,4 @@
-import { async } from "@firebase/util";
-import { collection, doc, addDoc, setDoc, getDoc, getDocs, deleteDoc, query, where, updateDoc, writeBatch, onSnapshot } from "firebase/firestore";
+import { collection, doc, addDoc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 
 export async function addTournament(numberTeams, numberMatchdays) {
@@ -37,7 +36,10 @@ async function createTeams(tournamentID, numberTeams) {
             wins: 0,
             losses: 0,
             own_score: 0,
-            opponent_score: 0
+            opponent_score: 0,
+            preliminaryRank: -1,
+            reachedStage: "preliminary",
+            finalRank: -1
         });
     }
 
@@ -209,7 +211,7 @@ export async function generateQuarterfinals(tournamentID) {
     // Sortierung exakt wie Tabelle
     teams.sort((a, b) => {
         if (b.wins !== a.wins) return b.wins - a.wins;
-        if (b.own_score !== a.own_score) return b.own_score - a.own_score;
+        if (b.own_score !== a.own_score) return a.own_score - b.own_score;
         return b.opponent_score - a.opponent_score;
     });
 
@@ -238,9 +240,18 @@ export async function generateQuarterfinals(tournamentID) {
         doc(db, "tournaments", tournamentID, "knockout", "quarterfinals"),
         { matches }
     );
+
+    teams.map(async (team, index) => {
+        const finalRank = index <= 7 ? -1 : index + 1;
+        const reachedStage = index <= 7 ? "quarterfinal" : "preliminary"
+        await updateDoc(
+            doc(db, "tournaments", tournamentID, "teams", team.id),
+            { preliminaryRank: index + 1, finalRank: finalRank, reachedStage: reachedStage }
+        );
+    });
 }
 
-export async function generateSemifinals(tournamentID, qfWinners) {
+export async function generateSemifinals(tournamentID, qfWinners, qfLosers) {
     if (qfWinners.length !== 4) throw new Error("Es müssen 4 Teams für das Halbfinale sein");
 
     const matches = {
@@ -252,6 +263,31 @@ export async function generateSemifinals(tournamentID, qfWinners) {
         doc(db, "tournaments", tournamentID, "knockout", "semifinals"),
         { matches }
     );
+
+    qfWinners.map(async team => {
+        await updateDoc(
+            doc(db, "tournaments", tournamentID, "teams", team),
+            { reachedStage: "semifinal" }
+        );
+    });
+
+    const qfLosersStandings = await Promise.all(
+        qfLosers.map(async teamID => {
+            const teamSnap = await getDoc(
+                doc(db, "tournaments", tournamentID, "teams", teamID)
+            );
+            return {
+                team: teamID,
+                rank: teamSnap.data().preliminaryRank
+            };
+        })
+    );
+    qfLosersStandings.sort((a, b) => a.rank - b.rank).map(async (team, index) => {
+        await updateDoc(
+            doc(db, "tournaments", tournamentID, "teams", team.team),
+            { finalRank: index + 5 }
+        );
+    });
 }
 
 export async function generateFinal(tournamentID, sfWinners, sfLosers) {
@@ -277,6 +313,36 @@ export async function generateFinal(tournamentID, sfWinners, sfLosers) {
     await setDoc(
         doc(db, "tournaments", tournamentID, "knockout", "final"),
         { matches }
+    );
+}
+
+export async function updateRankingFinals(tournamentID) {
+    const finalSnap = await getDoc(doc(db, "tournaments", tournamentID, "knockout", "final"));
+    const final = finalSnap.data().matches.final;
+    const place3 = finalSnap.data().matches.place3;
+    const finalWinner = final[`legs_${final.team1}`] > final[`legs_${final.team2}`] ? final.team1 : final.team2;
+    const finalLoser = final[`legs_${final.team1}`] < final[`legs_${final.team2}`] ? final.team1 : final.team2;
+    const place3Winner = place3[`legs_${place3.team1}`] > place3[`legs_${place3.team2}`] ? place3.team1 : place3.team2;
+    const place3Loser = place3[`legs_${place3.team1}`] < place3[`legs_${place3.team2}`] ? place3.team1 : place3.team2;
+
+    await updateDoc(
+        doc(db, "tournaments", tournamentID, "teams", finalWinner),
+        { finalRank: 1, reachedStage: "final" }
+    );
+
+    await updateDoc(
+        doc(db, "tournaments", tournamentID, "teams", finalLoser),
+        { finalRank: 2, reachedStage: "final" }
+    );
+
+    await updateDoc(
+        doc(db, "tournaments", tournamentID, "teams", place3Winner),
+        { finalRank: 3, reachedStage: "semifinal" }
+    );
+
+    await updateDoc(
+        doc(db, "tournaments", tournamentID, "teams", place3Loser),
+        { finalRank: 4, reachedStage: "semifinal" }
     );
 }
 
@@ -321,6 +387,7 @@ export function subscribeTournamentStatus(tournamentID, callback) {
 
     return onSnapshot(tournamentRef, snap => {
         if (!snap.exists()) return;
+        console.log("Tournament snapshot:", snap.data());
         callback(snap.data().status);
     });
 }

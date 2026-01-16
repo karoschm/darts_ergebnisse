@@ -9,8 +9,8 @@ export default function AppRoutes() {
     <BrowserRouter>
       <Routes>
         <Route path="/" element={<TournamentSetup/>} />
-        <Route path="/teams" element={<TeamSetup/>} />
-        <Route path="/running" element={<Running/>} />
+        <Route path="/tournament/:tournamendId/teams" element={<TeamSetup/>} />
+        <Route path="/tournament/:tournamentId/running" element={<Running/>} />
       </Routes>
     </BrowserRouter>
   );

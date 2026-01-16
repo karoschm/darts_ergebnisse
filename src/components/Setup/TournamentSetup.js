@@ -14,7 +14,7 @@ export default function TournamentSetup() {
         const tournamentID = await addTournament(numberTeams, numberMatchdays);
         setCurrentTournamentId(tournamentID);
 
-        navigate("/teams");
+        navigate(`/tournament/${tournamentID}/teams`);
     };
 
     return (

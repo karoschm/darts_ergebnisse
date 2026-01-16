@@ -6,17 +6,9 @@ import AppRoutes from './AppRoutes';
 function App() {
   return (
     <TournamentProvider>
-      <AppRoutes />
+      <AppRoutes/>
     </TournamentProvider>
   );
 }
-
-// function App() {
-//   return (
-//     <div className="App">
-//       <MainPage />
-//     </div>
-//   );
-// }
 
 export default App;
