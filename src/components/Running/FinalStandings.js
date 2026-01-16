@@ -56,7 +56,7 @@ export default function FinalStandings() {
             <h1>Abschließende Platzierungen</h1>
             <label>{teams.A1}</label>
             <ol>
-                {Object.entries(teams).sort(([i1, t1], [i2, t2]) => t1.finalRank < t2.finalRank).map(([teamID, team]) => (
+                {Object.entries(teams).sort(([i1, t1], [i2, t2]) => t1.finalRank - t2.finalRank).map(([teamID, team]) => (
                     <li key={teamID}>
                         {team?.name || teamID}
                     </li>

@@ -370,7 +370,7 @@ export function subscribeMatchday(tournamentID, md, callback) {
     });
 }
 
-export function subscreibeAllMatchdays(tournamentID, callback) {
+export function subscribeAllMatchdays(tournamentID, callback) {
     const matchdaysRef = collection(db, "tournaments", tournamentID, "matchdays");
 
     return onSnapshot(matchdaysRef, snapshot => {

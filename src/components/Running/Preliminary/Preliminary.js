@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTournament } from "../../../context/TournamentContext";
-import { addTeamGame, generateQuarterfinals, getNumberMatchdays, saveSchedule, subscreibeAllMatchdays, subscribeTeams, subscribeTournamentStatus, updateTournamentStatus } from "../../../services/firestoreService";
+import { addTeamGame, generateQuarterfinals, getNumberMatchdays, saveSchedule, subscribeAllMatchdays, subscribeTeams, subscribeTournamentStatus, updateTournamentStatus } from "../../../services/firestoreService";
 import StandingsTable from "./StandingsTable";
 import MatchdayTabs from "./MatchdayTabs";
 
@@ -34,7 +34,7 @@ export default function Preliminary() {
             );
             unsubscribes.push(unsubscribeStatus);
 
-            const unsubscribeAllMatchdays = subscreibeAllMatchdays(
+            const unsubscribeAllMatchdays = subscribeAllMatchdays(
                 currentTournamentId,
                 (matchdays) => {
                     if (matchdays.length === 0) {

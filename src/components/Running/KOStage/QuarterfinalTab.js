@@ -74,22 +74,24 @@ export default function QuarterfinalTab() {
     }
 
     function getQuarterFinalResults() {
-        const winnersLosers = {winners: [], losers: []};
+        const winnersLosers = { winners: [], losers: [] };
 
-        Object.values(quarterfinals.matches).forEach(match => {
-            if (!match.played) return; // Sicherheit
+        Object.entries(quarterfinals.matches)
+            .sort(([mId1, m1], [mId2, m2]) => mId1.localeCompare(mId2))
+            .forEach(([id, match]) => {
+                if (!match.played) return; // Sicherheit
 
-            const team1 = match.team1;
-            const team2 = match.team2;
+                const team1 = match.team1;
+                const team2 = match.team2;
 
-            if (match[`legs_${team1}`] > match[`legs_${team2}`]) {
-                winnersLosers["winners"].push(team1);
-                winnersLosers["losers"].push(team2);
-            } else {
-                winnersLosers["winners"].push(team2);
-                winnersLosers["losers"].push(team1);
-            }
-        });
+                if (match[`legs_${team1}`] > match[`legs_${team2}`]) {
+                    winnersLosers["winners"].push(team1);
+                    winnersLosers["losers"].push(team2);
+                } else {
+                    winnersLosers["winners"].push(team2);
+                    winnersLosers["losers"].push(team1);
+                }
+            });
 
         return winnersLosers; // Array mit IDs der siegreichen Teams
     }
