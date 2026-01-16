@@ -13,7 +13,6 @@ export async function addTournament(tournamentName, numberTeams, numberMatchdays
             matchdays: numberMatchdays,
             createdAt: new Date().toISOString()
         });
-    console.log(tournamentRef);
     } catch (err) {
         if (err.code === "already-exists") return `${tournamentName}_EXISTS`;
         return `${tournamentName}_ERROR`;
