@@ -1,15 +1,25 @@
 import { collection, doc, addDoc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 
-export async function addTournament(numberTeams, numberMatchdays) {
-    const ref = await addDoc(collection(db, "tournaments"), {
-        status: "setup",
-        teamCount: numberTeams,
-        matchdays: numberMatchdays,
-        createdAt: new Date().toISOString()
-    });
-    await createTeams(ref.id, numberTeams);
-    return ref.id;
+export async function addTournament(tournamentName, numberTeams, numberMatchdays) {
+    let tournamentRef = doc(db, "tournaments", tournamentName);
+    const tournamentSnap = await getDoc(tournamentRef);
+    if (tournamentSnap.exists()) return `${tournamentName}_EXISTS`;
+
+    try {
+        await setDoc(tournamentRef, {
+            status: "setup",
+            teamCount: numberTeams,
+            matchdays: numberMatchdays,
+            createdAt: new Date().toISOString()
+        });
+    console.log(tournamentRef);
+    } catch (err) {
+        if (err.code === "already-exists") return `${tournamentName}_EXISTS`;
+        return `${tournamentName}_ERROR`;
+    }
+    await createTeams(tournamentRef.id, numberTeams);
+    return tournamentRef.id;
 }
 
 export async function getNumberMatchdays(tournamentID) {

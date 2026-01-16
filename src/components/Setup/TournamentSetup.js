@@ -1,20 +1,28 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTournament } from "../../context/TournamentContext";
+import useFormStatus from "../../hooks/useFormStatus";
 import { addTournament } from "../../services/firestoreService";
 
 export default function TournamentSetup() {
     const navigate = useNavigate();
     const { setCurrentTournamentId } = useTournament();
-    const [numberTeams, setNumberTeams] = useState(2);
+    const { errorMessage, showError } = useFormStatus();
+
+    const [numberTeams, setNumberTeams] = useState(8);
     const [numberMatchdays, setNumberMatchdays] = useState(1);
+    const [tournamentName, setTournamentName] = useState("");
 
     const handleSubmit = async (e) => {
         e.preventDefault();
-        const tournamentID = await addTournament(numberTeams, numberMatchdays);
-        setCurrentTournamentId(tournamentID);
+        const trimmedTournamentName = tournamentName.trim()
+        const tournamentID = await addTournament(trimmedTournamentName, numberTeams, numberMatchdays);
+        if (tournamentID === trimmedTournamentName) {
+            setCurrentTournamentId(tournamentID);
 
-        navigate(`/tournament/${tournamentID}/teams`);
+            navigate(`/tournament/${tournamentID}/teams`);
+        } else if (tournamentID === `${trimmedTournamentName}_EXISTS`) return showError("Turniername bereits vorhanden!");
+        else return showError("Fehler bei der Turniererstellung!");
     };
 
     return (
@@ -40,8 +48,8 @@ export default function TournamentSetup() {
                 onChange={e => setNumberTeams(e.target.value)}
                 min={8}
             />
-            <br></br>
-            <br></br>
+            <br />
+            <br />
             <label>
                 Wie viele Spieltage soll die Vorrunde haben?
             </label>
@@ -53,11 +61,22 @@ export default function TournamentSetup() {
                 min={1}
                 max={numberTeams - 1}
             />
-            <br></br>
-            <br></br>
+            <br />
+            <br />
+            <label>
+                Bitte wähle einen Namen für das Turnier
+            </label>
+            <br />
+            <input
+                value={tournamentName}
+                onChange={e => setTournamentName(e.target.value)}
+            />
+            <br />
+            <br />
             <button type="submit">
                 Turnier erstellen
             </button>
+            {errorMessage && <div style={{ color: "red", marginTop: "10px" }}>{errorMessage}</div>}
         </form>
     );
 }
