@@ -31,8 +31,8 @@ export default function FinalStandings() {
             // setTeams(loadedTeams);
 
             const sortedTeams = Object.entries(loadedTeams)
-            .sort(([i1, t1], [i2, t2]) => t1.finalRank - t2.finalRank)
-            .map(([teamID, team]) => team?.name || teamID);
+                .sort(([i1, t1], [i2, t2]) => t1.finalRank - t2.finalRank)
+                .map(([teamID, team]) => team?.name || teamID);
 
             setTop3Teams(sortedTeams.slice(0, 3));
             setRemainingTeams(sortedTeams.slice(3));
@@ -65,18 +65,8 @@ export default function FinalStandings() {
             padding: "20px 20px 60px 20px"
         }}>
             <h1>Abschließende Platzierungen</h1>
-            <ol start={4}>
-                <Podium teams={top3Teams} />
-                <FinalRankList teams={remainingTeams} />
-                {/* {Object.entries(teams)
-                .sort(([i1, t1], [i2, t2]) => t1.finalRank - t2.finalRank)
-                .slice(3)
-                .map(([teamID, team]) => (
-                    <li key={teamID}>
-                        {team?.name || teamID}
-                    </li>
-                ))} */}
-            </ol>
+            <Podium teams={top3Teams} />
+            <FinalRankList teams={remainingTeams} />
         </div>
     );
 
