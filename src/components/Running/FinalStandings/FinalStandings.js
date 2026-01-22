@@ -2,11 +2,15 @@ import { useEffect } from "react";
 import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
 import { getAllTeams, subscribeTournamentStatus } from "../../../services/firestoreService";
+import FinalRankList from "./FinalRankList";
+import Podium from "./Podium";
 
 export default function FinalStandings() {
     const { currentTournamentId } = useTournament();
     const [status, setStatus] = useState("");
-    const [teams, setTeams] = useState({});
+    // const [teams, setTeams] = useState({});
+    const [top3Teams, setTop3Teams] = useState([]);
+    const [remainingTeams, setRemainingTeams] = useState([]);
 
     useEffect(() => {
         if (!currentTournamentId) return;
@@ -24,7 +28,14 @@ export default function FinalStandings() {
 
         async function getTeams() {
             const loadedTeams = await getAllTeams(currentTournamentId);
-            setTeams(loadedTeams);
+            // setTeams(loadedTeams);
+
+            const sortedTeams = Object.entries(loadedTeams)
+            .sort(([i1, t1], [i2, t2]) => t1.finalRank - t2.finalRank)
+            .map(([teamID, team]) => team?.name || teamID);
+
+            setTop3Teams(sortedTeams.slice(0, 3));
+            setRemainingTeams(sortedTeams.slice(3));
         }
         getTeams();
     }, [status, currentTournamentId]);
@@ -37,7 +48,7 @@ export default function FinalStandings() {
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
-            padding: "20px 20px 60px 20px"
+            padding: "60px"
         }}>
             Turnier ist noch nicht beendet
         </div>
@@ -51,16 +62,20 @@ export default function FinalStandings() {
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
-            padding: "60px"
+            padding: "20px 20px 60px 20px"
         }}>
             <h1>Abschließende Platzierungen</h1>
-            <label>{teams.A1}</label>
-            <ol>
-                {Object.entries(teams).sort(([i1, t1], [i2, t2]) => t1.finalRank - t2.finalRank).map(([teamID, team]) => (
+            <ol start={4}>
+                <Podium teams={top3Teams} />
+                <FinalRankList teams={remainingTeams} />
+                {/* {Object.entries(teams)
+                .sort(([i1, t1], [i2, t2]) => t1.finalRank - t2.finalRank)
+                .slice(3)
+                .map(([teamID, team]) => (
                     <li key={teamID}>
                         {team?.name || teamID}
                     </li>
-                ))}
+                ))} */}
             </ol>
         </div>
     );
