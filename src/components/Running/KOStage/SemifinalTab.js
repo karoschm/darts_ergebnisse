@@ -1,3 +1,4 @@
+import { TableCell, TableHead, TableRow } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
@@ -108,9 +109,8 @@ export default function SemifinalTab() {
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
-            padding: "0 20px"
+            padding: "20px 20px 60px 20px"
         }}>
-            <h1>Halbfinale</h1>
             <label>First to</label>
             <input
                 type={"number"}
@@ -122,24 +122,24 @@ export default function SemifinalTab() {
             {status !== "group" && (
                 <div>
                     <table>
-                        <thead>
-                            <tr>
-                                <th>Match</th>
-                                <th>Legs</th>
-                                <th>Team 1</th>
-                                <th></th>
-                                <th>Team 2</th>
-                                <th>Legs</th>
-                            </tr>
-                        </thead>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Match</TableCell>
+                                <TableCell>Legs</TableCell>
+                                <TableCell>Team 1</TableCell>
+                                <TableCell></TableCell>
+                                <TableCell>Team 2</TableCell>
+                                <TableCell>Legs</TableCell>
+                            </TableRow>
+                        </TableHead>
                         {sfReady ? (
                             <tbody>
                                 {Object.entries(semifinals.matches)
                                     .sort(([mId1, m1], [mId2, m2]) => mId1.localeCompare(mId2))
                                     .map(([matchId, match]) => (
-                                        <tr key={matchId}>
-                                            <td>{matchId}</td>
-                                            <td>
+                                        <TableRow key={matchId}>
+                                            <TableCell>{matchId}</TableCell>
+                                            <TableCell>
                                                 <input
                                                     type={"number"}
                                                     value={match[`legs_${match.team1}`]}
@@ -155,11 +155,11 @@ export default function SemifinalTab() {
                                                     min={0}
                                                     max={winLegs}
                                                 />
-                                            </td>
-                                            <td>{teamNames[match.team1]}</td>
-                                            <td>vs</td>
-                                            <td>{teamNames[match.team2]}</td>
-                                            <td>
+                                            </TableCell>
+                                            <TableCell>{teamNames[match.team1]}</TableCell>
+                                            <TableCell>vs</TableCell>
+                                            <TableCell>{teamNames[match.team2]}</TableCell>
+                                            <TableCell>
                                                 <input
                                                     type={"number"}
                                                     value={match[`legs_${match.team2}`]}
@@ -175,28 +175,28 @@ export default function SemifinalTab() {
                                                     min={0}
                                                     max={winLegs}
                                                 />
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     ))}
                             </tbody>
                         ) : (
                             <tbody>
-                                <tr>
-                                    <td>SF1</td>
+                                <TableRow>
+                                    <TableCell>SF1</TableCell>
                                     <td />
-                                    <td>Sieger QF1</td>
-                                    <td>vs</td>
-                                    <td>Sieger QF4</td>
+                                    <TableCell>Sieger QF1</TableCell>
+                                    <TableCell>vs</TableCell>
+                                    <TableCell>Sieger QF4</TableCell>
                                     <td />
-                                </tr>
-                                <tr>
-                                    <td>SF2</td>
+                                </TableRow>
+                                <TableRow>
+                                    <TableCell>SF2</TableCell>
                                     <td />
-                                    <td>Sieger QF2</td>
-                                    <td>vs</td>
-                                    <td>Sieger QF3</td>
+                                    <TableCell>Sieger QF2</TableCell>
+                                    <TableCell>vs</TableCell>
+                                    <TableCell>Sieger QF3</TableCell>
                                     <td />
-                                </tr>
+                                </TableRow>
                             </tbody>
                         )}
                     </table>

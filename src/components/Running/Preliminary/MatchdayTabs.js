@@ -1,3 +1,4 @@
+import { TableBody, TableCell, TableRow } from "@mui/material";
 import { useState, useEffect } from "react";
 import { useTournament } from "../../../context/TournamentContext";
 import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus } from "../../../services/firestoreService";
@@ -73,7 +74,7 @@ export default function MatchdayTabs({ md }) {
             borderCollapse: "collapse",
             alignContent: "center"
         }}>
-            <tbody>
+            <TableBody>
                 {Object.keys(matches).sort((a, b) => a.localeCompare(b)).map((mNumber) => {
                     const match = matches[mNumber];
                     const team1 = match.team1;
@@ -83,9 +84,9 @@ export default function MatchdayTabs({ md }) {
                     const gamePlayed = match.played
 
                     return gamePlayed ? (
-                        <tr key={mNumber} style={{ borderBottom: "1px solid #ccc" }}>
+                        <TableRow key={mNumber} style={{ borderBottom: "1px solid #ccc" }}>
 
-                            <td style={{ padding: "8px" }}>
+                            <TableCell style={{ padding: "8px" }}>
                                 <input
                                     type="number"
                                     style={{ width: "60px", textAlign: "center" }}
@@ -96,21 +97,21 @@ export default function MatchdayTabs({ md }) {
                                     min={0}
                                     max={501}
                                 />
-                            </td>
+                            </TableCell>
 
-                            <td style={{ padding: "8px", whiteSpace: "nowrap" }}>
+                            <TableCell style={{ padding: "8px", whiteSpace: "nowrap" }}>
                                 {teamNames[team1]}
-                            </td>
+                            </TableCell>
 
-                            <td style={{ padding: "8px", textAlign: "center" }}>
+                            <TableCell style={{ padding: "8px", textAlign: "center" }}>
                                 vs
-                            </td>
+                            </TableCell>
 
-                            <td style={{ padding: "8px", whiteSpace: "nowrap" }}>
+                            <TableCell style={{ padding: "8px", whiteSpace: "nowrap" }}>
                                 {teamNames[team2]}
-                            </td>
+                            </TableCell>
 
-                            <td style={{ padding: "8px" }}>
+                            <TableCell style={{ padding: "8px" }}>
                                 <input
                                     type="number"
                                     style={{ width: "60px", textAlign: "center" }}
@@ -121,40 +122,40 @@ export default function MatchdayTabs({ md }) {
                                     min={0}
                                     max={501}
                                 />
-                            </td>
+                            </TableCell>
 
-                        </tr>
+                        </TableRow>
                     ) : (
-                        <tr key={mNumber} style={{ borderBottom: "1px solid #ccc" }}>
+                        <TableRow key={mNumber} style={{ borderBottom: "1px solid #ccc" }}>
 
-                            <td></td>
+                            <TableCell />
 
-                            <td style={{ padding: "8px", whiteSpace: "nowrap" }}>
+                            <TableCell style={{ padding: "8px", whiteSpace: "nowrap" }}>
                                 {teamNames[team1]}
-                            </td>
+                            </TableCell>
 
-                            <td style={{ padding: "8px", textAlign: "center" }}>
+                            <TableCell style={{ padding: "8px", textAlign: "center" }}>
                                 vs
-                            </td>
+                            </TableCell>
 
-                            <td style={{ padding: "8px", whiteSpace: "nowrap" }}>
+                            <TableCell style={{ padding: "8px", whiteSpace: "nowrap" }}>
                                 {teamNames[team2]}
-                            </td>
+                            </TableCell>
 
-                            <td style={{ padding: "8px" }}>
+                            <TableCell style={{ padding: "8px" }}>
                                 <button 
                                     onClick={() => enterResult(mNumber)}
                                     disabled={status !== "group"}
                                 >
                                     Ergebnis eintragen
                                 </button>
-                            </td>
+                            </TableCell>
 
-                        </tr>
+                        </TableRow>
                     )
                 })
                 }
-            </tbody>
+            </TableBody>
         </table>
     );
 }

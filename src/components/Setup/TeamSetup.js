@@ -1,3 +1,4 @@
+import { TableBody, TableCell, TableRow } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -62,24 +63,24 @@ export default function TeamSetup() {
                 borderCollapse: "collapse",
                 alignContent: "center"
             }}>
-                <tbody>
+                <TableBody>
                     {Object.values(teams)
                         .sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
                         .map(team =>
-                            <tr key={`row_${team.id}`}>
-                                <td key={`cell_label_${team.id}`}>
+                            <TableRow key={`row_${team.id}`}>
+                                <TableCell key={`cell_label_${team.id}`}>
                                     <label key={`label_${team.id}`}>{team.id}</label>
-                                </td>
-                                <td key={`cell_input_${team.id}`}>
+                                </TableCell>
+                                <TableCell key={`cell_input_${team.id}`}>
                                     <input
                                         key={`label_${team.id}`}
                                         value={teamNames[team.id]}
                                         onChange={e => handleInputChange(team.id, e.target.value)}
                                     />
-                                </td>
-                            </tr>
+                                </TableCell>
+                            </TableRow>
                         )}
-                </tbody>
+                </TableBody>
             </table>
             <button type="submit">
                 Turnier starten

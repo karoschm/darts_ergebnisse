@@ -1,3 +1,4 @@
+import { TableCell, TableHead, TableRow } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
@@ -89,9 +90,8 @@ export default function FinalTab() {
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
-            padding: "0 20px"
+            padding: "20px 20px 60px 20px"
         }}>
-            <h1>Finale</h1>
             <label>First to</label>
             <input
                 type={"number"}
@@ -104,19 +104,19 @@ export default function FinalTab() {
                 <div>
                     <h2>Finale</h2>
                     <table>
-                        <thead>
-                            <tr>
-                                <th>Legs</th>
-                                <th>Team 1</th>
-                                <th></th>
-                                <th>Team 2</th>
-                                <th>Legs</th>
-                            </tr>
-                        </thead>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Legs</TableCell>
+                                <TableCell>Team 1</TableCell>
+                                <TableCell></TableCell>
+                                <TableCell>Team 2</TableCell>
+                                <TableCell>Legs</TableCell>
+                            </TableRow>
+                        </TableHead>
                         <tbody>
                             {finalReady ? (
-                                <tr>
-                                    <td>
+                                <TableRow>
+                                    <TableCell>
                                         <input
                                             type={"number"}
                                             value={finals.matches.final[`legs_${finals.matches.final.team1}`]}
@@ -132,11 +132,11 @@ export default function FinalTab() {
                                             min={0}
                                             max={winLegs}
                                         />
-                                    </td>
-                                    <td>{teamNames[finals.matches.final.team1]}</td>
-                                    <td>vs</td>
-                                    <td>{teamNames[finals.matches.final.team2]}</td>
-                                    <td>
+                                    </TableCell>
+                                    <TableCell>{teamNames[finals.matches.final.team1]}</TableCell>
+                                    <TableCell>vs</TableCell>
+                                    <TableCell>{teamNames[finals.matches.final.team2]}</TableCell>
+                                    <TableCell>
                                         <input
                                             type={"number"}
                                             value={finals.matches.final[`legs_${finals.matches.final.team2}`]}
@@ -152,16 +152,16 @@ export default function FinalTab() {
                                             min={0}
                                             max={winLegs}
                                         />
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             ) : (
-                                <tr>
+                                <TableRow>
                                     <td />
-                                    <td>Sieger SF1</td>
-                                    <td>vs</td>
-                                    <td>Sieger SF 2</td>
+                                    <TableCell>Sieger SF1</TableCell>
+                                    <TableCell>vs</TableCell>
+                                    <TableCell>Sieger SF 2</TableCell>
                                     <td />
-                                </tr>
+                                </TableRow>
                             )}
                         </tbody>
                     </table>
@@ -170,18 +170,18 @@ export default function FinalTab() {
                     <h2>Spiel um Platz 3</h2>
                     <table>
                         <thead>
-                            <tr>
-                                <th>Legs</th>
-                                <th>Team 1</th>
-                                <th></th>
-                                <th>Team 2</th>
-                                <th>Legs</th>
-                            </tr>
+                            <TableRow>
+                                <TableCell>Legs</TableCell>
+                                <TableCell>Team 1</TableCell>
+                                <TableCell></TableCell>
+                                <TableCell>Team 2</TableCell>
+                                <TableCell>Legs</TableCell>
+                            </TableRow>
                         </thead>
                         <tbody>
                             {place3Ready ? (
-                                <tr>
-                                    <td>
+                                <TableRow>
+                                    <TableCell>
                                         <input
                                             type={"number"}
                                             value={finals.matches.place3[`legs_${finals.matches.place3.team1}`]}
@@ -197,11 +197,11 @@ export default function FinalTab() {
                                             min={0}
                                             max={winLegs}
                                         />
-                                    </td>
-                                    <td>{teamNames[finals.matches.place3.team1]}</td>
-                                    <td>vs</td>
-                                    <td>{teamNames[finals.matches.place3.team2]}</td>
-                                    <td>
+                                    </TableCell>
+                                    <TableCell>{teamNames[finals.matches.place3.team1]}</TableCell>
+                                    <TableCell>vs</TableCell>
+                                    <TableCell>{teamNames[finals.matches.place3.team2]}</TableCell>
+                                    <TableCell>
                                         <input
                                             type={"number"}
                                             value={finals.matches.place3[`legs_${finals.matches.place3.team2}`]}
@@ -217,16 +217,16 @@ export default function FinalTab() {
                                             min={0}
                                             max={winLegs}
                                         />
-                                    </td>
-                                </tr>
+                                    </TableCell>
+                                </TableRow>
                             ) : (
-                                <tr>
+                                <TableRow>
                                     <td />
-                                    <td>Verlierer SF1</td>
-                                    <td>vs</td>
-                                    <td>Verlierer SF 2</td>
+                                    <TableCell>Verlierer SF1</TableCell>
+                                    <TableCell>vs</TableCell>
+                                    <TableCell>Verlierer SF 2</TableCell>
                                     <td />
-                                </tr>
+                                </TableRow>
                             )}
                         </tbody>
                     </table>

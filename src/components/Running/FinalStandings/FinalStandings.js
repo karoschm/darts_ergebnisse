@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useState } from "react";
-import { useTournament } from "../../context/TournamentContext";
-import { getAllTeams, subscribeTournamentStatus } from "../../services/firestoreService";
+import { useTournament } from "../../../context/TournamentContext";
+import { getAllTeams, subscribeTournamentStatus } from "../../../services/firestoreService";
 
 export default function FinalStandings() {
     const { currentTournamentId } = useTournament();
@@ -37,7 +37,7 @@ export default function FinalStandings() {
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
-            padding: "0 20px"
+            padding: "20px 20px 60px 20px"
         }}>
             Turnier ist noch nicht beendet
         </div>
@@ -51,7 +51,7 @@ export default function FinalStandings() {
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
-            padding: "0 20px"
+            padding: "60px"
         }}>
             <h1>Abschließende Platzierungen</h1>
             <label>{teams.A1}</label>

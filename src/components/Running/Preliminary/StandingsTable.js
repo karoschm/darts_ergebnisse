@@ -1,3 +1,5 @@
+import { TableCell, TableHead, TableRow } from "@mui/material";
+
 export default function StandingsTable({ teams }) {
     function getTableOrder() {
         const sortedTeams = Object.values(teams).sort((a, b) => {
@@ -17,24 +19,44 @@ export default function StandingsTable({ teams }) {
                 borderCollapse: "collapse",
                 alignContent: "center"
             }}>
-                <thead>
-                    <tr>
-                        <th>Platzierung</th>
-                        <th>Team</th>
-                        <th>Siege</th>
-                        <th>Niederlagen</th>
-                        <th>Punkteverhältnis</th>
-                    </tr>
-                </thead>
+                <TableHead>
+                    <TableRow>
+                        <TableCell>Platzierung</TableCell>
+                        <TableCell>Team</TableCell>
+                        <TableCell>Siege</TableCell>
+                        <TableCell>Niederlagen</TableCell>
+                        <TableCell>Punkteverhältnis</TableCell>
+                    </TableRow>
+                </TableHead>
                 <tbody>
                     {getTableOrder().map((team, index) => (
-                        <tr key={`row_${team.name}`}>
-                            <td key={`rank_${team.name}`}>{index + 1}.</td>
-                            <td key={`name_${team.name}`}>{team.name}</td>
-                            <td key={`wins_${team.name}`}>{team.wins}</td>
-                            <td key={`losses_${team.name}`}>{team.losses}</td>
-                            <td key={`score_${team.name}`}>{team.own_score}:{team.opponent_score}</td>
-                        </tr>
+                        <TableRow key={`row_${team.name}`}>
+                            <TableCell key={`rank_${team.name}`}>{index + 1}.</TableCell>
+                            <TableCell
+                                key={`name_${team.name}`}
+                                align="center"
+                            >
+                                {team.name}
+                            </TableCell>
+                            <TableCell
+                                key={`wins_${team.name}`}
+                                align="center"
+                            >
+                                {team.wins}
+                            </TableCell>
+                            <TableCell
+                                key={`losses_${team.name}`}
+                                align="center"
+                            >
+                                {team.losses}
+                            </TableCell>
+                            <TableCell
+                                key={`score_${team.name}`}
+                                align="right"
+                            >
+                                {team.own_score}:{team.opponent_score}
+                            </TableCell>
+                        </TableRow>
                     ))}
                 </tbody>
             </table>

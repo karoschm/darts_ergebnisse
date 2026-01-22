@@ -149,12 +149,9 @@ export default function Preliminary() {
                 flexDirection: "column",
                 alignItems: "center",
                 textAlign: "center",
-                padding: "0 20px"
+                padding: "20px 20px 60px 20px"
             }}
         >
-            <h1>
-                Vorrunde
-            </h1>
             <StandingsTable teams={teams} />
             <br></br>
             <br></br>

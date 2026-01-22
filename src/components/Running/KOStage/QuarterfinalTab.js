@@ -1,3 +1,4 @@
+import { TableBody, TableCell, TableHead, TableRow } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
@@ -110,9 +111,8 @@ export default function QuarterfinalTab() {
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
-            padding: "0 20px"
+            padding: "20px 20px 60px 20px"
         }}>
-            <h1>Viertelfinale</h1>
             <label>First to</label>
             <input
                 type={"number"}
@@ -124,24 +124,24 @@ export default function QuarterfinalTab() {
             {status !== "group" && (
                 <div>
                     <table>
-                        <thead>
-                            <tr>
-                                <th>Match</th>
-                                <th>Legs</th>
-                                <th>Team 1</th>
-                                <th></th>
-                                <th>Team 2</th>
-                                <th>Legs</th>
-                            </tr>
-                        </thead>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell>Match</TableCell>
+                                <TableCell>Legs</TableCell>
+                                <TableCell>Team 1</TableCell>
+                                <TableCell></TableCell>
+                                <TableCell>Team 2</TableCell>
+                                <TableCell>Legs</TableCell>
+                            </TableRow>
+                        </TableHead>
                         {qfReady ? (
-                            <tbody>
+                            <TableBody>
                                 {Object.entries(quarterfinals.matches)
                                     .sort(([mId1, m1], [mId2, m2]) => mId1.localeCompare(mId2))
                                     .map(([matchId, match]) => (
-                                        <tr key={matchId}>
-                                            <td>{matchId}</td>
-                                            <td>
+                                        <TableRow key={matchId}>
+                                            <TableCell>{matchId}</TableCell>
+                                            <TableCell>
                                                 <input
                                                     type={"number"}
                                                     value={match[`legs_${match.team1}`]}
@@ -150,11 +150,11 @@ export default function QuarterfinalTab() {
                                                     min={0}
                                                     max={winLegs}
                                                 />
-                                            </td>
-                                            <td>{teamNames[match.team1]}</td>
-                                            <td>vs</td>
-                                            <td>{teamNames[match.team2]}</td>
-                                            <td>
+                                            </TableCell>
+                                            <TableCell>{teamNames[match.team1]}</TableCell>
+                                            <TableCell>vs</TableCell>
+                                            <TableCell>{teamNames[match.team2]}</TableCell>
+                                            <TableCell>
                                                 <input
                                                     type={"number"}
                                                     value={match[`legs_${match.team2}`]}
@@ -163,45 +163,45 @@ export default function QuarterfinalTab() {
                                                     min={0}
                                                     max={winLegs}
                                                 />
-                                            </td>
-                                        </tr>
+                                            </TableCell>
+                                        </TableRow>
                                     ))}
-                            </tbody>
+                            </TableBody>
                         ) : (
-                            <tbody>
-                                <tr>
-                                    <td>QF1</td>
+                            <TableBody>
+                                <TableRow>
+                                    <TableCell>QF1</TableCell>
                                     <td />
-                                    <td>VR Platz 1</td>
-                                    <td>vs</td>
-                                    <td>VR Platz 8</td>
+                                    <TableCell>VR Platz 1</TableCell>
+                                    <TableCell>vs</TableCell>
+                                    <TableCell>VR Platz 8</TableCell>
                                     <td />
-                                </tr>
-                                <tr>
-                                    <td>QF2</td>
+                                </TableRow>
+                                <TableRow>
+                                    <TableCell>QF2</TableCell>
                                     <td />
-                                    <td>VR Platz 2</td>
-                                    <td>vs</td>
-                                    <td>VR Platz 7</td>
+                                    <TableCell>VR Platz 2</TableCell>
+                                    <TableCell>vs</TableCell>
+                                    <TableCell>VR Platz 7</TableCell>
                                     <td />
-                                </tr>
-                                <tr>
-                                    <td>QF3</td>
+                                </TableRow>
+                                <TableRow>
+                                    <TableCell>QF3</TableCell>
                                     <td />
-                                    <td>VR Platz 3</td>
-                                    <td>vs</td>
-                                    <td>VR Platz 6</td>
+                                    <TableCell>VR Platz 3</TableCell>
+                                    <TableCell>vs</TableCell>
+                                    <TableCell>VR Platz 6</TableCell>
                                     <td />
-                                </tr>
-                                <tr>
-                                    <td>QF4</td>
+                                </TableRow>
+                                <TableRow>
+                                    <TableCell>QF4</TableCell>
                                     <td />
-                                    <td>VR Platz 4</td>
-                                    <td>vs</td>
-                                    <td>VR Platz 5</td>
+                                    <TableCell>VR Platz 4</TableCell>
+                                    <TableCell>vs</TableCell>
+                                    <TableCell>VR Platz 5</TableCell>
                                     <td />
-                                </tr>
-                            </tbody>
+                                </TableRow>
+                            </TableBody>
                         )}
                     </table>
                     <br />
