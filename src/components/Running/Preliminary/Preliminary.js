@@ -6,6 +6,7 @@ import { useTournament } from "../../../context/TournamentContext";
 import { addTeamGame, generateQuarterfinals, getNumberMatchdays, saveSchedule, subscribeAllMatchdays, subscribeTeams, subscribeTournamentStatus, updateTournamentStatus } from "../../../services/firestoreService";
 import StandingsTable from "./StandingsTable";
 import MatchdayTabs from "./MatchdayTabs";
+import { Button } from "@mui/material";
 
 export default function Preliminary() {
     const { currentTournamentId } = useTournament();
@@ -14,6 +15,7 @@ export default function Preliminary() {
     const [preliminaryTabValue, setPreliminaryTabValue] = useState(0);
     const [numberMatchdays, setNumberMatchdays] = useState(0);
     const [allMatchdaysPlayed, setAllMatchdaysPlayed] = useState(false);
+    const [scheduleAvailable, setScheduleAvailable] = useState(false);
 
     useEffect(() => {
         if (!currentTournamentId) return;
@@ -138,6 +140,7 @@ export default function Preliminary() {
                 addTeamGame(currentTournamentId, team1, team2, matchday);
             });
         });
+        setScheduleAvailable(true);
     }
 
     return (
@@ -155,17 +158,17 @@ export default function Preliminary() {
             <StandingsTable teams={teams} />
             <br></br>
             <br></br>
-            <button
+            <Button
                 key={"make_schedule"}
                 onClick={handleMakeSchedule}
                 disabled={status !== "setup"}
             >
                 Vorrundenspielplan generieren
-            </button>
+            </Button>
             <button
                 key={"start_preliminary"}
                 onClick={handleStartPreliminary}
-                disabled={status !== "setup"}
+                disabled={status !== "setup" && !scheduleAvailable}
             >
                 Vorrunde beginnen
             </button>

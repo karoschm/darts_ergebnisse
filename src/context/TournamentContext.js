@@ -1,23 +1,22 @@
-import { createContext, useContext, useState } from "react";
+import { createContext, useContext } from "react";
+import { useParams } from "react-router-dom";
 
-const TournamentContext = createContext(null);
+const TournamentContext = createContext();
 
 export function TournamentProvider({ children }) {
-    const [currentTournamentId, setCurrentTournamentId] = useState(null);
+  const { tournamentId } = useParams();
 
-    return (
-        <TournamentContext.Provider
-            value={{ currentTournamentId, setCurrentTournamentId }}
-        >
-            {children}
-        </TournamentContext.Provider>
-    );
+  return (
+    <TournamentContext.Provider
+      value={{
+        currentTournamentId: tournamentId || null,
+      }}
+    >
+      {children}
+    </TournamentContext.Provider>
+  );
 }
 
 export function useTournament() {
-    const context = useContext(TournamentContext);
-    if (!context) {
-        throw new Error("useTournament must be used inside TournamentProvider");
-    }
-    return context;
+  return useContext(TournamentContext);
 }

@@ -1,4 +1,4 @@
-import { TableBody, TableCell, TableRow } from "@mui/material";
+import { Button, TableBody, TableCell, TableRow, TextField } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -53,12 +53,10 @@ export default function TeamSetup() {
                 flexDirection: "column",
                 alignItems: "center",
                 textAlign: "center",
-                padding: "0 20px"
+                padding: "40px"
             }}
         >
-            <label>
-                Bitte gib für alle Teams einen Namen ein
-            </label>
+            <h2>Teamnamen</h2>
             <table style={{
                 borderCollapse: "collapse",
                 alignContent: "center"
@@ -72,7 +70,7 @@ export default function TeamSetup() {
                                     <label key={`label_${team.id}`}>{team.id}</label>
                                 </TableCell>
                                 <TableCell key={`cell_input_${team.id}`}>
-                                    <input
+                                    <TextField
                                         key={`label_${team.id}`}
                                         value={teamNames[team.id]}
                                         onChange={e => handleInputChange(team.id, e.target.value)}
@@ -82,9 +80,10 @@ export default function TeamSetup() {
                         )}
                 </TableBody>
             </table>
-            <button type="submit">
+            <br />
+            <Button type="submit">
                 Turnier starten
-            </button>
+            </Button>
         </form>
     );
 }

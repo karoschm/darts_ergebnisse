@@ -30,6 +30,22 @@ const theme = createTheme({
     },
 
     components: {
+        MuiButton: {
+            defaultProps: {
+                variant: "outlined"
+            },
+            styleOverrides: {
+                root: {
+                    padding: "8px 18px",
+                },
+            },
+        },
+        MuiTextField: {
+            defaultProps: {
+                variant: "standard",
+                size: "small",
+            },
+        },
         MuiTabs: {
             styleOverrides: {
                 root: {

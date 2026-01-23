@@ -2,7 +2,7 @@ import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBa
 import { db } from "../firebase";
 
 export async function addTournament(tournamentName, numberTeams, numberMatchdays) {
-    let tournamentRef = doc(db, "tournaments", tournamentName);
+    const tournamentRef = doc(db, "tournaments", tournamentName);
     const tournamentSnap = await getDoc(tournamentRef);
     if (tournamentSnap.exists()) return `${tournamentName}_EXISTS`;
 
@@ -19,6 +19,13 @@ export async function addTournament(tournamentName, numberTeams, numberMatchdays
     }
     await createTeams(tournamentRef.id, numberTeams);
     return tournamentRef.id;
+}
+
+export async function checkIfTournamentExists(tournamentID) {
+    const snapshot = await getDocs(
+        collection(db, "tournaments", tournamentID, "teams")
+    );
+    return !snapshot.empty;
 }
 
 export async function getNumberMatchdays(tournamentID) {
@@ -41,7 +48,7 @@ async function createTeams(tournamentID, numberTeams) {
         const ref = doc(db, "tournaments", tournamentID, "teams", id);
 
         batch.set(ref, {
-            name: "",
+            name: id,
             wins: 0,
             losses: 0,
             own_score: 0,
