@@ -21,13 +21,17 @@ export default function Podium({ teams }) {
         >
             {podiumConfig.map((cfg, index) => (
                 <div>
-                    <Typography variant="h4" align="center">
+                    <Typography variant="h5" align="center" sx={{ 
+                        width: 200,
+                            whiteSpace: "normal",
+                            overflowWrap: "break-word",
+                            wordBreak: "break-word",}}>
                         {ordered[index]}
                     </Typography>
                     <Card
                         key={cfg.place}
                         sx={{
-                            width: 160,
+                            width: 200,
                             height: cfg.height,
                             bgcolor: cfg.color,
                             display: "flex",

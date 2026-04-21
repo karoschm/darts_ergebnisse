@@ -36,7 +36,9 @@ const theme = createTheme({
             },
             styleOverrides: {
                 root: {
-                    padding: "8px 18px",
+                    padding: "3px 8px",
+                    textTransform: "none",
+                    borderRadius: "6px"
                 },
             },
         },
@@ -69,6 +71,31 @@ const theme = createTheme({
                 },
             },
         },
+        MuiTable: {
+            styleOverrides: {
+                root: {
+                    tableLayout: "fixed",
+                    width: "60%",
+                },
+            },
+        },
+        MuiTableCell: {
+            styleOverrides: {
+                root: {
+                    whiteSpace: "normal",
+                    overflowWrap: "break-word",
+                    wordBreak: "break-word",
+                    padding: "12px 3px"
+                }
+            }
+        },
+        MuiTableHead: {
+            styleOverrides: {
+                root: {
+                    borderBottom: "2px solid #0f5132"
+                }
+            }
+        }
     },
 });
 

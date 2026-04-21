@@ -39,14 +39,16 @@ export default function Preliminary() {
                 (matchdays) => {
                     if (matchdays.length === 0) {
                         setAllMatchdaysPlayed(false);
+                        setScheduleAvailable(false);
                         return;
                     }
-        
+                    setScheduleAvailable(true);
+
                     const allPlayed = matchdays.every(md => {
                         const matches = md.matches || {};
                         return Object.values(matches).every(match => match.played === true);
                     });
-        
+
                     setAllMatchdaysPlayed(allPlayed);
                 }
             );
@@ -140,7 +142,7 @@ export default function Preliminary() {
                 addTeamGame(currentTournamentId, team1, team2, matchday);
             });
         });
-        setScheduleAvailable(true);
+        // setScheduleAvailable(true);
     }
 
     return (
@@ -158,6 +160,12 @@ export default function Preliminary() {
             <StandingsTable teams={teams} />
             <br></br>
             <br></br>
+            <div style={{
+                display: "flex",
+                gap: "15px",
+                justifyContent: "center", 
+                marginTop: "10px"
+            }} >
             <Button
                 key={"make_schedule"}
                 onClick={handleMakeSchedule}
@@ -165,13 +173,14 @@ export default function Preliminary() {
             >
                 Vorrundenspielplan generieren
             </Button>
-            <button
+            <Button
                 key={"start_preliminary"}
                 onClick={handleStartPreliminary}
-                disabled={status !== "setup" && !scheduleAvailable}
+                disabled={status !== "setup" || !scheduleAvailable}
             >
                 Vorrunde beginnen
-            </button>
+            </Button>
+            </div>
             <br></br>
             <Tabs
                 key={"preliminary_tabs"}
@@ -186,6 +195,14 @@ export default function Preliminary() {
             </Tabs>
             {[...Array(numberMatchdays).keys()].map(md => (
                 <div
+                    style={{
+                        flex: 1,
+                        minWidth: 0,
+                        display: "flex",
+                        flexDirection: "column",
+                        alignItems: "center",
+                        textAlign: "center",
+                    }}
                     key={md}
                     role="tabpanel"
                     hidden={preliminaryTabValue !== md}
@@ -195,15 +212,15 @@ export default function Preliminary() {
                     )}
                 </div>
             ))}
-            <br/>
-            <br/>
-            <button
+            <br />
+            <br />
+            <Button
                 key={"end_preliminary"}
                 onClick={handleFinishPreliminary}
                 disabled={!allMatchdaysPlayed || (status !== "group")}
             >
                 Vorrunde abschließen
-            </button>
+            </Button>
         </form>
     );
 }

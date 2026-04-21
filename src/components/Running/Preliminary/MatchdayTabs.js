@@ -1,4 +1,5 @@
-import { TableBody, TableCell, TableRow } from "@mui/material";
+import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
+// import NumberField from "../../NumberField";
 import { useState, useEffect } from "react";
 import { useTournament } from "../../../context/TournamentContext";
 import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus } from "../../../services/firestoreService";
@@ -70,7 +71,7 @@ export default function MatchdayTabs({ md }) {
     }
 
     return (
-        <table style={{
+        <Table style={{
             borderCollapse: "collapse",
             alignContent: "center"
         }}>
@@ -84,71 +85,80 @@ export default function MatchdayTabs({ md }) {
                     const gamePlayed = match.played
 
                     return gamePlayed ? (
-                        <TableRow key={mNumber} style={{ borderBottom: "1px solid #ccc" }}>
-
-                            <TableCell style={{ padding: "8px" }}>
-                                <input
+                        <TableRow key={mNumber}>
+                            <TableCell align="right" width="10%">
+                                <TextField
                                     type="number"
                                     style={{ width: "60px", textAlign: "center" }}
                                     disabled={status !== "group"}
                                     value={scoreTeam1}
-                                    onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value), team2)}
-                                    onBlur={e => saveScore(currentTournamentId, md, mNumber, team1, Number(e.target.value), team2)}
-                                    min={0}
-                                    max={501}
+                                    onChange={e => 
+                                        handleScoreChange(mNumber, team1, Number(e.target.value), team2)
+                                    }
+                                    onBlur={e => 
+                                        saveScore(currentTournamentId, md, mNumber, team1, Number(e.target.value), team2)
+                                    }
+                                    inputProps={{ min: 0, max: 501 }}
                                 />
                             </TableCell>
 
-                            <TableCell style={{ padding: "8px", whiteSpace: "nowrap" }}>
+                            <TableCell align="right" width="25%">
                                 {teamNames[team1]}
                             </TableCell>
 
-                            <TableCell style={{ padding: "8px", textAlign: "center" }}>
+                            <TableCell align="center" width="10%">
                                 vs
                             </TableCell>
 
-                            <TableCell style={{ padding: "8px", whiteSpace: "nowrap" }}>
+                            <TableCell align="left" width="25%">
                                 {teamNames[team2]}
                             </TableCell>
 
-                            <TableCell style={{ padding: "8px" }}>
-                                <input
+                            <TableCell align="left" width="10%">
+                                <TextField
                                     type="number"
                                     style={{ width: "60px", textAlign: "center" }}
                                     disabled={status !== "group"}
                                     value={scoreTeam2}
-                                    onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value), team1)}
-                                    onBlur={e => saveScore(currentTournamentId, md, mNumber, team2, Number(e.target.value), team1)}
-                                    min={0}
-                                    max={501}
+                                    onChange={e => 
+                                        handleScoreChange(mNumber, team2, Number(e.target.value), team1)
+                                    }
+                                    onBlur={e => 
+                                        saveScore(currentTournamentId, md, mNumber, team2, Number(e.target.value), team1)
+                                    }
+                                    inputProps={{ min: 0, max: 501 }}
                                 />
                             </TableCell>
 
+                            <TableCell width="20%" />
+
                         </TableRow>
                     ) : (
-                        <TableRow key={mNumber} style={{ borderBottom: "1px solid #ccc" }}>
+                        <TableRow key={mNumber}>
 
-                            <TableCell />
+                            <TableCell width="10%" />
 
-                            <TableCell style={{ padding: "8px", whiteSpace: "nowrap" }}>
+                            <TableCell align="right" width="25%">
                                 {teamNames[team1]}
                             </TableCell>
 
-                            <TableCell style={{ padding: "8px", textAlign: "center" }}>
+                            <TableCell align="center" width="10%">
                                 vs
                             </TableCell>
 
-                            <TableCell style={{ padding: "8px", whiteSpace: "nowrap" }}>
+                            <TableCell align="left" width="25%">
                                 {teamNames[team2]}
                             </TableCell>
 
-                            <TableCell style={{ padding: "8px" }}>
-                                <button 
+                            <TableCell width="10%" />
+
+                            <TableCell width="20%">
+                                <Button
                                     onClick={() => enterResult(mNumber)}
                                     disabled={status !== "group"}
                                 >
                                     Ergebnis eintragen
-                                </button>
+                                </Button>
                             </TableCell>
 
                         </TableRow>
@@ -156,6 +166,6 @@ export default function MatchdayTabs({ md }) {
                 })
                 }
             </TableBody>
-        </table>
+        </Table>
     );
 }

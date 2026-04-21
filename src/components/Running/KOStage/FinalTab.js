@@ -1,4 +1,4 @@
-import { TableCell, TableHead, TableRow } from "@mui/material";
+import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
@@ -92,153 +92,147 @@ export default function FinalTab() {
             textAlign: "center",
             padding: "20px 20px 60px 20px"
         }}>
-            <label>First to</label>
-            <input
+            <label>Gewinnlegs: First to</label>
+            <TextField
+                style={{ width: "60px", paddingTop: "10px" }}
                 type={"number"}
                 value={winLegs}
                 disabled={status !== "final"}
                 onChange={e => handleWinLegsChange(Number(e.target.value))}
+                inputProps={{ min: 0 }}
             />
             <br />
-            {status !== "group" && (
-                <div>
-                    <h2>Finale</h2>
-                    <table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Legs</TableCell>
-                                <TableCell>Team 1</TableCell>
-                                <TableCell></TableCell>
-                                <TableCell>Team 2</TableCell>
-                                <TableCell>Legs</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        <tbody>
-                            {finalReady ? (
-                                <TableRow>
-                                    <TableCell>
-                                        <input
-                                            type={"number"}
-                                            value={finals.matches.final[`legs_${finals.matches.final.team1}`]}
-                                            disabled={status !== "final"}
-                                            onChange={e =>
-                                                handleLegScoreChange(
-                                                    "final",
-                                                    finals.matches.final.team1,
-                                                    Number(e.target.value),
-                                                    finals.matches.final.team2
-                                                )
-                                            }
-                                            min={0}
-                                            max={winLegs}
-                                        />
-                                    </TableCell>
-                                    <TableCell>{teamNames[finals.matches.final.team1]}</TableCell>
-                                    <TableCell>vs</TableCell>
-                                    <TableCell>{teamNames[finals.matches.final.team2]}</TableCell>
-                                    <TableCell>
-                                        <input
-                                            type={"number"}
-                                            value={finals.matches.final[`legs_${finals.matches.final.team2}`]}
-                                            disabled={status !== "final"}
-                                            onChange={e =>
-                                                handleLegScoreChange(
-                                                    "final",
-                                                    finals.matches.final.team2,
-                                                    Number(e.target.value),
-                                                    finals.matches.final.team1
-                                                )
-                                            }
-                                            min={0}
-                                            max={winLegs}
-                                        />
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                <TableRow>
-                                    <td />
-                                    <TableCell>Sieger SF1</TableCell>
-                                    <TableCell>vs</TableCell>
-                                    <TableCell>Sieger SF 2</TableCell>
-                                    <td />
-                                </TableRow>
-                            )}
-                        </tbody>
-                    </table>
-                    <br />
-                    <br />
-                    <h2>Spiel um Platz 3</h2>
-                    <table>
-                        <thead>
-                            <TableRow>
-                                <TableCell>Legs</TableCell>
-                                <TableCell>Team 1</TableCell>
-                                <TableCell></TableCell>
-                                <TableCell>Team 2</TableCell>
-                                <TableCell>Legs</TableCell>
-                            </TableRow>
-                        </thead>
-                        <tbody>
-                            {place3Ready ? (
-                                <TableRow>
-                                    <TableCell>
-                                        <input
-                                            type={"number"}
-                                            value={finals.matches.place3[`legs_${finals.matches.place3.team1}`]}
-                                            disabled={status !== "final"}
-                                            onChange={e =>
-                                                handleLegScoreChange(
-                                                    "place3",
-                                                    finals.matches.place3.team1,
-                                                    Number(e.target.value),
-                                                    finals.matches.place3.team2
-                                                )
-                                            }
-                                            min={0}
-                                            max={winLegs}
-                                        />
-                                    </TableCell>
-                                    <TableCell>{teamNames[finals.matches.place3.team1]}</TableCell>
-                                    <TableCell>vs</TableCell>
-                                    <TableCell>{teamNames[finals.matches.place3.team2]}</TableCell>
-                                    <TableCell>
-                                        <input
-                                            type={"number"}
-                                            value={finals.matches.place3[`legs_${finals.matches.place3.team2}`]}
-                                            disabled={status !== "final"}
-                                            onChange={e =>
-                                                handleLegScoreChange(
-                                                    "place3",
-                                                    finals.matches.place3.team2,
-                                                    Number(e.target.value),
-                                                    finals.matches.place3.team1
-                                                )
-                                            }
-                                            min={0}
-                                            max={winLegs}
-                                        />
-                                    </TableCell>
-                                </TableRow>
-                            ) : (
-                                <TableRow>
-                                    <td />
-                                    <TableCell>Verlierer SF1</TableCell>
-                                    <TableCell>vs</TableCell>
-                                    <TableCell>Verlierer SF 2</TableCell>
-                                    <td />
-                                </TableRow>
-                            )}
-                        </tbody>
-                    </table>
-                    <br />
-                    <button
-                        onClick={handleFinishFinal}
-                        disabled={!finalReady || !place3Ready || !allFinalsPlayed || status !== "final"}
-                    >
-                        Turnier abschließen
-                    </button>
-                </div>
-            )}
+            <h2>Finale</h2>
+            <Table>
+                <TableHead>
+                    <TableRow>
+                        <TableCell align="right" width="15%">Legs</TableCell>
+                        <TableCell align="right" width="30%">Team 1</TableCell>
+                        <TableCell align="center" width="10%"></TableCell>
+                        <TableCell align="left" width="30%">Team 2</TableCell>
+                        <TableCell align="left" width="15%">Legs</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {finalReady ? (
+                        <TableRow>
+                            <TableCell align="right">
+                                <TextField
+                                    type={"number"}
+                                    value={finals.matches.final[`legs_${finals.matches.final.team1}`]}
+                                    disabled={status !== "final"}
+                                    onChange={e =>
+                                        handleLegScoreChange(
+                                            "final",
+                                            finals.matches.final.team1,
+                                            Number(e.target.value),
+                                            finals.matches.final.team2
+                                        )
+                                    }
+                                    inputProps={{ min: 0, max: winLegs }}
+                                />
+                            </TableCell>
+                            <TableCell align="right">{teamNames[finals.matches.final.team1]}</TableCell>
+                            <TableCell align="center">vs</TableCell>
+                            <TableCell align="left">{teamNames[finals.matches.final.team2]}</TableCell>
+                            <TableCell align="left">
+                                <TextField
+                                    type={"number"}
+                                    value={finals.matches.final[`legs_${finals.matches.final.team2}`]}
+                                    disabled={status !== "final"}
+                                    onChange={e =>
+                                        handleLegScoreChange(
+                                            "final",
+                                            finals.matches.final.team2,
+                                            Number(e.target.value),
+                                            finals.matches.final.team1
+                                        )
+                                    }
+                                    inputProps={{ min: 0, max: winLegs }}
+                                />
+                            </TableCell>
+                        </TableRow>
+                    ) : (
+                        <TableRow>
+                            <td />
+                            <TableCell>Sieger SF1</TableCell>
+                            <TableCell>vs</TableCell>
+                            <TableCell>Sieger SF 2</TableCell>
+                            <td />
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+            <br />
+            <br />
+            <h2>Spiel um Platz 3</h2>
+            <Table>
+                <TableHead>
+                    <TableRow>
+                        <TableCell align="right" width="15%">Legs</TableCell>
+                        <TableCell align="right" width="30%">Team 1</TableCell>
+                        <TableCell align="center" width="10%"></TableCell>
+                        <TableCell align="left" width="30%">Team 2</TableCell>
+                        <TableCell align="left" width="15%">Legs</TableCell>
+                    </TableRow>
+                </TableHead>
+                <TableBody>
+                    {place3Ready ? (
+                        <TableRow>
+                            <TableCell align="right">
+                                <TextField
+                                    type={"number"}
+                                    value={finals.matches.place3[`legs_${finals.matches.place3.team1}`]}
+                                    disabled={status !== "final"}
+                                    onChange={e =>
+                                        handleLegScoreChange(
+                                            "place3",
+                                            finals.matches.place3.team1,
+                                            Number(e.target.value),
+                                            finals.matches.place3.team2
+                                        )
+                                    }
+                                    inputProps={{ min: 0, max: winLegs }}
+                                />
+                            </TableCell>
+                            <TableCell align="right">{teamNames[finals.matches.place3.team1]}</TableCell>
+                            <TableCell align="center">vs</TableCell>
+                            <TableCell align="left">{teamNames[finals.matches.place3.team2]}</TableCell>
+                            <TableCell align="left">
+                                <TextField
+                                    type={"number"}
+                                    value={finals.matches.place3[`legs_${finals.matches.place3.team2}`]}
+                                    disabled={status !== "final"}
+                                    onChange={e =>
+                                        handleLegScoreChange(
+                                            "place3",
+                                            finals.matches.place3.team2,
+                                            Number(e.target.value),
+                                            finals.matches.place3.team1
+                                        )
+                                    }
+                                    inputProps={{ min: 0, max: winLegs }}
+                                />
+                            </TableCell>
+                        </TableRow>
+                    ) : (
+                        <TableRow>
+                            <td />
+                            <TableCell>Verlierer SF1</TableCell>
+                            <TableCell>vs</TableCell>
+                            <TableCell>Verlierer SF 2</TableCell>
+                            <td />
+                        </TableRow>
+                    )}
+                </TableBody>
+            </Table>
+            <br />
+            <Button
+                onClick={handleFinishFinal}
+                disabled={!finalReady || !place3Ready || !allFinalsPlayed || status !== "final"}
+            >
+                Turnier abschließen
+            </Button>
         </div>
     )
 }

@@ -1,4 +1,4 @@
-import { TableCell, TableHead, TableRow } from "@mui/material";
+import { Table, TableCell, TableHead, TableRow } from "@mui/material";
 
 export default function StandingsTable({ teams }) {
     function getTableOrder() {
@@ -11,21 +11,30 @@ export default function StandingsTable({ teams }) {
     }
 
     return (
-        <div>
+        <div
+        style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+        }}
+    >
             <h2>
                 Tabelle
             </h2>
-            <table style={{
+            <Table style={{
                 borderCollapse: "collapse",
                 alignContent: "center"
             }}>
                 <TableHead>
                     <TableRow>
-                        <TableCell>Platzierung</TableCell>
-                        <TableCell>Team</TableCell>
-                        <TableCell>Siege</TableCell>
-                        <TableCell>Niederlagen</TableCell>
-                        <TableCell>Punkteverhältnis</TableCell>
+                        <TableCell width="10%">#</TableCell>
+                        <TableCell width="55%" align="center">Team</TableCell>
+                        <TableCell width="10%" align="center">W</TableCell>
+                        <TableCell width="10%" align="center">L</TableCell>
+                        <TableCell width="15%" align="right">+/-</TableCell>
                     </TableRow>
                 </TableHead>
                 <tbody>
@@ -59,7 +68,7 @@ export default function StandingsTable({ teams }) {
                         </TableRow>
                     ))}
                 </tbody>
-            </table>
+            </Table>
         </div>
     );
 }

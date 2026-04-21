@@ -1,4 +1,4 @@
-import { TableBody, TableCell, TableHead, TableRow } from "@mui/material";
+import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
@@ -37,7 +37,6 @@ export default function QuarterfinalTab() {
                 (data) => {
                     setQuarterfinals(data);
 
-                    // Abgeleitet: prüfen, ob alle Matches played === true
                     const matches = data.matches || {};
                     const allPlayed = Object.values(matches).every(match => match.played === true);
                     setAllQFsPlayed(allPlayed);
@@ -113,107 +112,106 @@ export default function QuarterfinalTab() {
             textAlign: "center",
             padding: "20px 20px 60px 20px"
         }}>
-            <label>First to</label>
-            <input
+            <label>Gewinnlegs: First to</label>
+            <TextField
+                style={{ width: "60px", paddingTop: "10px" }}
                 type={"number"}
                 value={winLegs}
                 disabled={status !== "qf"}
                 onChange={e => handleWinLegsChange(Number(e.target.value))}
+                inputProps={{ min: 0 }}
             />
             <br />
-            {status !== "group" && (
-                <div>
-                    <table>
-                        <TableHead>
-                            <TableRow>
-                                <TableCell>Match</TableCell>
-                                <TableCell>Legs</TableCell>
-                                <TableCell>Team 1</TableCell>
-                                <TableCell></TableCell>
-                                <TableCell>Team 2</TableCell>
-                                <TableCell>Legs</TableCell>
-                            </TableRow>
-                        </TableHead>
-                        {qfReady ? (
-                            <TableBody>
-                                {Object.entries(quarterfinals.matches)
-                                    .sort(([mId1, m1], [mId2, m2]) => mId1.localeCompare(mId2))
-                                    .map(([matchId, match]) => (
-                                        <TableRow key={matchId}>
-                                            <TableCell>{matchId}</TableCell>
-                                            <TableCell>
-                                                <input
-                                                    type={"number"}
-                                                    value={match[`legs_${match.team1}`]}
-                                                    disabled={status !== "qf"}
-                                                    onChange={e => handleLegScoreChange(matchId, match.team1, Number(e.target.value), match.team2)}
-                                                    min={0}
-                                                    max={winLegs}
-                                                />
-                                            </TableCell>
-                                            <TableCell>{teamNames[match.team1]}</TableCell>
-                                            <TableCell>vs</TableCell>
-                                            <TableCell>{teamNames[match.team2]}</TableCell>
-                                            <TableCell>
-                                                <input
-                                                    type={"number"}
-                                                    value={match[`legs_${match.team2}`]}
-                                                    disabled={status !== "qf"}
-                                                    onChange={e => handleLegScoreChange(matchId, match.team2, Number(e.target.value), match.team1)}
-                                                    min={0}
-                                                    max={winLegs}
-                                                />
-                                            </TableCell>
-                                        </TableRow>
-                                    ))}
-                            </TableBody>
-                        ) : (
-                            <TableBody>
-                                <TableRow>
-                                    <TableCell>QF1</TableCell>
-                                    <td />
-                                    <TableCell>VR Platz 1</TableCell>
-                                    <TableCell>vs</TableCell>
-                                    <TableCell>VR Platz 8</TableCell>
-                                    <td />
+            <Table>
+                <TableHead>
+                    <TableRow>
+                        <TableCell align="center" width="15%">Match</TableCell>
+                        <TableCell align="right" width="10%">Legs</TableCell>
+                        <TableCell align="right" width="25%">Team 1</TableCell>
+                        <TableCell align="center" width="10%"></TableCell>
+                        <TableCell align="left" width="25%">Team 2</TableCell>
+                        <TableCell align="left" width="10%">Legs</TableCell>
+                    </TableRow>
+                </TableHead>
+                {qfReady ? (
+                    <TableBody>
+                        {Object.entries(quarterfinals.matches)
+                            .sort(([mId1, m1], [mId2, m2]) => mId1.localeCompare(mId2))
+                            .map(([matchId, match]) => (
+                                <TableRow key={matchId}>
+                                    <TableCell align="center">{matchId}</TableCell>
+                                    <TableCell align="right">
+                                        <TextField
+                                            type={"number"}
+                                            value={match[`legs_${match.team1}`]}
+                                            disabled={status !== "qf"}
+                                            onChange={e => handleLegScoreChange(
+                                                matchId, match.team1, Number(e.target.value), match.team2
+                                            )}
+                                            inputProps={{ min: 0, max: winLegs }}
+                                        />
+                                    </TableCell>
+                                    <TableCell align="right">{teamNames[match.team1]}</TableCell>
+                                    <TableCell align="center">vs</TableCell>
+                                    <TableCell align="left">{teamNames[match.team2]}</TableCell>
+                                    <TableCell align="left">
+                                        <TextField
+                                            type={"number"}
+                                            value={match[`legs_${match.team2}`]}
+                                            disabled={status !== "qf"}
+                                            onChange={e => handleLegScoreChange(
+                                                matchId, match.team2, Number(e.target.value), match.team1
+                                            )}
+                                            inputProps={{ min: 0, max: winLegs }}
+                                        />
+                                    </TableCell>
                                 </TableRow>
-                                <TableRow>
-                                    <TableCell>QF2</TableCell>
-                                    <td />
-                                    <TableCell>VR Platz 2</TableCell>
-                                    <TableCell>vs</TableCell>
-                                    <TableCell>VR Platz 7</TableCell>
-                                    <td />
-                                </TableRow>
-                                <TableRow>
-                                    <TableCell>QF3</TableCell>
-                                    <td />
-                                    <TableCell>VR Platz 3</TableCell>
-                                    <TableCell>vs</TableCell>
-                                    <TableCell>VR Platz 6</TableCell>
-                                    <td />
-                                </TableRow>
-                                <TableRow>
-                                    <TableCell>QF4</TableCell>
-                                    <td />
-                                    <TableCell>VR Platz 4</TableCell>
-                                    <TableCell>vs</TableCell>
-                                    <TableCell>VR Platz 5</TableCell>
-                                    <td />
-                                </TableRow>
-                            </TableBody>
-                        )}
-                    </table>
-                    <br />
-                    <button
-                        onClick={handleFinishQuarterfinal}
-                        disabled={!allQFsPlayed || (status !== "qf")}
-                    >
-                        Viertelfinale abschließen
-                    </button>
-                </div>
-            )}
-
+                            ))}
+                    </TableBody>
+                ) : (
+                    <TableBody>
+                        <TableRow>
+                            <TableCell>QF1</TableCell>
+                            <TableCell />
+                            <TableCell>VR Platz 1</TableCell>
+                            <TableCell>vs</TableCell>
+                            <TableCell>VR Platz 8</TableCell>
+                            <TableCell />
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>QF2</TableCell>
+                            <TableCell />
+                            <TableCell>VR Platz 2</TableCell>
+                            <TableCell>vs</TableCell>
+                            <TableCell>VR Platz 7</TableCell>
+                            <TableCell />
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>QF3</TableCell>
+                            <TableCell />
+                            <TableCell>VR Platz 3</TableCell>
+                            <TableCell>vs</TableCell>
+                            <TableCell>VR Platz 6</TableCell>
+                            <TableCell />
+                        </TableRow>
+                        <TableRow>
+                            <TableCell>QF4</TableCell>
+                            <TableCell />
+                            <TableCell>VR Platz 4</TableCell>
+                            <TableCell>vs</TableCell>
+                            <TableCell>VR Platz 5</TableCell>
+                            <TableCell />
+                        </TableRow>
+                    </TableBody>
+                )}
+            </Table>
+            <br />
+            <Button
+                onClick={handleFinishQuarterfinal}
+                disabled={!allQFsPlayed || (status !== "qf")}
+            >
+                Viertelfinale abschließen
+            </Button>
         </div>
     )
 }
