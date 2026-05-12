@@ -1,6 +1,9 @@
-import { List, ListItem, ListItemText, Paper } from "@mui/material";
+import { List, ListItem, ListItemText, Paper, useTheme, useMediaQuery } from "@mui/material";
 
 export default function FinalRankList({ teams, startRank = 4 }) {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
     return (
         <Paper sx={{ width: "100%", maxWidth: 500 }}>
             <List>

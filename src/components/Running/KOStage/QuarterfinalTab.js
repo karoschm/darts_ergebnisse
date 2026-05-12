@@ -1,8 +1,9 @@
-import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField } from "@mui/material";
+import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, useTheme, useMediaQuery } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
 import { generateSemifinals, getAllTeams, saveKOScore, subscribeKnockoutRound, subscribeTournamentStatus, updateAllKOsPlayed, updateTournamentStatus } from "../../../services/firestoreService";
+
 
 export default function QuarterfinalTab() {
     const { currentTournamentId } = useTournament();
@@ -12,8 +13,9 @@ export default function QuarterfinalTab() {
     const [allQFsPlayed, setAllQFsPlayed] = useState(false);
     const [winLegs, setWinLegs] = useState(3);
 
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
     const qfMatches = quarterfinals?.matches?.QF1;
-
     const qfReady = Boolean(qfMatches?.team1 && qfMatches?.team2);
 
     useEffect(() => {
@@ -102,7 +104,156 @@ export default function QuarterfinalTab() {
         updateTournamentStatus(currentTournamentId, "sf");
     }
 
-    return (
+    return isMobile ? (
+        <div style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            padding: "20px 20px 60px 20px"
+        }}
+        >
+            <label>Gewinnlegs: First to</label>
+            <TextField
+                style={{ width: "60px", paddingTop: "10px" }}
+                type={"number"}
+                value={winLegs}
+                disabled={status !== "qf"}
+                onChange={e => handleWinLegsChange(Number(e.target.value))}
+                inputProps={{ min: 0 }}
+            />
+            <br />
+            {qfReady ? (
+                <div>
+                    {Object.entries(quarterfinals.matches)
+                        .sort(([mId1, m1], [mId2, m2]) => mId1.localeCompare(mId2))
+                        .map(([matchId, match]) => {
+                            // const match = matches[matchId];
+                            const team1 = match.team1;
+                            const team2 = match.team2;
+
+                            return (
+                                <div
+                                    key={matchId}
+                                    style={{
+                                        border: "1px solid #ccc",
+                                        borderRadius: 10,
+                                        padding: 12,
+                                        marginBottom: 12,
+                                    }}
+                                >
+                                    <div style={{ textAlign: "left", margin: "6px 20%" }}>{matchId}</div>
+                                    <div style={{
+                                        flex: 1,
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        textAlign: "center"
+                                    }}>
+                                        <div>{teamNames[team1]}</div>
+
+                                        <TextField
+                                            style={{ width: "50%" }}
+                                            type="number"
+                                            value={match[`legs_${match.team1}`]}
+                                            onChange={e => handleLegScoreChange(
+                                                matchId, match.team1, Number(e.target.value), match.team2
+                                            )}
+                                            fullWidth
+                                            inputProps={{ min: 0, max: winLegs }}
+                                        />
+                                    </div>
+
+                                    <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                                    <div style={{
+                                        flex: 1,
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        textAlign: "center"
+                                    }}>
+                                        <div>{teamNames[team2]}</div>
+
+                                        <TextField
+                                            style={{ width: "50%" }}
+                                            type="number"
+                                            value={match[`legs_${match.team2}`]}
+                                            onChange={e => handleLegScoreChange(
+                                                matchId, match.team2, Number(e.target.value), match.team1
+                                            )}
+                                            fullWidth
+                                            inputProps={{ min: 0, max: winLegs }}
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                </div>
+            ) : (
+                <div>
+                    <div
+                        key="qf1_not_ready"
+                        style={{
+                            border: "1px solid #ccc",
+                            borderRadius: 10,
+                            padding: 12,
+                            marginBottom: 12,
+                        }}
+                    >
+                        <div>VR Platz 1</div>
+                        <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                        <div>VR Platz 8</div>
+                    </div>
+                    <div
+                        key="qf2_not_ready"
+                        style={{
+                            border: "1px solid #ccc",
+                            borderRadius: 10,
+                            padding: 12,
+                            marginBottom: 12,
+                        }}
+                    >
+                        <div>VR Platz 2</div>
+                        <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                        <div>VR Platz 7</div>
+                    </div>
+                    <div
+                        key="qf3_not_ready"
+                        style={{
+                            border: "1px solid #ccc",
+                            borderRadius: 10,
+                            padding: 12,
+                            marginBottom: 12,
+                        }}
+                    >
+                        <div>VR Platz 3</div>
+                        <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                        <div>VR Platz 6</div>
+                    </div>
+                    <div
+                        key="qf4_not_ready"
+                        style={{
+                            border: "1px solid #ccc",
+                            borderRadius: 10,
+                            padding: 12,
+                            marginBottom: 12,
+                        }}
+                    >
+                        <div>VR Platz 4</div>
+                        <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                        <div>VR Platz 5</div>
+                    </div>
+                </div>
+            )}
+
+            <Button
+                onClick={handleFinishQuarterfinal}
+                disabled={!allQFsPlayed || (status !== "qf")}
+            >
+                Viertelfinale abschließen
+            </Button>
+        </div>
+    ) : (
         <div style={{
             flex: 1,
             minWidth: 0,

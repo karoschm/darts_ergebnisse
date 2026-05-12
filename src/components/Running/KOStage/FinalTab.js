@@ -1,4 +1,4 @@
-import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField } from "@mui/material";
+import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, useTheme, useMediaQuery } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
@@ -12,6 +12,8 @@ export default function FinalTab() {
     const [teamNames, setTeamNames] = useState({});
     const [winLegs, setWinLegs] = useState(5);
 
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
     const finalMatch = finals?.matches?.final;
     const place3Match = finals?.matches?.place3;
 
@@ -82,7 +84,196 @@ export default function FinalTab() {
         updateTournamentStatus(currentTournamentId, "finished");
     }
 
-    return (
+    return isMobile ? (
+        <div style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            padding: "20px 20px 60px 20px"
+        }}
+        >
+            <label>Gewinnlegs: First to</label>
+            <TextField
+                style={{ width: "60px", paddingTop: "10px" }}
+                type={"number"}
+                value={winLegs}
+                disabled={status !== "final"}
+                onChange={e => handleWinLegsChange(Number(e.target.value))}
+                inputProps={{ min: 0 }}
+            />
+            <br />
+            <h2>Finale</h2>
+            {finalReady ? (
+                <div
+                    key="finale"
+                    style={{
+                        border: "1px solid #ccc",
+                        borderRadius: 10,
+                        padding: 12,
+                        marginBottom: 12,
+                    }}
+                >
+                    <div style={{
+                        flex: 1,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        textAlign: "center"
+                    }}>
+                        <div>{teamNames[finals.matches.final.team1]}</div>
+
+                        <TextField
+                            style={{ width: "50%" }}
+                            type="number"
+                            value={finals.matches.final[`legs_${finals.matches.final.team1}`]}
+                            disabled={status !== "final"}
+                            onChange={e =>
+                                handleLegScoreChange(
+                                    "final",
+                                    finals.matches.final.team1,
+                                    Number(e.target.value),
+                                    finals.matches.final.team2
+                                )
+                            }
+                            inputProps={{ min: 0, max: winLegs }}
+                            fullWidth
+                        />
+                    </div>
+
+                    <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                    <div style={{
+                        flex: 1,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        textAlign: "center"
+                    }}>
+                        <div>{teamNames[finals.matches.final.team2]}</div>
+
+                        <TextField
+                            style={{ width: "50%" }}
+                            type="number"
+                            value={finals.matches.final[`legs_${finals.matches.final.team2}`]}
+                            disabled={status !== "final"}
+                            onChange={e =>
+                                handleLegScoreChange(
+                                    "final",
+                                    finals.matches.final.team2,
+                                    Number(e.target.value),
+                                    finals.matches.final.team1
+                                )
+                            }
+                            inputProps={{ min: 0, max: winLegs }}
+                            fullWidth
+                        />
+                    </div>
+                </div>
+            ) : (
+                <div
+                    key="finale_not_ready"
+                    style={{
+                        border: "1px solid #ccc",
+                        borderRadius: 10,
+                        padding: 12,
+                        marginBottom: 12,
+                    }}
+                >
+                    <div>Sieger SF1</div>
+                    <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                    <div>Sieger SF2</div>
+                </div>
+            )}
+            <br />
+            <br />
+            <h2>Spiel um Platz 3</h2>
+            {place3Ready ? (
+                <div
+                    key="place3"
+                    style={{
+                        border: "1px solid #ccc",
+                        borderRadius: 10,
+                        padding: 12,
+                        marginBottom: 12,
+                    }}
+                >
+                    <div style={{
+                        flex: 1,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        textAlign: "center"
+                    }}>
+                        <div>{teamNames[finals.matches.place3.team1]}</div>
+
+                        <TextField
+                            style={{ width: "50%" }}
+                            type="number"
+                            value={finals.matches.place3[`legs_${finals.matches.place3.team1}`]}
+                            disabled={status !== "final"}
+                            onChange={e =>
+                                handleLegScoreChange(
+                                    "place3",
+                                    finals.matches.place3.team1,
+                                    Number(e.target.value),
+                                    finals.matches.place3.team2
+                                )
+                            }
+                            inputProps={{ min: 0, max: winLegs }}
+                            fullWidth
+                        />
+                    </div>
+
+                    <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                    <div style={{
+                        flex: 1,
+                        display: "flex",
+                        justifyContent: "space-between",
+                        textAlign: "center"
+                    }}>
+                        <div>{teamNames[finals.matches.place3.team2]}</div>
+
+                        <TextField
+                            style={{ width: "50%" }}
+                            type="number"
+                            value={finals.matches.place3[`legs_${finals.matches.place3.team2}`]}
+                            disabled={status !== "final"}
+                            onChange={e =>
+                                handleLegScoreChange(
+                                    "place3",
+                                    finals.matches.place3.team2,
+                                    Number(e.target.value),
+                                    finals.matches.place3.team1
+                                )
+                            }
+                            inputProps={{ min: 0, max: winLegs }}
+                            fullWidth
+                        />
+                    </div>
+                </div>
+            ) : (
+                <div
+                    key="place3_not_ready"
+                    style={{
+                        border: "1px solid #ccc",
+                        borderRadius: 10,
+                        padding: 12,
+                        marginBottom: 12,
+                    }}
+                >
+                    <div>Verlierer SF1</div>
+                    <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                    <div>Verlierer SF2</div>
+                </div>
+            )}
+            <br />
+            <Button
+                onClick={handleFinishFinal}
+                disabled={!finalReady || !place3Ready || !allFinalsPlayed || status !== "final"}
+            >
+                Turnier abschließen
+            </Button>
+        </div>
+    ) : (
         <div style={{
             flex: 1,
             minWidth: 0,
@@ -157,7 +348,7 @@ export default function FinalTab() {
                             <td />
                             <TableCell>Sieger SF1</TableCell>
                             <TableCell>vs</TableCell>
-                            <TableCell>Sieger SF 2</TableCell>
+                            <TableCell>Sieger SF2</TableCell>
                             <td />
                         </TableRow>
                     )}

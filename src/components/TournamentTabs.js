@@ -1,6 +1,9 @@
-import { Tabs, Tab, Box } from "@mui/material";
+import { Tabs, Tab, Box, useTheme, useMediaQuery } from "@mui/material";
 
 export default function TournamentTabs({ value, onChange }) {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
     return (
         <Box
             sx={{
@@ -13,7 +16,10 @@ export default function TournamentTabs({ value, onChange }) {
             <Tabs
                 value={value}
                 onChange={onChange}
-                centered
+                // centered
+                variant={isMobile ? "scrollable" : "fullWidth"}
+                scrollButtons="auto"
+                sx={{ width: "100%" }}
             >
                 <Tab label="Vorrunde" value={0} />
                 <Tab label="Viertelfinale" value={1} />

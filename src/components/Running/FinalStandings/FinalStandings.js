@@ -4,13 +4,16 @@ import { useTournament } from "../../../context/TournamentContext";
 import { getAllTeams, subscribeTournamentStatus } from "../../../services/firestoreService";
 import FinalRankList from "./FinalRankList";
 import Podium from "./Podium";
+import { useTheme, useMediaQuery } from "@mui/material";
 
 export default function FinalStandings() {
     const { currentTournamentId } = useTournament();
     const [status, setStatus] = useState("");
-    // const [teams, setTeams] = useState({});
     const [top3Teams, setTop3Teams] = useState([]);
     const [remainingTeams, setRemainingTeams] = useState([]);
+    
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
     useEffect(() => {
         if (!currentTournamentId) return;

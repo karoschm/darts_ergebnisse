@@ -1,6 +1,9 @@
-import { Table, TableCell, TableHead, TableRow } from "@mui/material";
+import { Table, TableCell, TableHead, TableRow, useTheme, useMediaQuery } from "@mui/material";
 
 export default function StandingsTable({ teams }) {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
     function getTableOrder() {
         const sortedTeams = Object.values(teams).sort((a, b) => {
             if (b.wins !== a.wins) return b.wins - a.wins;
@@ -10,17 +13,43 @@ export default function StandingsTable({ teams }) {
         return sortedTeams;
     }
 
-    return (
+    return isMobile ? (
         <div
-        style={{
-            flex: 1,
-            minWidth: 0,
-            display: "flex",
-            flexDirection: "column",
-            alignItems: "center",
-            textAlign: "center",
-        }}
-    >
+            style={{
+                flex: 1,
+                minWidth: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+            }}
+        >
+            {getTableOrder().map((team, index) => (
+                <div
+                    key={team.id}
+                    style={{
+                        border: "1px solid #ccc",
+                        borderRadius: 8,
+                        padding: 12,
+                        marginBottom: 10,
+                    }}
+                >
+                    <strong>{index + 1}. {team.name}</strong>
+                    <div>W: {team.wins} | L: {team.losses} | {team.own_score}:{team.opponent_score}</div>
+                </div>
+            ))}
+        </div>
+    ) : (
+        <div
+            style={{
+                flex: 1,
+                minWidth: 0,
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center",
+                textAlign: "center",
+            }}
+        >
             <h2>
                 Tabelle
             </h2>

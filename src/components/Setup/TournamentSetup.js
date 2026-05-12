@@ -1,8 +1,9 @@
-import { Button, TextField } from "@mui/material";
+import { Button, TextField, useTheme, useMediaQuery } from "@mui/material";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import useFormStatus from "../../hooks/useFormStatus";
 import { addTournament } from "../../services/firestoreService";
+
 
 export default function TournamentSetup() {
     const navigate = useNavigate();
@@ -11,6 +12,9 @@ export default function TournamentSetup() {
     const [numberTeams, setNumberTeams] = useState(8);
     const [numberMatchdays, setNumberMatchdays] = useState(1);
     const [tournamentName, setTournamentName] = useState("");
+
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
     const handleSubmit = async (e) => {
         e.preventDefault();

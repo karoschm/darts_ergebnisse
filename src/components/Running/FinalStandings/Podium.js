@@ -1,17 +1,49 @@
-import { Box, Card, Typography } from "@mui/material";
+import { Box, Card, Typography, useTheme, useMediaQuery } from "@mui/material";
 import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 
-const podiumConfig = [
-    { place: 2, color: "#C0C0C0", height: 140 },
-    { place: 1, color: "#FFD700", height: 180 },
-    { place: 3, color: "#CD7F32", height: 120 },
-];
-
 export default function Podium({ teams }) {
-    // teams = [{ id, name }] in Reihenfolge [1,2,3]
-    const ordered = [teams[1], teams[0], teams[2]];
-
-    return (
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+    const ordered = isMobile ? [teams[0], teams[1], teams[2]] : [teams[1], teams[0], teams[2]];
+    const podiumConfig = isMobile ? [
+        { place: 1, color: "#FFD700", height: 160 },
+        { place: 2, color: "#C0C0C0", height: 160 },
+        { place: 3, color: "#CD7F32", height: 160 },
+    ] : [
+        { place: 2, color: "#C0C0C0", height: 140 },
+        { place: 1, color: "#FFD700", height: 180 },
+        { place: 3, color: "#CD7F32", height: 120 },
+    ];
+    
+    return isMobile ? (
+        <div>
+        {podiumConfig.map((cfg, index) => (
+                <div>
+                    <Card
+                        key={cfg.place}
+                        sx={{
+                            width: 250,
+                            height: cfg.height,
+                            bgcolor: cfg.color,
+                            display: "flex",
+                            flexDirection: "column",
+                            alignItems: "center",
+                            justifyContent: "center",
+                            borderRadius: 3,
+                        }}
+                    >
+                        {cfg.place === 1 && (
+                            <EmojiEventsIcon sx={{ fontSize: 40, mb: 1 }} />
+                        )}
+                        <Typography variant="h5">
+                            {cfg.place}. {ordered[index]}
+                        </Typography>
+                    </Card>
+                    <br/>
+                </div>
+            ))}
+            </div>
+    ) : (
         <Box
             display="flex"
             justifyContent="center"

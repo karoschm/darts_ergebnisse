@@ -1,4 +1,4 @@
-import { Button, TableBody, TableCell, TableRow, TextField } from "@mui/material";
+import { Button, TableBody, TableCell, TableRow, TextField, useTheme, useMediaQuery } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
@@ -10,6 +10,9 @@ export default function TeamSetup() {
     const { currentTournamentId } = useTournament();
     const [teams, setTeams] = useState({});
     const [teamNames, setTeamNames] = useState({});
+
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
     useEffect(() => {
         if (!currentTournamentId) return;

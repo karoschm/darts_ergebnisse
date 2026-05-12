@@ -1,14 +1,17 @@
-import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography } from "@mui/material";
-// import NumberField from "../../NumberField";
+import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography, useTheme, useMediaQuery } from "@mui/material";
 import { useState, useEffect } from "react";
 import { useTournament } from "../../../context/TournamentContext";
 import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus } from "../../../services/firestoreService";
+
 
 export default function MatchdayTabs({ md }) {
     const { currentTournamentId } = useTournament();
     const [matches, setMatches] = useState({});
     const [teamNames, setTeamNames] = useState({});
     const [status, setStatus] = useState("");
+
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
     useEffect(() => {
         if (!currentTournamentId) return;
@@ -70,7 +73,71 @@ export default function MatchdayTabs({ md }) {
         setMatchPlayed(currentTournamentId, md, matchKey);
     }
 
-    return (
+    return isMobile ? (
+        <div>
+            {Object.keys(matches).map((mNumber) => {
+                const match = matches[mNumber];
+                const team1 = match.team1;
+                const team2 = match.team2;
+
+                return (
+                    <div
+                        key={mNumber}
+                        style={{
+                            border: "1px solid #ccc",
+                            borderRadius: 10,
+                            padding: 12,
+                            marginBottom: 12,
+                        }}
+                    >
+
+                        <div style={{
+                            flex: 1,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            textAlign: "center"
+                        }}>
+                            <div>{teamNames[team1]}</div>
+
+                            <TextField
+                                style={{ width: "50%" }}
+                                type="number"
+                                value={match[`score_${team1}`]}
+                                disabled={status !== "group"}
+                                onChange={e =>
+                                    handleScoreChange(mNumber, team1, Number(e.target.value), team2)
+                                }
+                                fullWidth
+                                inputProps={{ min: 0, max: 501 }}
+                            />
+                        </div>
+
+                        <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                        <div style={{
+                            flex: 1,
+                            display: "flex",
+                            justifyContent: "space-between",
+                            textAlign: "center"
+                        }}>
+                            <div>{teamNames[team2]}</div>
+
+                            <TextField
+                                style={{ width: "50%" }}
+                                type="number"
+                                value={match[`score_${team2}`]}
+                                disabled={status !== "group"}
+                                onChange={e =>
+                                    handleScoreChange(mNumber, team2, Number(e.target.value), team1)
+                                }
+                                fullWidth
+                                inputProps={{ min: 0, max: 501 }}
+                            />
+                        </div>
+                    </div>
+                );
+            })}
+        </div>
+    ) : (
         <Table style={{
             borderCollapse: "collapse",
             alignContent: "center"
@@ -92,10 +159,10 @@ export default function MatchdayTabs({ md }) {
                                     style={{ width: "60px", textAlign: "center" }}
                                     disabled={status !== "group"}
                                     value={scoreTeam1}
-                                    onChange={e => 
+                                    onChange={e =>
                                         handleScoreChange(mNumber, team1, Number(e.target.value), team2)
                                     }
-                                    onBlur={e => 
+                                    onBlur={e =>
                                         saveScore(currentTournamentId, md, mNumber, team1, Number(e.target.value), team2)
                                     }
                                     inputProps={{ min: 0, max: 501 }}
@@ -120,10 +187,10 @@ export default function MatchdayTabs({ md }) {
                                     style={{ width: "60px", textAlign: "center" }}
                                     disabled={status !== "group"}
                                     value={scoreTeam2}
-                                    onChange={e => 
+                                    onChange={e =>
                                         handleScoreChange(mNumber, team2, Number(e.target.value), team1)
                                     }
-                                    onBlur={e => 
+                                    onBlur={e =>
                                         saveScore(currentTournamentId, md, mNumber, team2, Number(e.target.value), team1)
                                     }
                                     inputProps={{ min: 0, max: 501 }}

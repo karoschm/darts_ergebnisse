@@ -6,7 +6,8 @@ import { useTournament } from "../../../context/TournamentContext";
 import { addTeamGame, generateQuarterfinals, getNumberMatchdays, saveSchedule, subscribeAllMatchdays, subscribeTeams, subscribeTournamentStatus, updateTournamentStatus } from "../../../services/firestoreService";
 import StandingsTable from "./StandingsTable";
 import MatchdayTabs from "./MatchdayTabs";
-import { Button } from "@mui/material";
+import { Button, useTheme, useMediaQuery } from "@mui/material";
+
 
 export default function Preliminary() {
     const { currentTournamentId } = useTournament();
@@ -16,6 +17,9 @@ export default function Preliminary() {
     const [numberMatchdays, setNumberMatchdays] = useState(0);
     const [allMatchdaysPlayed, setAllMatchdaysPlayed] = useState(false);
     const [scheduleAvailable, setScheduleAvailable] = useState(false);
+
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
     useEffect(() => {
         if (!currentTournamentId) return;
@@ -142,7 +146,6 @@ export default function Preliminary() {
                 addTeamGame(currentTournamentId, team1, team2, matchday);
             });
         });
-        // setScheduleAvailable(true);
     }
 
     return (
@@ -186,7 +189,9 @@ export default function Preliminary() {
                 key={"preliminary_tabs"}
                 value={preliminaryTabValue}
                 onChange={handlePreliminaryTabChange}
-                variant="fullWidth"
+                variant={isMobile ? "scrollable" : "fullWidth"}
+                scrollButtons="auto"
+                sx={{ width: "100%" }}
             >
                 {[...Array(numberMatchdays).keys()].map(md => (
                     <Tab key={`tab_${md + 1}`} label={md + 1} value={md} />

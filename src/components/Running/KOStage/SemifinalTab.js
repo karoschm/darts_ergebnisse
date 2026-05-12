@@ -1,4 +1,4 @@
-import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField } from "@mui/material";
+import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, useTheme, useMediaQuery } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
@@ -12,8 +12,9 @@ export default function SemifinalTab() {
     const [teamNames, setTeamNames] = useState({});
     const [winLegs, setWinLegs] = useState(4);
 
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
     const sfMatches = semifinals?.matches?.SF1;
-
     const sfReady = Boolean(sfMatches?.team1 && sfMatches?.team2);
 
     useEffect(() => {
@@ -101,7 +102,141 @@ export default function SemifinalTab() {
         updateTournamentStatus(currentTournamentId, "final");
     }
 
-    return (
+    return isMobile ? (
+        <div style={{
+            flex: 1,
+            minWidth: 0,
+            display: "flex",
+            flexDirection: "column",
+            alignItems: "center",
+            textAlign: "center",
+            padding: "20px 20px 60px 20px"
+        }}
+        >
+            <label>Gewinnlegs: First to</label>
+            <TextField
+                style={{ width: "60px", paddingTop: "10px" }}
+                type={"number"}
+                value={winLegs}
+                disabled={status !== "sf"}
+                onChange={e => handleWinLegsChange(Number(e.target.value))}
+                inputProps={{ min: 0 }}
+            />
+            <br />
+            {sfReady ? (
+                <div>
+                    {Object.entries(semifinals.matches)
+                        .sort(([mId1, m1], [mId2, m2]) => mId1.localeCompare(mId2))
+                        .map(([matchId, match]) => {
+                            const team1 = match.team1;
+                            const team2 = match.team2;
+
+                            return (
+                                <div
+                                    key={matchId}
+                                    style={{
+                                        border: "1px solid #ccc",
+                                        borderRadius: 10,
+                                        padding: 12,
+                                        marginBottom: 12,
+                                    }}
+                                >
+                                    <div style={{ textAlign: "left", margin: "6px 20%" }}>{matchId}</div>
+                                    <div style={{
+                                        flex: 1,
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        textAlign: "center"
+                                    }}>
+                                        <div>{teamNames[team1]}</div>
+
+                                        <TextField
+                                            style={{ width: "50%" }}
+                                            type="number"
+                                            value={match[`legs_${match.team1}`]}
+                                            disabled={status !== "sf"}
+                                            onChange={e =>
+                                                handleLegScoreChange(
+                                                    matchId,
+                                                    match.team1,
+                                                    Number(e.target.value),
+                                                    match.team2
+                                                )
+                                            }
+                                            inputProps={{ min: 0, max: winLegs }}
+                                            fullWidth
+                                        />
+                                    </div>
+
+                                    <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                                    <div style={{
+                                        flex: 1,
+                                        display: "flex",
+                                        justifyContent: "space-between",
+                                        textAlign: "center"
+                                    }}>
+                                        <div>{teamNames[team2]}</div>
+
+                                        <TextField
+                                            style={{ width: "50%" }}
+                                            type="number"
+                                            value={match[`legs_${match.team2}`]}
+                                            disabled={status !== "sf"}
+                                            onChange={e =>
+                                                handleLegScoreChange(
+                                                    matchId,
+                                                    match.team2,
+                                                    Number(e.target.value),
+                                                    match.team1
+                                                )
+                                            }
+                                            inputProps={{ min: 0, max: winLegs }}
+                                            fullWidth
+                                        />
+                                    </div>
+                                </div>
+                            );
+                        })}
+                </div>
+            ) : (
+                <div>
+                    <div
+                        key="sf1_not_ready"
+                        style={{
+                            border: "1px solid #ccc",
+                            borderRadius: 10,
+                            padding: 12,
+                            marginBottom: 12,
+                        }}
+                    >
+                        <div>Sieger QF1</div>
+                        <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                        <div>Sieger QF4</div>
+                    </div>
+                    <div
+                        key="sf2_not_ready"
+                        style={{
+                            border: "1px solid #ccc",
+                            borderRadius: 10,
+                            padding: 12,
+                            marginBottom: 12,
+                        }}
+                    >
+                        <div>Sieger QF2</div>
+                        <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                        <div>Sieger QF3</div>
+                    </div>
+                </div>
+            )}
+
+            <Button
+                onClick={handleFinishSemifinal}
+                disabled={!allSFsPlayed || (status !== "sf")}
+            >
+                Halbfinale abschließen
+            </Button>
+        </div>
+    ) : (
         <div style={{
             flex: 1,
             minWidth: 0,

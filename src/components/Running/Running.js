@@ -9,7 +9,7 @@ import FinalStandings from "./FinalStandings/FinalStandings";
 import { useEffect } from "react";
 import { useTournament } from "../../context/TournamentContext";
 import { subscribeTournamentStatus } from "../../services/firestoreService";
-import { Box, Chip, Typography } from "@mui/material";
+import { Box, Chip, Typography, useTheme, useMediaQuery } from "@mui/material";
 import PageContainer from "../PageContainer";
 import HeaderBar from "../HeaderBar";
 import TournamentTabs from "../TournamentTabs";
@@ -18,6 +18,9 @@ export default function Running() {
     const { currentTournamentId } = useTournament();
     const [status, setStatus] = useState("");
     const [tabValue, setTabValue] = useState(0);
+    
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
     const statusLabelMap = {
         group: "Vorrunde",
@@ -63,6 +66,9 @@ export default function Running() {
             <TournamentTabs
                 value={tabValue}
                 onChange={handleTabChange}
+                variant={isMobile ? "scrollable" : "fullWidth"}
+                scrollButtons="auto"
+                sx={{ width: "100%" }}
             />
 
             <Box mt={3}>
@@ -74,39 +80,5 @@ export default function Running() {
             </Box>
 
         </PageContainer>
-
-        // <Box display="flex" flexDirection="column" gap={2} padding="20px 0">
-        //     <Box display="flex" alignItems="center" justifyContent="center" gap={2}>
-        //         <Typography variant="h5">
-        //             {currentTournamentId}
-        //         </Typography>
-
-        //         {status !== "setup" && <Chip
-        //             label={statusLabelMap[status]}
-        //             color={statusColorMap[status]}
-        //             size="small"
-
-        //         />}
-        //     </Box>
-        //     {/* <h1 align="center">{currentTournamentId}</h1> */}
-        //     <Tabs
-        //         value={tabValue}
-        //         onChange={handleTabChange}
-        //         variant="fullWidth"
-        //     >
-        //         <Tab label={"Vorrunde"} value={0} />
-        //         <Tab label={"Viertelfinale"} value={1} />
-        //         <Tab label={"Halbfinale"} value={2} />
-        //         <Tab label={"Finale"} value={3} />
-        //         <Tab label={"Gesamtstand"} value={4} />
-        //     </Tabs>
-        //     <Box mt={2}>
-        //         {tabValue === 0 && <Preliminary />}
-        //         {tabValue === 1 && <QuarterfinalTab />}
-        //         {tabValue === 2 && <SemifinalTab />}
-        //         {tabValue === 3 && <FinalTab />}
-        //         {tabValue === 4 && <FinalStandings />}
-        //     </Box>
-        // </Box>
     )
 }

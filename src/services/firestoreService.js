@@ -122,8 +122,11 @@ export async function getMatchdayMatches(tournamentID, md) {
 
 export async function saveScore(tournamentID, md, matchKey, team1, newScore, team2) {
     const matchdayRef = doc(db, "tournaments", tournamentID, "matchdays", md);
+    const matchdaySnap = await getDoc(matchdayRef);
+    const oppScore = matchdaySnap.data().matches[`${matchKey}`][`score_${team2}`]
     await updateDoc(matchdayRef, {
-        [`matches.${matchKey}.score_${team1}`]: newScore
+        [`matches.${matchKey}.score_${team1}`]: newScore,
+        [`matches.${matchKey}.played`]: newScore !== null && newScore !== "" && oppScore !== null && oppScore !== ""
     });
 
     const team1Ref = doc(db, "tournaments", tournamentID, "teams", team1);
