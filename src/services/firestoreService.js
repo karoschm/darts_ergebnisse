@@ -28,6 +28,12 @@ export async function checkIfTournamentExists(tournamentID) {
     return !snapshot.empty;
 }
 
+export async function getAllTournaments() {
+    const snapshot = await getDocs(collection(db, "tournaments"));
+    // console.log(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
 export async function getNumberMatchdays(tournamentID) {
     const tournamentRef = doc(db, "tournaments", tournamentID);
     const tournamentSnap = await getDoc(tournamentRef);

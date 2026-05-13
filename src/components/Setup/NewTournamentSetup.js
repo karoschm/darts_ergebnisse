@@ -5,7 +5,7 @@ import useFormStatus from "../../hooks/useFormStatus";
 import { addTournament } from "../../services/firestoreService";
 
 
-export default function TournamentSetup() {
+export default function NewTournamentSetup() {
     const navigate = useNavigate();
     const { errorMessage, showError } = useFormStatus();
 
