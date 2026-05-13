@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
 import { generateFinal, getAllTeams, saveKOScore, subscribeKnockoutRound, subscribeTournamentStatus, updateAllKOsPlayed, updateTournamentStatus } from "../../../services/firestoreService";
 
-export default function SemifinalTab() {
+export default function SemifinalTab(isViewMode) {
     const { currentTournamentId } = useTournament();
     const [status, setStatus] = useState("");
     const [semifinals, setSemifinals] = useState({ matches: {} })
@@ -118,7 +118,7 @@ export default function SemifinalTab() {
                 style={{ width: "60px", paddingTop: "10px" }}
                 type={"number"}
                 value={winLegs}
-                disabled={status !== "sf"}
+                disabled={status !== "sf" || isViewMode}
                 onChange={e => handleWinLegsChange(Number(e.target.value))}
                 inputProps={{ min: 0 }}
             />
@@ -154,7 +154,7 @@ export default function SemifinalTab() {
                                             style={{ width: "50%" }}
                                             type="number"
                                             value={match[`legs_${match.team1}`]}
-                                            disabled={status !== "sf"}
+                                            disabled={status !== "sf" || isViewMode}
                                             onChange={e =>
                                                 handleLegScoreChange(
                                                     matchId,
@@ -181,7 +181,7 @@ export default function SemifinalTab() {
                                             style={{ width: "50%" }}
                                             type="number"
                                             value={match[`legs_${match.team2}`]}
-                                            disabled={status !== "sf"}
+                                            disabled={status !== "sf" || isViewMode}
                                             onChange={e =>
                                                 handleLegScoreChange(
                                                     matchId,
@@ -251,7 +251,7 @@ export default function SemifinalTab() {
                 style={{ width: "60px", paddingTop: "10px" }}
                 type={"number"}
                 value={winLegs}
-                disabled={status !== "sf"}
+                disabled={status !== "sf" || isViewMode}
                 onChange={e => handleWinLegsChange(Number(e.target.value))}
                 inputProps={{ min: 0 }}
             />
@@ -278,7 +278,7 @@ export default function SemifinalTab() {
                                         <TextField
                                             type={"number"}
                                             value={match[`legs_${match.team1}`]}
-                                            disabled={status !== "sf"}
+                                            disabled={status !== "sf" || isViewMode}
                                             onChange={e =>
                                                 handleLegScoreChange(
                                                     matchId,
@@ -297,7 +297,7 @@ export default function SemifinalTab() {
                                         <TextField
                                             type={"number"}
                                             value={match[`legs_${match.team2}`]}
-                                            disabled={status !== "sf"}
+                                            disabled={status !== "sf" || isViewMode}
                                             onChange={e =>
                                                 handleLegScoreChange(
                                                     matchId,
@@ -334,12 +334,14 @@ export default function SemifinalTab() {
                 )}
             </Table>
             <br />
-            <Button
-                onClick={handleFinishSemifinal}
-                disabled={!allSFsPlayed || (status !== "sf")}
-            >
-                Halbfinale abschließen
-            </Button>
+            {!isViewMode && (
+                <Button
+                    onClick={handleFinishSemifinal}
+                    disabled={!allSFsPlayed || (status !== "sf")}
+                >
+                    Halbfinale abschließen
+                </Button>
+            )}
         </div>
     )
 }

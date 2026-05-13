@@ -4,7 +4,7 @@ import { useTournament } from "../../../context/TournamentContext";
 import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus } from "../../../services/firestoreService";
 
 
-export default function MatchdayTabs({ md }) {
+export default function MatchdayTabs({ md, isViewMode }) {
     const { currentTournamentId } = useTournament();
     const [matches, setMatches] = useState({});
     const [teamNames, setTeamNames] = useState({});
@@ -103,7 +103,7 @@ export default function MatchdayTabs({ md }) {
                                 style={{ width: "50%" }}
                                 type="number"
                                 value={match[`score_${team1}`]}
-                                disabled={status !== "group"}
+                                disabled={status !== "group" || isViewMode}
                                 onChange={e =>
                                     handleScoreChange(mNumber, team1, Number(e.target.value), team2)
                                 }
@@ -125,7 +125,7 @@ export default function MatchdayTabs({ md }) {
                                 style={{ width: "50%" }}
                                 type="number"
                                 value={match[`score_${team2}`]}
-                                disabled={status !== "group"}
+                                disabled={status !== "group" || isViewMode}
                                 onChange={e =>
                                     handleScoreChange(mNumber, team2, Number(e.target.value), team1)
                                 }
@@ -157,7 +157,7 @@ export default function MatchdayTabs({ md }) {
                                 <TextField
                                     type="number"
                                     style={{ width: "60px", textAlign: "center" }}
-                                    disabled={status !== "group"}
+                                    disabled={status !== "group" || isViewMode}
                                     value={scoreTeam1}
                                     onChange={e =>
                                         handleScoreChange(mNumber, team1, Number(e.target.value), team2)
@@ -185,7 +185,7 @@ export default function MatchdayTabs({ md }) {
                                 <TextField
                                     type="number"
                                     style={{ width: "60px", textAlign: "center" }}
-                                    disabled={status !== "group"}
+                                    disabled={status !== "group" || isViewMode}
                                     value={scoreTeam2}
                                     onChange={e =>
                                         handleScoreChange(mNumber, team2, Number(e.target.value), team1)
@@ -220,12 +220,14 @@ export default function MatchdayTabs({ md }) {
                             <TableCell width="10%" />
 
                             <TableCell width="20%">
-                                <Button
-                                    onClick={() => enterResult(mNumber)}
-                                    disabled={status !== "group"}
-                                >
-                                    Ergebnis eintragen
-                                </Button>
+                                {!isViewMode && (
+                                    <Button
+                                        onClick={() => enterResult(mNumber)}
+                                        disabled={status !== "group"}
+                                    >
+                                        Ergebnis eintragen
+                                    </Button>
+                                )}
                             </TableCell>
 
                         </TableRow>

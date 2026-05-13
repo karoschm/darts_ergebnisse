@@ -13,6 +13,7 @@ import { Box, Chip, Typography, useTheme, useMediaQuery } from "@mui/material";
 import PageContainer from "../PageContainer";
 import HeaderBar from "../HeaderBar";
 import TournamentTabs from "../TournamentTabs";
+import { useParams } from "react-router-dom";
 
 export default function Running() {
     const { currentTournamentId } = useTournament();
@@ -21,6 +22,10 @@ export default function Running() {
     
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+    
+    const { mode } = useParams();
+    const isViewMode = mode === "view";
+    const isEditMode = mode === "edit";
 
     const statusLabelMap = {
         group: "Vorrunde",
@@ -61,6 +66,7 @@ export default function Running() {
                 status={status}
                 statusLabelMap={statusLabelMap}
                 statusColorMap={statusColorMap}
+                isViewMode={isViewMode}
             />
 
             <TournamentTabs
@@ -72,11 +78,11 @@ export default function Running() {
             />
 
             <Box mt={3}>
-                {tabValue === 0 && <Preliminary />}
-                {tabValue === 1 && <QuarterfinalTab />}
-                {tabValue === 2 && <SemifinalTab />}
-                {tabValue === 3 && <FinalTab />}
-                {tabValue === 4 && <FinalStandings />}
+                {tabValue === 0 && <Preliminary isViewMode={isViewMode}/>}
+                {tabValue === 1 && <QuarterfinalTab isViewMode={isViewMode}/>}
+                {tabValue === 2 && <SemifinalTab isViewMode={isViewMode}/>}
+                {tabValue === 3 && <FinalTab isViewMode={isViewMode}/>}
+                {tabValue === 4 && <FinalStandings isViewMode={isViewMode}/>}
             </Box>
 
         </PageContainer>

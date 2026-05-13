@@ -1,6 +1,7 @@
-import { Box, Typography, Chip } from "@mui/material";
+import { Box, Typography, Chip, Button } from "@mui/material";
+import RefreshIcon from "@mui/icons-material/Refresh";
 
-export default function HeaderBar({ tournamentId, status, statusLabelMap, statusColorMap }) {
+export default function HeaderBar({ tournamentId, status, statusLabelMap, statusColorMap, isViewMode }) {
     return (
         <Box
             sx={{
@@ -26,6 +27,16 @@ export default function HeaderBar({ tournamentId, status, statusLabelMap, status
                 color={statusColorMap[status]}
                 size="small"
             />
+
+            {/* {isViewMode && (
+                <Button
+                    variant="outlined"
+                    startIcon={<RefreshIcon />}
+                    onClick={() => window.location.reload()}
+                >
+                    Aktualisieren
+                </Button>
+            )} */}
         </Box>
     );
 }

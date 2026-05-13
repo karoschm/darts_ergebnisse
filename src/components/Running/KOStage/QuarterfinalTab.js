@@ -5,7 +5,7 @@ import { useTournament } from "../../../context/TournamentContext";
 import { generateSemifinals, getAllTeams, saveKOScore, subscribeKnockoutRound, subscribeTournamentStatus, updateAllKOsPlayed, updateTournamentStatus } from "../../../services/firestoreService";
 
 
-export default function QuarterfinalTab() {
+export default function QuarterfinalTab(isViewMode) {
     const { currentTournamentId } = useTournament();
     const [teamNames, setTeamNames] = useState({});
     const [status, setStatus] = useState("");
@@ -120,7 +120,7 @@ export default function QuarterfinalTab() {
                 style={{ width: "60px", paddingTop: "10px" }}
                 type={"number"}
                 value={winLegs}
-                disabled={status !== "qf"}
+                disabled={status !== "qf" || isViewMode}
                 onChange={e => handleWinLegsChange(Number(e.target.value))}
                 inputProps={{ min: 0 }}
             />
@@ -157,6 +157,7 @@ export default function QuarterfinalTab() {
                                             style={{ width: "50%" }}
                                             type="number"
                                             value={match[`legs_${match.team1}`]}
+                                            disabled={isViewMode}
                                             onChange={e => handleLegScoreChange(
                                                 matchId, match.team1, Number(e.target.value), match.team2
                                             )}
@@ -178,6 +179,7 @@ export default function QuarterfinalTab() {
                                             style={{ width: "50%" }}
                                             type="number"
                                             value={match[`legs_${match.team2}`]}
+                                            disabled={isViewMode}
                                             onChange={e => handleLegScoreChange(
                                                 matchId, match.team2, Number(e.target.value), match.team1
                                             )}
@@ -268,7 +270,7 @@ export default function QuarterfinalTab() {
                 style={{ width: "60px", paddingTop: "10px" }}
                 type={"number"}
                 value={winLegs}
-                disabled={status !== "qf"}
+                disabled={status !== "qf" || isViewMode}
                 onChange={e => handleWinLegsChange(Number(e.target.value))}
                 inputProps={{ min: 0 }}
             />
@@ -295,7 +297,7 @@ export default function QuarterfinalTab() {
                                         <TextField
                                             type={"number"}
                                             value={match[`legs_${match.team1}`]}
-                                            disabled={status !== "qf"}
+                                            disabled={status !== "qf" || isViewMode}
                                             onChange={e => handleLegScoreChange(
                                                 matchId, match.team1, Number(e.target.value), match.team2
                                             )}
@@ -309,7 +311,7 @@ export default function QuarterfinalTab() {
                                         <TextField
                                             type={"number"}
                                             value={match[`legs_${match.team2}`]}
-                                            disabled={status !== "qf"}
+                                            disabled={status !== "qf" || isViewMode}
                                             onChange={e => handleLegScoreChange(
                                                 matchId, match.team2, Number(e.target.value), match.team1
                                             )}
@@ -357,12 +359,14 @@ export default function QuarterfinalTab() {
                 )}
             </Table>
             <br />
-            <Button
-                onClick={handleFinishQuarterfinal}
-                disabled={!allQFsPlayed || (status !== "qf")}
-            >
-                Viertelfinale abschließen
-            </Button>
+            {!isViewMode && (
+                <Button
+                    onClick={handleFinishQuarterfinal}
+                    disabled={!allQFsPlayed || (status !== "qf")}
+                >
+                    Viertelfinale abschließen
+                </Button>
+            )}
         </div>
     )
 }

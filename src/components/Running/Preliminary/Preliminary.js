@@ -9,7 +9,7 @@ import MatchdayTabs from "./MatchdayTabs";
 import { Button, useTheme, useMediaQuery } from "@mui/material";
 
 
-export default function Preliminary() {
+export default function Preliminary(isViewMode) {
     const { currentTournamentId } = useTournament();
     const [teams, setTeams] = useState({});
     const [status, setStatus] = useState("");
@@ -169,20 +169,24 @@ export default function Preliminary() {
                 justifyContent: "center", 
                 marginTop: "10px"
             }} >
-            <Button
-                key={"make_schedule"}
-                onClick={handleMakeSchedule}
-                disabled={status !== "setup"}
-            >
-                Vorrundenspielplan generieren
-            </Button>
-            <Button
-                key={"start_preliminary"}
-                onClick={handleStartPreliminary}
-                disabled={status !== "setup" || !scheduleAvailable}
-            >
-                Vorrunde beginnen
-            </Button>
+            {!isViewMode && (
+                <div>
+                    <Button
+                        key={"make_schedule"}
+                        onClick={handleMakeSchedule}
+                        disabled={status !== "setup"}
+                    >
+                        Vorrundenspielplan generieren
+                    </Button>
+                    <Button
+                        key={"start_preliminary"}
+                        onClick={handleStartPreliminary}
+                        disabled={status !== "setup" || !scheduleAvailable}
+                    >
+                        Vorrunde beginnen
+                    </Button>
+                </div>
+            )}
             </div>
             <br></br>
             <Tabs
@@ -213,19 +217,21 @@ export default function Preliminary() {
                     hidden={preliminaryTabValue !== md}
                 >
                     {preliminaryTabValue === md && (
-                        <MatchdayTabs md={(md + 1).toString()} />
+                        <MatchdayTabs md={(md + 1).toString()} isViewMode={isViewMode} />
                     )}
                 </div>
             ))}
             <br />
             <br />
-            <Button
-                key={"end_preliminary"}
-                onClick={handleFinishPreliminary}
-                disabled={!allMatchdaysPlayed || (status !== "group")}
-            >
-                Vorrunde abschließen
-            </Button>
+            {!isViewMode && (
+                <Button
+                    key={"end_preliminary"}
+                    onClick={handleFinishPreliminary}
+                    disabled={!allMatchdaysPlayed || (status !== "group")}
+                >
+                    Vorrunde abschließen
+                </Button>
+            )}
         </form>
     );
 }

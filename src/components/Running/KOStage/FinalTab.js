@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
 import { getAllTeams, saveKOScore, subscribeKnockoutRound, subscribeTournamentStatus, updateAllKOsPlayed, updateRankingFinals, updateTournamentStatus } from "../../../services/firestoreService";
 
-export default function FinalTab() {
+export default function FinalTab(isViewMode) {
     const { currentTournamentId } = useTournament();
     const [status, setStatus] = useState("");
     const [finals, setFinals] = useState({ matches: {} })
@@ -100,7 +100,7 @@ export default function FinalTab() {
                 style={{ width: "60px", paddingTop: "10px" }}
                 type={"number"}
                 value={winLegs}
-                disabled={status !== "final"}
+                disabled={status !== "final" || isViewMode}
                 onChange={e => handleWinLegsChange(Number(e.target.value))}
                 inputProps={{ min: 0 }}
             />
@@ -128,7 +128,7 @@ export default function FinalTab() {
                             style={{ width: "50%" }}
                             type="number"
                             value={finals.matches.final[`legs_${finals.matches.final.team1}`]}
-                            disabled={status !== "final"}
+                            disabled={status !== "final" || isViewMode}
                             onChange={e =>
                                 handleLegScoreChange(
                                     "final",
@@ -155,7 +155,7 @@ export default function FinalTab() {
                             style={{ width: "50%" }}
                             type="number"
                             value={finals.matches.final[`legs_${finals.matches.final.team2}`]}
-                            disabled={status !== "final"}
+                            disabled={status !== "final" || isViewMode}
                             onChange={e =>
                                 handleLegScoreChange(
                                     "final",
@@ -209,7 +209,7 @@ export default function FinalTab() {
                             style={{ width: "50%" }}
                             type="number"
                             value={finals.matches.place3[`legs_${finals.matches.place3.team1}`]}
-                            disabled={status !== "final"}
+                            disabled={status !== "final" || isViewMode}
                             onChange={e =>
                                 handleLegScoreChange(
                                     "place3",
@@ -236,7 +236,7 @@ export default function FinalTab() {
                             style={{ width: "50%" }}
                             type="number"
                             value={finals.matches.place3[`legs_${finals.matches.place3.team2}`]}
-                            disabled={status !== "final"}
+                            disabled={status !== "final" || isViewMode}
                             onChange={e =>
                                 handleLegScoreChange(
                                     "place3",
@@ -266,12 +266,14 @@ export default function FinalTab() {
                 </div>
             )}
             <br />
-            <Button
-                onClick={handleFinishFinal}
-                disabled={!finalReady || !place3Ready || !allFinalsPlayed || status !== "final"}
-            >
-                Turnier abschließen
-            </Button>
+            {!isViewMode && (
+                <Button
+                    onClick={handleFinishFinal}
+                    disabled={!finalReady || !place3Ready || !allFinalsPlayed || status !== "final"}
+                >
+                    Turnier abschließen
+                </Button>
+            )}
         </div>
     ) : (
         <div style={{
@@ -288,7 +290,7 @@ export default function FinalTab() {
                 style={{ width: "60px", paddingTop: "10px" }}
                 type={"number"}
                 value={winLegs}
-                disabled={status !== "final"}
+                disabled={status !== "final" || isViewMode}
                 onChange={e => handleWinLegsChange(Number(e.target.value))}
                 inputProps={{ min: 0 }}
             />
@@ -311,7 +313,7 @@ export default function FinalTab() {
                                 <TextField
                                     type={"number"}
                                     value={finals.matches.final[`legs_${finals.matches.final.team1}`]}
-                                    disabled={status !== "final"}
+                                    disabled={status !== "final" || isViewMode}
                                     onChange={e =>
                                         handleLegScoreChange(
                                             "final",
@@ -330,7 +332,7 @@ export default function FinalTab() {
                                 <TextField
                                     type={"number"}
                                     value={finals.matches.final[`legs_${finals.matches.final.team2}`]}
-                                    disabled={status !== "final"}
+                                    disabled={status !== "final" || isViewMode}
                                     onChange={e =>
                                         handleLegScoreChange(
                                             "final",
@@ -374,7 +376,7 @@ export default function FinalTab() {
                                 <TextField
                                     type={"number"}
                                     value={finals.matches.place3[`legs_${finals.matches.place3.team1}`]}
-                                    disabled={status !== "final"}
+                                    disabled={status !== "final" || isViewMode}
                                     onChange={e =>
                                         handleLegScoreChange(
                                             "place3",
@@ -393,7 +395,7 @@ export default function FinalTab() {
                                 <TextField
                                     type={"number"}
                                     value={finals.matches.place3[`legs_${finals.matches.place3.team2}`]}
-                                    disabled={status !== "final"}
+                                    disabled={status !== "final" || isViewMode}
                                     onChange={e =>
                                         handleLegScoreChange(
                                             "place3",
@@ -418,12 +420,14 @@ export default function FinalTab() {
                 </TableBody>
             </Table>
             <br />
-            <Button
-                onClick={handleFinishFinal}
-                disabled={!finalReady || !place3Ready || !allFinalsPlayed || status !== "final"}
-            >
-                Turnier abschließen
-            </Button>
+            {!isViewMode && (
+                <Button
+                    onClick={handleFinishFinal}
+                    disabled={!finalReady || !place3Ready || !allFinalsPlayed || status !== "final"}
+                >
+                    Turnier abschließen
+                </Button>
+            )}
         </div>
     )
 }

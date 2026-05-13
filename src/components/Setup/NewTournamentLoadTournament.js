@@ -38,12 +38,9 @@ export default function NewTournamentLoadTournament() {
                 key={"load_tournament"}
                 onClick={handleLoadTournament}
             >
-                Vorhandenes Turnier zum Bearbeiten laden
+                Vorhandenes Turnier laden
             </Button>
             <br/>
-            {/* <Button>
-                Vorhandenes Turnier zum Ansehen laden
-            </Button> */}
         </form>
     )
 }
