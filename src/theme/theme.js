@@ -105,6 +105,17 @@ const theme = createTheme({
                     borderBottom: "2px solid #0f5132"
                 }
             }
+        },
+        MuiCard: {
+            styleOverrides: {
+                root: {
+                    background: "#f7f9fc",
+                    border: "1px solid #ccc",
+                    borderRadius: 10,
+                    padding: 12,
+                    marginBottom: 12,
+                }
+            }
         }
     },
 });

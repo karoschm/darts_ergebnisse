@@ -1,4 +1,4 @@
-import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, useTheme, useMediaQuery } from "@mui/material";
+import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, useTheme, useMediaQuery, Card, Typography, Tooltip } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
@@ -107,25 +107,37 @@ export default function FinalTab({ isViewMode }) {
             <br />
             <h2>Finale</h2>
             {finalReady ? (
-                <div
-                    key="finale"
-                    style={{
-                        border: "1px solid #ccc",
-                        borderRadius: 10,
-                        padding: 12,
-                        marginBottom: 12,
+                <Card
+                    key={"finale"}
+                    sx={{
+                        width: "90vw",
+                        mx: "auto",
+                        mb: 2
                     }}
                 >
                     <div style={{
                         flex: 1,
                         display: "flex",
-                        justifyContent: "space-between",
-                        textAlign: "center"
+                        justifyContent: "space-between"
                     }}>
-                        <div>{teamNames[finals.matches.final.team1]}</div>
+                        <Typography
+                            sx={{
+                                minWidth: 0,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                fontSize:
+                                    teamNames[finals.matches.final.team1].length > 20
+                                        ? "0.75rem"
+                                        : "1rem"
+                            }}
+                            style={{ flex: 3 }}
+                        >
+                            {teamNames[finals.matches.final.team1]}
+                        </Typography>
 
                         <TextField
-                            style={{ width: "50%" }}
+                            style={{ flex: 1, minWidth: "60px" }}
                             type="number"
                             value={finals.matches.final[`legs_${finals.matches.final.team1}`]}
                             disabled={status !== "final" || isViewMode}
@@ -142,17 +154,30 @@ export default function FinalTab({ isViewMode }) {
                         />
                     </div>
 
-                    <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                    <div style={{ textAlign: "right", margin: "4px" }}>vs</div>
                     <div style={{
                         flex: 1,
                         display: "flex",
                         justifyContent: "space-between",
-                        textAlign: "center"
                     }}>
-                        <div>{teamNames[finals.matches.final.team2]}</div>
+                        <Typography
+                            sx={{
+                                minWidth: 0,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                fontSize:
+                                    teamNames[finals.matches.final.team2].length > 20
+                                        ? "0.75rem"
+                                        : "1rem"
+                            }}
+                            style={{ flex: 3 }}
+                        >
+                            {teamNames[finals.matches.final.team2]}
+                        </Typography>
 
                         <TextField
-                            style={{ width: "50%" }}
+                            style={{ flex: 1, minWidth: "60px" }}
                             type="number"
                             value={finals.matches.final[`legs_${finals.matches.final.team2}`]}
                             disabled={status !== "final" || isViewMode}
@@ -168,45 +193,56 @@ export default function FinalTab({ isViewMode }) {
                             fullWidth
                         />
                     </div>
-                </div>
+                </Card>
             ) : (
-                <div
+                <Card
                     key="finale_not_ready"
-                    style={{
-                        border: "1px solid #ccc",
-                        borderRadius: 10,
-                        padding: 12,
-                        marginBottom: 12,
+                    sx={{
+                        width: "90vw",
+                        mx: "auto",
+                        mb: 2
                     }}
                 >
                     <div>Sieger SF1</div>
                     <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
                     <div>Sieger SF2</div>
-                </div>
+                </Card>
             )}
             <br />
             <br />
             <h2>Spiel um Platz 3</h2>
             {place3Ready ? (
-                <div
-                    key="place3"
-                    style={{
-                        border: "1px solid #ccc",
-                        borderRadius: 10,
-                        padding: 12,
-                        marginBottom: 12,
+                <Card
+                    key={"place3"}
+                    sx={{
+                        width: "90vw",
+                        mx: "auto",
+                        mb: 2
                     }}
                 >
                     <div style={{
                         flex: 1,
                         display: "flex",
-                        justifyContent: "space-between",
-                        textAlign: "center"
+                        justifyContent: "space-between"
                     }}>
-                        <div>{teamNames[finals.matches.place3.team1]}</div>
+                        <Typography
+                            sx={{
+                                minWidth: 0,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                fontSize:
+                                    teamNames[finals.matches.place3.team1].length > 20
+                                        ? "0.75rem"
+                                        : "1rem"
+                            }}
+                            style={{ flex: 3 }}
+                        >
+                            {teamNames[finals.matches.place3.team1]}
+                        </Typography>
 
                         <TextField
-                            style={{ width: "50%" }}
+                            style={{ flex: 1, minWidth: "60px" }}
                             type="number"
                             value={finals.matches.place3[`legs_${finals.matches.place3.team1}`]}
                             disabled={status !== "final" || isViewMode}
@@ -223,17 +259,30 @@ export default function FinalTab({ isViewMode }) {
                         />
                     </div>
 
-                    <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                    <div style={{ textAlign: "right", margin: "4px" }}>vs</div>
                     <div style={{
                         flex: 1,
                         display: "flex",
-                        justifyContent: "space-between",
-                        textAlign: "center"
+                        justifyContent: "space-between"
                     }}>
-                        <div>{teamNames[finals.matches.place3.team2]}</div>
+                        <Typography
+                            sx={{
+                                minWidth: 0,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                                fontSize:
+                                    teamNames[finals.matches.place3.team2].length > 20
+                                        ? "0.75rem"
+                                        : "1rem"
+                            }}
+                            style={{ flex: 3 }}
+                        >
+                            {teamNames[finals.matches.place3.team2]}
+                        </Typography>
 
                         <TextField
-                            style={{ width: "50%" }}
+                            style={{ flex: 1, minWidth: "60px" }}
                             type="number"
                             value={finals.matches.place3[`legs_${finals.matches.place3.team2}`]}
                             disabled={status !== "final" || isViewMode}
@@ -249,21 +298,20 @@ export default function FinalTab({ isViewMode }) {
                             fullWidth
                         />
                     </div>
-                </div>
+                </Card>
             ) : (
-                <div
+                <Card
                     key="place3_not_ready"
-                    style={{
-                        border: "1px solid #ccc",
-                        borderRadius: 10,
-                        padding: 12,
-                        marginBottom: 12,
+                    sx={{
+                        width: "90vw",
+                        mx: "auto",
+                        mb: 2
                     }}
                 >
                     <div>Verlierer SF1</div>
                     <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
                     <div>Verlierer SF2</div>
-                </div>
+                </Card>
             )}
             <br />
             {!isViewMode && (
@@ -296,7 +344,18 @@ export default function FinalTab({ isViewMode }) {
             />
             <br />
             <h2>Finale</h2>
-            <Table>
+            <Table
+                sx={{
+                    width: "80vw",
+                    mx: "auto",
+                    mb: 2,
+                    maxWidth: 800
+                }}
+                style={{
+                    borderCollapse: "collapse",
+                    alignContent: "center"
+                }}
+            >
                 <TableHead>
                     <TableRow>
                         <TableCell align="right" width="15%">Legs</TableCell>
@@ -325,9 +384,41 @@ export default function FinalTab({ isViewMode }) {
                                     inputProps={{ min: 0, max: winLegs }}
                                 />
                             </TableCell>
-                            <TableCell align="right">{teamNames[finals.matches.final.team1]}</TableCell>
+                            <TableCell
+                                sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    fontSize:
+                                        teamNames[finals.matches.final.team1].length > 25
+                                            ? "0.75rem"
+                                            : "1rem"
+                                }}
+                                align="right"
+                                width="25%"
+                            >
+                                <Tooltip title={teamNames[finals.matches.final.team1]} enterDelay={1000}>
+                                    {teamNames[finals.matches.final.team1]}
+                                </Tooltip>
+                            </TableCell>
                             <TableCell align="center">vs</TableCell>
-                            <TableCell align="left">{teamNames[finals.matches.final.team2]}</TableCell>
+                            <TableCell
+                                sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    fontSize:
+                                        teamNames[finals.matches.final.team2].length > 25
+                                            ? "0.75rem"
+                                            : "1rem"
+                                }}
+                                align="left"
+                                width="25%"
+                            >
+                                <Tooltip title={teamNames[finals.matches.final.team2]} enterDelay={1000}>
+                                    {teamNames[finals.matches.final.team2]}
+                                </Tooltip>
+                            </TableCell>
                             <TableCell align="left">
                                 <TextField
                                     type={"number"}
@@ -359,7 +450,18 @@ export default function FinalTab({ isViewMode }) {
             <br />
             <br />
             <h2>Spiel um Platz 3</h2>
-            <Table>
+            <Table
+                sx={{
+                    width: "80vw",
+                    mx: "auto",
+                    mb: 2,
+                    maxWidth: 800
+                }}
+                style={{
+                    borderCollapse: "collapse",
+                    alignContent: "center"
+                }}
+            >
                 <TableHead>
                     <TableRow>
                         <TableCell align="right" width="15%">Legs</TableCell>
@@ -388,9 +490,41 @@ export default function FinalTab({ isViewMode }) {
                                     inputProps={{ min: 0, max: winLegs }}
                                 />
                             </TableCell>
-                            <TableCell align="right">{teamNames[finals.matches.place3.team1]}</TableCell>
+                            <TableCell
+                                sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    fontSize:
+                                        teamNames[finals.matches.place3.team1].length > 25
+                                            ? "0.75rem"
+                                            : "1rem"
+                                }}
+                                align="right"
+                                width="25%"
+                            >
+                                <Tooltip title={teamNames[finals.matches.place3.team1]} enterDelay={1000}>
+                                    {teamNames[finals.matches.place3.team1]}
+                                </Tooltip>
+                            </TableCell>
                             <TableCell align="center">vs</TableCell>
-                            <TableCell align="left">{teamNames[finals.matches.place3.team2]}</TableCell>
+                            <TableCell
+                                sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    fontSize:
+                                        teamNames[finals.matches.place3.team2].length > 25
+                                            ? "0.75rem"
+                                            : "1rem"
+                                }}
+                                align="left"
+                                width="25%"
+                            >
+                                <Tooltip title={teamNames[finals.matches.place3.team2]} enterDelay={1000}>
+                                    {teamNames[finals.matches.place3.team2]}
+                                </Tooltip>
+                            </TableCell>
                             <TableCell align="left">
                                 <TextField
                                     type={"number"}

@@ -1,4 +1,4 @@
-import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, useTheme, useMediaQuery } from "@mui/material";
+import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, useTheme, useMediaQuery, Card, Typography, Tooltip } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
@@ -132,26 +132,38 @@ export default function SemifinalTab({ isViewMode }) {
                             const team2 = match.team2;
 
                             return (
-                                <div
+                                <Card
                                     key={matchId}
-                                    style={{
-                                        border: "1px solid #ccc",
-                                        borderRadius: 10,
-                                        padding: 12,
-                                        marginBottom: 12,
+                                    sx={{
+                                        width: "90vw",
+                                        mx: "auto",
+                                        mb: 2
                                     }}
                                 >
-                                    <div style={{ textAlign: "left", margin: "6px 20%" }}>{matchId}</div>
+                                    <div style={{ textAlign: "center", margin: "2px" }}>{matchId}</div>
                                     <div style={{
                                         flex: 1,
                                         display: "flex",
-                                        justifyContent: "space-between",
-                                        textAlign: "center"
+                                        justifyContent: "space-between"
                                     }}>
-                                        <div>{teamNames[team1]}</div>
+                                        <Typography
+                                            sx={{
+                                                minWidth: 0,
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                whiteSpace: "nowrap",
+                                                fontSize:
+                                                    teamNames[team1].length > 20
+                                                        ? "0.75rem"
+                                                        : "1rem"
+                                            }}
+                                            style={{ flex: 3 }}
+                                        >
+                                            {teamNames[team1]}
+                                        </Typography>
 
                                         <TextField
-                                            style={{ width: "50%" }}
+                                            style={{ flex: 1, minWidth: "60px" }}
                                             type="number"
                                             value={match[`legs_${match.team1}`]}
                                             disabled={status !== "sf" || isViewMode}
@@ -168,17 +180,30 @@ export default function SemifinalTab({ isViewMode }) {
                                         />
                                     </div>
 
-                                    <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                                    <div style={{ textAlign: "right", margin: "4px" }}>vs</div>
                                     <div style={{
                                         flex: 1,
                                         display: "flex",
-                                        justifyContent: "space-between",
-                                        textAlign: "center"
+                                        justifyContent: "space-between"
                                     }}>
-                                        <div>{teamNames[team2]}</div>
+                                        <Typography
+                                            sx={{
+                                                minWidth: 0,
+                                                overflow: "hidden",
+                                                textOverflow: "ellipsis",
+                                                whiteSpace: "nowrap",
+                                                fontSize:
+                                                    teamNames[team2].length > 20
+                                                        ? "0.75rem"
+                                                        : "1rem"
+                                            }}
+                                            style={{ flex: 3 }}
+                                        >
+                                            {teamNames[team2]}
+                                        </Typography>
 
                                         <TextField
-                                            style={{ width: "50%" }}
+                                            style={{ flex: 1, minWidth: "60px" }}
                                             type="number"
                                             value={match[`legs_${match.team2}`]}
                                             disabled={status !== "sf" || isViewMode}
@@ -194,47 +219,47 @@ export default function SemifinalTab({ isViewMode }) {
                                             fullWidth
                                         />
                                     </div>
-                                </div>
+                                </Card>
                             );
                         })}
                 </div>
             ) : (
                 <div>
-                    <div
+                    <Card
                         key="sf1_not_ready"
-                        style={{
-                            border: "1px solid #ccc",
-                            borderRadius: 10,
-                            padding: 12,
-                            marginBottom: 12,
+                        sx={{
+                            width: "90vw",
+                            mx: "auto",
+                            mb: 2
                         }}
                     >
                         <div>Sieger QF1</div>
                         <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
                         <div>Sieger QF4</div>
-                    </div>
-                    <div
+                    </Card>
+                    <Card
                         key="sf2_not_ready"
-                        style={{
-                            border: "1px solid #ccc",
-                            borderRadius: 10,
-                            padding: 12,
-                            marginBottom: 12,
+                        sx={{
+                            width: "90vw",
+                            mx: "auto",
+                            mb: 2
                         }}
                     >
                         <div>Sieger QF2</div>
                         <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
                         <div>Sieger QF3</div>
-                    </div>
+                    </Card>
                 </div>
             )}
 
-            <Button
-                onClick={handleFinishSemifinal}
-                disabled={!allSFsPlayed || (status !== "sf")}
-            >
-                Halbfinale abschließen
-            </Button>
+            {!isViewMode && (
+                <Button
+                    onClick={handleFinishSemifinal}
+                    disabled={!allSFsPlayed || (status !== "sf")}
+                >
+                    Halbfinale abschließen
+                </Button>
+            )}
         </div>
     ) : (
         <div style={{
@@ -256,7 +281,18 @@ export default function SemifinalTab({ isViewMode }) {
                 inputProps={{ min: 0 }}
             />
             <br />
-            <Table>
+            <Table
+                sx={{
+                    width: "80vw",
+                    mx: "auto",
+                    mb: 2,
+                    maxWidth: 800
+                }}
+                style={{
+                    borderCollapse: "collapse",
+                    alignContent: "center"
+                }}
+            >
                 <TableHead>
                     <TableRow>
                         <TableCell align="center" width="15%">Match</TableCell>
@@ -290,9 +326,41 @@ export default function SemifinalTab({ isViewMode }) {
                                             inputProps={{ min: 0, max: winLegs }}
                                         />
                                     </TableCell>
-                                    <TableCell align="right">{teamNames[match.team1]}</TableCell>
+                                    <TableCell
+                                        sx={{
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                            fontSize:
+                                                teamNames[match.team1].length > 25
+                                                    ? "0.75rem"
+                                                    : "1rem"
+                                        }}
+                                        align="right"
+                                        width="25%"
+                                    >
+                                        <Tooltip title={teamNames[match.team1]} enterDelay={1000}>
+                                            {teamNames[match.team1]}
+                                        </Tooltip>
+                                    </TableCell>
                                     <TableCell align="center">vs</TableCell>
-                                    <TableCell align="left">{teamNames[match.team2]}</TableCell>
+                                    <TableCell
+                                        sx={{
+                                            overflow: "hidden",
+                                            textOverflow: "ellipsis",
+                                            whiteSpace: "nowrap",
+                                            fontSize:
+                                                teamNames[match.team2].length > 25
+                                                    ? "0.75rem"
+                                                    : "1rem"
+                                        }}
+                                        align="left"
+                                        width="25%"
+                                    >
+                                        <Tooltip title={teamNames[match.team2]}  enterDelay={1000}>
+                                            {teamNames[match.team2]}
+                                        </Tooltip>
+                                    </TableCell>
                                     <TableCell align="left">
                                         <TextField
                                             type={"number"}

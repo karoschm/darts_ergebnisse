@@ -1,4 +1,4 @@
-import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography, useTheme, useMediaQuery } from "@mui/material";
+import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography, useTheme, useMediaQuery, Card, Tooltip } from "@mui/material";
 import { useState, useEffect } from "react";
 import { useTournament } from "../../../context/TournamentContext";
 import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus } from "../../../services/firestoreService";
@@ -12,8 +12,6 @@ export default function MatchdayTabs({ md, isViewMode }) {
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
-    console.log(isViewMode)
 
     useEffect(() => {
         if (!currentTournamentId) return;
@@ -77,32 +75,45 @@ export default function MatchdayTabs({ md, isViewMode }) {
 
     return isMobile ? (
         <div>
+            <br />
             {Object.keys(matches).map((mNumber) => {
                 const match = matches[mNumber];
                 const team1 = match.team1;
                 const team2 = match.team2;
 
                 return (
-                    <div
+                    <Card
                         key={mNumber}
-                        style={{
-                            border: "1px solid #ccc",
-                            borderRadius: 10,
-                            padding: 12,
-                            marginBottom: 12,
+                        sx={{
+                            width: "90vw",
+                            mx: "auto",
+                            mb: 2
                         }}
                     >
-
                         <div style={{
                             flex: 1,
                             display: "flex",
                             justifyContent: "space-between",
-                            textAlign: "center"
                         }}>
-                            <div>{teamNames[team1]}</div>
+                            <Typography
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    fontSize:
+                                        teamNames[team1].length > 20
+                                            ? "0.75rem"
+                                            : "1rem"
+                                }}
+                                style={{ flex: 3 }}
+                            >
+                                {teamNames[team1]}
+                            </Typography>
 
                             <TextField
-                                style={{ width: "50%" }}
+                                style={{ flex: 1, minWidth: "60px" }}
                                 type="number"
                                 value={match[`score_${team1}`]}
                                 disabled={status !== "group" || isViewMode}
@@ -114,17 +125,31 @@ export default function MatchdayTabs({ md, isViewMode }) {
                             />
                         </div>
 
-                        <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                        <div style={{ textAlign: "right", margin: "4px" }}>vs</div>
                         <div style={{
                             flex: 1,
                             display: "flex",
                             justifyContent: "space-between",
-                            textAlign: "center"
                         }}>
-                            <div>{teamNames[team2]}</div>
+                            <Typography
+                                sx={{
+                                    flex: 1,
+                                    minWidth: 0,
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    fontSize:
+                                        teamNames[team2].length > 20
+                                            ? "0.75rem"
+                                            : "1rem"
+                                }}
+                                style={{ flex: 3 }}
+                            >
+                                {teamNames[team2]}
+                            </Typography>
 
                             <TextField
-                                style={{ width: "50%" }}
+                                style={{ flex: 1, minWidth: "60px" }}
                                 type="number"
                                 value={match[`score_${team2}`]}
                                 disabled={status !== "group" || isViewMode}
@@ -135,15 +160,23 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                 inputProps={{ min: 0, max: 501 }}
                             />
                         </div>
-                    </div>
+                    </Card>
                 );
             })}
         </div>
     ) : (
-        <Table style={{
-            borderCollapse: "collapse",
-            alignContent: "center"
-        }}>
+        <Table
+            sx={{
+                width: "80vw",
+                mx: "auto",
+                mb: 2,
+                maxWidth: 800
+            }}
+            style={{
+                borderCollapse: "collapse",
+                alignContent: "center"
+            }}
+        >
             <TableBody>
                 {Object.keys(matches).sort((a, b) => a.localeCompare(b)).map((mNumber) => {
                     const match = matches[mNumber];
@@ -171,16 +204,44 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                 />
                             </TableCell>
 
-                            <TableCell align="right" width="25%">
-                                {teamNames[team1]}
+                            <TableCell
+                                sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    fontSize:
+                                        teamNames[team1].length > 25
+                                            ? "0.75rem"
+                                            : "1rem"
+                                }}
+                                align="right"
+                                width="25%"
+                            >
+                                <Tooltip title={teamNames[team1]}  enterDelay={1000}>
+                                    {teamNames[team1]}
+                                </Tooltip>
                             </TableCell>
 
                             <TableCell align="center" width="10%">
                                 vs
                             </TableCell>
 
-                            <TableCell align="left" width="25%">
-                                {teamNames[team2]}
+                            <TableCell
+                                sx={{
+                                    overflow: "hidden",
+                                    textOverflow: "ellipsis",
+                                    whiteSpace: "nowrap",
+                                    fontSize:
+                                        teamNames[team2].length > 25
+                                            ? "0.75rem"
+                                            : "1rem"
+                                }}
+                                align="left"
+                                width="25%"
+                            >
+                                <Tooltip title={teamNames[team2]}  enterDelay={1000}>
+                                    {teamNames[team2]}
+                                </Tooltip>
                             </TableCell>
 
                             <TableCell align="left" width="10%">

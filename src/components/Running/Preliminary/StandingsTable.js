@@ -1,4 +1,4 @@
-import { Table, TableCell, TableHead, TableRow, useTheme, useMediaQuery } from "@mui/material";
+import { Table, TableCell, TableHead, TableRow, useTheme, useMediaQuery, Card, Typography, Tooltip } from "@mui/material";
 
 export default function StandingsTable({ teams }) {
     const theme = useTheme();
@@ -25,18 +25,32 @@ export default function StandingsTable({ teams }) {
             }}
         >
             {getTableOrder().map((team, index) => (
-                <div
+                <Card
                     key={team.id}
-                    style={{
-                        border: "1px solid #ccc",
-                        borderRadius: 8,
-                        padding: 12,
-                        marginBottom: 10,
+                    sx={{
+                        width: "90vw",
+                        mx: "auto",
+                        mb: 2
                     }}
                 >
-                    <strong>{index + 1}. {team.name}</strong>
+                    <Typography
+                        sx={{
+                            flex: 1,
+                            minWidth: 0,
+                            overflow: "hidden",
+                            textOverflow: "ellipsis",
+                            whiteSpace: "nowrap",
+                            fontSize:
+                                team.name.length > 30
+                                    ? "0.75rem"
+                                    : "1rem"
+                        }}
+                        fontWeight={"bold"}
+                    >
+                        {index + 1}. {team.name}
+                    </Typography>
                     <div>W: {team.wins} | L: {team.losses} | {team.own_score}:{team.opponent_score}</div>
-                </div>
+                </Card>
             ))}
         </div>
     ) : (

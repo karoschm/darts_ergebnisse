@@ -30,7 +30,6 @@ export async function checkIfTournamentExists(tournamentID) {
 
 export async function getAllTournaments() {
     const snapshot = await getDocs(collection(db, "tournaments"));
-    // console.log(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
 }
 

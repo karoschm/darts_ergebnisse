@@ -161,8 +161,7 @@ export default function Preliminary({ isViewMode }) {
             }}
         >
             <StandingsTable teams={teams} />
-            <br></br>
-            <br></br>
+            <br/>
             <div style={{
                 display: "flex",
                 gap: "15px",
@@ -188,7 +187,7 @@ export default function Preliminary({ isViewMode }) {
                 </div>
             )}
             </div>
-            <br></br>
+            <br/>
             <Tabs
                 key={"preliminary_tabs"}
                 value={preliminaryTabValue}
@@ -221,7 +220,6 @@ export default function Preliminary({ isViewMode }) {
                     )}
                 </div>
             ))}
-            <br />
             <br />
             {!isViewMode && (
                 <Button
