@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
 import { getAllTeams, saveKOScore, subscribeKnockoutRound, subscribeTournamentStatus, updateAllKOsPlayed, updateRankingFinals, updateTournamentStatus } from "../../../services/firestoreService";
 
-export default function FinalTab(isViewMode) {
+export default function FinalTab({ isViewMode }) {
     const { currentTournamentId } = useTournament();
     const [status, setStatus] = useState("");
     const [finals, setFinals] = useState({ matches: {} })

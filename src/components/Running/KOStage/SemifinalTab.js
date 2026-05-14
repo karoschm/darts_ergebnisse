@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
 import { generateFinal, getAllTeams, saveKOScore, subscribeKnockoutRound, subscribeTournamentStatus, updateAllKOsPlayed, updateTournamentStatus } from "../../../services/firestoreService";
 
-export default function SemifinalTab(isViewMode) {
+export default function SemifinalTab({ isViewMode }) {
     const { currentTournamentId } = useTournament();
     const [status, setStatus] = useState("");
     const [semifinals, setSemifinals] = useState({ matches: {} })

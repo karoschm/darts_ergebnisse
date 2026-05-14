@@ -13,6 +13,8 @@ export default function MatchdayTabs({ md, isViewMode }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
+    console.log(isViewMode)
+
     useEffect(() => {
         if (!currentTournamentId) return;
 

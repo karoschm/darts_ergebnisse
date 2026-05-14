@@ -9,7 +9,7 @@ import MatchdayTabs from "./MatchdayTabs";
 import { Button, useTheme, useMediaQuery } from "@mui/material";
 
 
-export default function Preliminary(isViewMode) {
+export default function Preliminary({ isViewMode }) {
     const { currentTournamentId } = useTournament();
     const [teams, setTeams] = useState({});
     const [status, setStatus] = useState("");
