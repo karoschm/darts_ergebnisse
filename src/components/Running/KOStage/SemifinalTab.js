@@ -383,20 +383,20 @@ export default function SemifinalTab({ isViewMode }) {
                 ) : (
                     <tbody>
                         <TableRow>
-                            <TableCell>SF1</TableCell>
-                            <td />
-                            <TableCell>Sieger QF1</TableCell>
-                            <TableCell>vs</TableCell>
+                            <TableCell align="center">SF1</TableCell>
+                            <TableCell />
+                            <TableCell align="right">Sieger QF1</TableCell>
+                            <TableCell align="center">vs</TableCell>
                             <TableCell>Sieger QF4</TableCell>
-                            <td />
+                            <TableCell />
                         </TableRow>
                         <TableRow>
-                            <TableCell>SF2</TableCell>
-                            <td />
-                            <TableCell>Sieger QF2</TableCell>
-                            <TableCell>vs</TableCell>
+                            <TableCell align="center">SF2</TableCell>
+                            <TableCell />
+                            <TableCell align="right">Sieger QF2</TableCell>
+                            <TableCell align="center">vs</TableCell>
                             <TableCell>Sieger QF3</TableCell>
-                            <td />
+                            <TableCell />
                         </TableRow>
                     </tbody>
                 )}

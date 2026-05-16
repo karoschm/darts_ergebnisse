@@ -438,11 +438,11 @@ export default function FinalTab({ isViewMode }) {
                         </TableRow>
                     ) : (
                         <TableRow>
-                            <td />
-                            <TableCell>Sieger SF1</TableCell>
-                            <TableCell>vs</TableCell>
+                            <TableCell />
+                            <TableCell align="right">Sieger SF1</TableCell>
+                            <TableCell align="center">vs</TableCell>
                             <TableCell>Sieger SF2</TableCell>
-                            <td />
+                            <TableCell />
                         </TableRow>
                     )}
                 </TableBody>
@@ -544,11 +544,11 @@ export default function FinalTab({ isViewMode }) {
                         </TableRow>
                     ) : (
                         <TableRow>
-                            <td />
-                            <TableCell>Verlierer SF1</TableCell>
-                            <TableCell>vs</TableCell>
+                            <TableCell />
+                            <TableCell align="right">Verlierer SF1</TableCell>
+                            <TableCell align="center">vs</TableCell>
                             <TableCell>Verlierer SF 2</TableCell>
-                            <td />
+                            <TableCell />
                         </TableRow>
                     )}
                 </TableBody>

@@ -389,34 +389,34 @@ export default function QuarterfinalTab({ isViewMode }) {
                 ) : (
                     <TableBody>
                         <TableRow>
-                            <TableCell>QF1</TableCell>
+                            <TableCell align="center">QF1</TableCell>
                             <TableCell />
-                            <TableCell>VR Platz 1</TableCell>
-                            <TableCell>vs</TableCell>
+                            <TableCell align="right">VR Platz 1</TableCell>
+                            <TableCell align="center">vs</TableCell>
                             <TableCell>VR Platz 8</TableCell>
                             <TableCell />
                         </TableRow>
                         <TableRow>
-                            <TableCell>QF2</TableCell>
+                            <TableCell align="center">QF2</TableCell>
                             <TableCell />
-                            <TableCell>VR Platz 2</TableCell>
-                            <TableCell>vs</TableCell>
+                            <TableCell align="right">VR Platz 2</TableCell>
+                            <TableCell align="center">vs</TableCell>
                             <TableCell>VR Platz 7</TableCell>
                             <TableCell />
                         </TableRow>
                         <TableRow>
-                            <TableCell>QF3</TableCell>
+                            <TableCell align="center">QF3</TableCell>
                             <TableCell />
-                            <TableCell>VR Platz 3</TableCell>
-                            <TableCell>vs</TableCell>
+                            <TableCell align="right">VR Platz 3</TableCell>
+                            <TableCell align="center">vs</TableCell>
                             <TableCell>VR Platz 6</TableCell>
                             <TableCell />
                         </TableRow>
                         <TableRow>
-                            <TableCell>QF4</TableCell>
+                            <TableCell align="center">QF4</TableCell>
                             <TableCell />
-                            <TableCell>VR Platz 4</TableCell>
-                            <TableCell>vs</TableCell>
+                            <TableCell align="right">VR Platz 4</TableCell>
+                            <TableCell align="center">vs</TableCell>
                             <TableCell>VR Platz 5</TableCell>
                             <TableCell />
                         </TableRow>
