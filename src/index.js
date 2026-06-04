@@ -1,20 +1,40 @@
-import React from 'react';
-import ReactDOM from 'react-dom/client';
-import './index.css';
-import App from './App';
-import reportWebVitals from './reportWebVitals';
-import { ThemeProvider, CssBaseline } from "@mui/material";
-import theme from "./theme/theme";
+import ReactDOM from "react-dom/client";
+import App from "./App";
 
-const root = ReactDOM.createRoot(document.getElementById('root'));
+import { ThemeProvider } from "@mui/material/styles";
+import CssBaseline from "@mui/material/CssBaseline";
+
+import { useMemo } from "react";
+
+import { ThemeProviderCustom, useThemeMode } from "./context/ThemeContext";
+import { getTheme } from "./theme/theme";
+
+function AppWithTheme() {
+  const { darkMode } = useThemeMode();
+
+  const theme = useMemo(
+    () => getTheme(darkMode ? "dark" : "light"),
+    [darkMode]
+  );
+
+  return (
+    <ThemeProvider theme={theme}>
+      <CssBaseline />
+      <App />
+    </ThemeProvider>
+  );
+}
+const root = ReactDOM.createRoot(
+  document.getElementById("root")
+);
+
 root.render(
-  <ThemeProvider theme={theme}>
-    <CssBaseline />
-    <App />
-  </ThemeProvider>
+  <ThemeProviderCustom>
+    <AppWithTheme />
+  </ThemeProviderCustom>
 );
 
 // If you want to start measuring performance in your app, pass a function
 // to log results (for example: reportWebVitals(console.log))
 // or send to an analytics endpoint. Learn more: https://bit.ly/CRA-vitals
-reportWebVitals();
+// reportWebVitals();

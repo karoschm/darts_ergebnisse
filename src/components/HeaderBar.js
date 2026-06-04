@@ -1,7 +1,13 @@
 import { Box, Typography, Chip, Button } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import IconButton from "@mui/material/IconButton";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
+import { useThemeMode } from "../context/ThemeContext";
 
 export default function HeaderBar({ tournamentId, status, statusLabelMap, statusColorMap, isViewMode }) {
+    const { darkMode, toggleDarkMode } = useThemeMode();
+
     return (
         <Box
             sx={{
@@ -28,15 +34,13 @@ export default function HeaderBar({ tournamentId, status, statusLabelMap, status
                 size="small"
             />
 
-            {/* {isViewMode && (
-                <Button
-                    variant="outlined"
-                    startIcon={<RefreshIcon />}
-                    onClick={() => window.location.reload()}
-                >
-                    Aktualisieren
-                </Button>
-            )} */}
+            <IconButton onClick={toggleDarkMode}>
+                {darkMode ? (
+                    <LightModeIcon />
+                ) : (
+                    <DarkModeIcon />
+                )}
+            </IconButton>
         </Box>
     );
 }
