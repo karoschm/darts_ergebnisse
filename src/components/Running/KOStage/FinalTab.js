@@ -96,14 +96,18 @@ export default function FinalTab({ isViewMode }) {
         }}
         >
             <label>Gewinnlegs: First to</label>
-            <TextField
-                style={{ width: "60px", paddingTop: "10px" }}
-                type={"number"}
-                value={winLegs}
-                disabled={status !== "final" || isViewMode}
-                onChange={e => handleWinLegsChange(Number(e.target.value))}
-                inputProps={{ min: 0 }}
-            />
+            <Tooltip title={(status != "final") ? "Das Turnier befindet sich in einer anderen Stufe" : isViewMode ? "Keine Bearbeitung möglich" : ""}>
+                <span>
+                    <TextField
+                        style={{ width: "60px", paddingTop: "10px" }}
+                        type={"number"}
+                        value={winLegs}
+                        disabled={status !== "final" || isViewMode}
+                        onChange={e => handleWinLegsChange(Number(e.target.value))}
+                        inputProps={{ min: 0 }}
+                    />
+                </span>
+            </Tooltip>
             <br />
             <h2>Finale</h2>
             {finalReady ? (
@@ -334,14 +338,26 @@ export default function FinalTab({ isViewMode }) {
             padding: "20px 20px 60px 20px"
         }}>
             <label>Gewinnlegs: First to</label>
-            <TextField
-                style={{ width: "60px", paddingTop: "10px" }}
-                type={"number"}
-                value={winLegs}
-                disabled={status !== "final" || isViewMode}
-                onChange={e => handleWinLegsChange(Number(e.target.value))}
-                inputProps={{ min: 0 }}
-            />
+            <Tooltip
+                title={
+                    isViewMode ?
+                        "Keine Bearbeitung möglich (Beobachtungsmodus)" :
+                        (status != "final") ?
+                            "Das Turnier befindet sich in einer anderen Stufe" :
+                            ""
+                }
+            >
+                <span>
+                    <TextField
+                        style={{ width: "60px", paddingTop: "10px" }}
+                        type={"number"}
+                        value={winLegs}
+                        disabled={status !== "final" || isViewMode}
+                        onChange={e => handleWinLegsChange(Number(e.target.value))}
+                        inputProps={{ min: 0 }}
+                    />
+                </span>
+            </Tooltip>
             <br />
             <h2>Finale</h2>
             <Table
@@ -369,20 +385,32 @@ export default function FinalTab({ isViewMode }) {
                     {finalReady ? (
                         <TableRow>
                             <TableCell align="right">
-                                <TextField
-                                    type={"number"}
-                                    value={finals.matches.final[`legs_${finals.matches.final.team1}`]}
-                                    disabled={status !== "final" || isViewMode}
-                                    onChange={e =>
-                                        handleLegScoreChange(
-                                            "final",
-                                            finals.matches.final.team1,
-                                            Number(e.target.value),
-                                            finals.matches.final.team2
-                                        )
+                                <Tooltip
+                                    title={
+                                        isViewMode ?
+                                            "Keine Bearbeitung möglich (Beobachtungsmodus)" :
+                                            (status != "final") ?
+                                                "Das Turnier befindet sich in einer anderen Stufe" :
+                                                ""
                                     }
-                                    inputProps={{ min: 0, max: winLegs }}
-                                />
+                                >
+                                    <span>
+                                        <TextField
+                                            type={"number"}
+                                            value={finals.matches.final[`legs_${finals.matches.final.team1}`]}
+                                            disabled={status !== "final" || isViewMode}
+                                            onChange={e =>
+                                                handleLegScoreChange(
+                                                    "final",
+                                                    finals.matches.final.team1,
+                                                    Number(e.target.value),
+                                                    finals.matches.final.team2
+                                                )
+                                            }
+                                            inputProps={{ min: 0, max: winLegs }}
+                                        />
+                                    </span>
+                                </Tooltip>
                             </TableCell>
                             <TableCell
                                 sx={{
@@ -420,20 +448,32 @@ export default function FinalTab({ isViewMode }) {
                                 </Tooltip>
                             </TableCell>
                             <TableCell align="left">
-                                <TextField
-                                    type={"number"}
-                                    value={finals.matches.final[`legs_${finals.matches.final.team2}`]}
-                                    disabled={status !== "final" || isViewMode}
-                                    onChange={e =>
-                                        handleLegScoreChange(
-                                            "final",
-                                            finals.matches.final.team2,
-                                            Number(e.target.value),
-                                            finals.matches.final.team1
-                                        )
+                                <Tooltip
+                                    title={
+                                        isViewMode ?
+                                            "Keine Bearbeitung möglich (Beobachtungsmodus)" :
+                                            (status != "final") ?
+                                                "Das Turnier befindet sich in einer anderen Stufe" :
+                                                ""
                                     }
-                                    inputProps={{ min: 0, max: winLegs }}
-                                />
+                                >
+                                    <span>
+                                        <TextField
+                                            type={"number"}
+                                            value={finals.matches.final[`legs_${finals.matches.final.team2}`]}
+                                            disabled={status !== "final" || isViewMode}
+                                            onChange={e =>
+                                                handleLegScoreChange(
+                                                    "final",
+                                                    finals.matches.final.team2,
+                                                    Number(e.target.value),
+                                                    finals.matches.final.team1
+                                                )
+                                            }
+                                            inputProps={{ min: 0, max: winLegs }}
+                                        />
+                                    </span>
+                                </Tooltip>
                             </TableCell>
                         </TableRow>
                     ) : (
@@ -475,20 +515,32 @@ export default function FinalTab({ isViewMode }) {
                     {place3Ready ? (
                         <TableRow>
                             <TableCell align="right">
-                                <TextField
-                                    type={"number"}
-                                    value={finals.matches.place3[`legs_${finals.matches.place3.team1}`]}
-                                    disabled={status !== "final" || isViewMode}
-                                    onChange={e =>
-                                        handleLegScoreChange(
-                                            "place3",
-                                            finals.matches.place3.team1,
-                                            Number(e.target.value),
-                                            finals.matches.place3.team2
-                                        )
+                                <Tooltip
+                                    title={
+                                        isViewMode ?
+                                            "Keine Bearbeitung möglich (Beobachtungsmodus)" :
+                                            (status != "final") ?
+                                                "Das Turnier befindet sich in einer anderen Stufe" :
+                                                ""
                                     }
-                                    inputProps={{ min: 0, max: winLegs }}
-                                />
+                                >
+                                    <span>
+                                        <TextField
+                                            type={"number"}
+                                            value={finals.matches.place3[`legs_${finals.matches.place3.team1}`]}
+                                            disabled={status !== "final" || isViewMode}
+                                            onChange={e =>
+                                                handleLegScoreChange(
+                                                    "place3",
+                                                    finals.matches.place3.team1,
+                                                    Number(e.target.value),
+                                                    finals.matches.place3.team2
+                                                )
+                                            }
+                                            inputProps={{ min: 0, max: winLegs }}
+                                        />
+                                    </span>
+                                </Tooltip>
                             </TableCell>
                             <TableCell
                                 sx={{
@@ -526,20 +578,32 @@ export default function FinalTab({ isViewMode }) {
                                 </Tooltip>
                             </TableCell>
                             <TableCell align="left">
-                                <TextField
-                                    type={"number"}
-                                    value={finals.matches.place3[`legs_${finals.matches.place3.team2}`]}
-                                    disabled={status !== "final" || isViewMode}
-                                    onChange={e =>
-                                        handleLegScoreChange(
-                                            "place3",
-                                            finals.matches.place3.team2,
-                                            Number(e.target.value),
-                                            finals.matches.place3.team1
-                                        )
+                                <Tooltip
+                                    title={
+                                        isViewMode ?
+                                            "Keine Bearbeitung möglich (Beobachtungsmodus)" :
+                                            (status != "final") ?
+                                                "Das Turnier befindet sich in einer anderen Stufe" :
+                                                ""
                                     }
-                                    inputProps={{ min: 0, max: winLegs }}
-                                />
+                                >
+                                    <span>
+                                        <TextField
+                                            type={"number"}
+                                            value={finals.matches.place3[`legs_${finals.matches.place3.team2}`]}
+                                            disabled={status !== "final" || isViewMode}
+                                            onChange={e =>
+                                                handleLegScoreChange(
+                                                    "place3",
+                                                    finals.matches.place3.team2,
+                                                    Number(e.target.value),
+                                                    finals.matches.place3.team1
+                                                )
+                                            }
+                                            inputProps={{ min: 0, max: winLegs }}
+                                        />
+                                    </span>
+                                </Tooltip>
                             </TableCell>
                         </TableRow>
                     ) : (

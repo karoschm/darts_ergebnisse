@@ -189,19 +189,31 @@ export default function MatchdayTabs({ md, isViewMode }) {
                     return gamePlayed ? (
                         <TableRow key={mNumber}>
                             <TableCell align="right" width="10%">
-                                <TextField
-                                    type="number"
-                                    style={{ width: "60px", textAlign: "center" }}
-                                    disabled={status !== "group" || isViewMode}
-                                    value={scoreTeam1}
-                                    onChange={e =>
-                                        handleScoreChange(mNumber, team1, Number(e.target.value), team2)
+                                <Tooltip
+                                    title={
+                                        isViewMode ?
+                                            "Keine Bearbeitung möglich (Beobachtungsmodus)" :
+                                            (status != "group") ?
+                                                "Das Turnier befindet sich in einer anderen Stufe" :
+                                                ""
                                     }
-                                    onBlur={e =>
-                                        saveScore(currentTournamentId, md, mNumber, team1, Number(e.target.value), team2)
-                                    }
-                                    inputProps={{ min: 0, max: 501 }}
-                                />
+                                >
+                                    <span>
+                                        <TextField
+                                            type="number"
+                                            style={{ width: "60px", textAlign: "center" }}
+                                            disabled={status !== "group" || isViewMode}
+                                            value={scoreTeam1}
+                                            onChange={e =>
+                                                handleScoreChange(mNumber, team1, Number(e.target.value), team2)
+                                            }
+                                            onBlur={e =>
+                                                saveScore(currentTournamentId, md, mNumber, team1, Number(e.target.value), team2)
+                                            }
+                                            inputProps={{ min: 0, max: 501 }}
+                                        />
+                                    </span>
+                                </Tooltip>
                             </TableCell>
 
                             <TableCell
@@ -217,7 +229,7 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                 align="right"
                                 width="25%"
                             >
-                                <Tooltip title={teamNames[team1]}  enterDelay={1000}>
+                                <Tooltip title={teamNames[team1]} enterDelay={1000}>
                                     {teamNames[team1]}
                                 </Tooltip>
                             </TableCell>
@@ -239,25 +251,37 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                 align="left"
                                 width="25%"
                             >
-                                <Tooltip title={teamNames[team2]}  enterDelay={1000}>
+                                <Tooltip title={teamNames[team2]} enterDelay={1000}>
                                     {teamNames[team2]}
                                 </Tooltip>
                             </TableCell>
 
                             <TableCell align="left" width="10%">
-                                <TextField
-                                    type="number"
-                                    style={{ width: "60px", textAlign: "center" }}
-                                    disabled={status !== "group" || isViewMode}
-                                    value={scoreTeam2}
-                                    onChange={e =>
-                                        handleScoreChange(mNumber, team2, Number(e.target.value), team1)
+                                <Tooltip
+                                    title={
+                                        isViewMode ?
+                                            "Keine Bearbeitung möglich (Beobachtungsmodus)" :
+                                            (status != "group") ?
+                                                "Das Turnier befindet sich in einer anderen Stufe" :
+                                                ""
                                     }
-                                    onBlur={e =>
-                                        saveScore(currentTournamentId, md, mNumber, team2, Number(e.target.value), team1)
-                                    }
-                                    inputProps={{ min: 0, max: 501 }}
-                                />
+                                >
+                                    <span>
+                                        <TextField
+                                            type="number"
+                                            style={{ width: "60px", textAlign: "center" }}
+                                            disabled={status !== "group" || isViewMode}
+                                            value={scoreTeam2}
+                                            onChange={e =>
+                                                handleScoreChange(mNumber, team2, Number(e.target.value), team1)
+                                            }
+                                            onBlur={e =>
+                                                saveScore(currentTournamentId, md, mNumber, team2, Number(e.target.value), team1)
+                                            }
+                                            inputProps={{ min: 0, max: 501 }}
+                                        />
+                                    </span>
+                                </Tooltip>
                             </TableCell>
 
                             <TableCell width="20%" />

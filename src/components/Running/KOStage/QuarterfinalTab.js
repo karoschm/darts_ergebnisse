@@ -288,14 +288,26 @@ export default function QuarterfinalTab({ isViewMode }) {
             padding: "20px 20px 60px 20px"
         }}>
             <label>Gewinnlegs: First to</label>
-            <TextField
-                style={{ width: "60px", paddingTop: "10px" }}
-                type={"number"}
-                value={winLegs}
-                disabled={status !== "qf" || isViewMode}
-                onChange={e => handleWinLegsChange(Number(e.target.value))}
-                inputProps={{ min: 0 }}
-            />
+            <Tooltip
+                title={
+                    isViewMode ?
+                        "Keine Bearbeitung möglich (Beobachtungsmodus)" :
+                        (status != "qf") ?
+                            "Das Turnier befindet sich in einer anderen Stufe" :
+                            ""
+                }
+            >
+                <span>
+                    <TextField
+                        style={{ width: "60px", paddingTop: "10px" }}
+                        type={"number"}
+                        value={winLegs}
+                        disabled={status !== "qf" || isViewMode}
+                        onChange={e => handleWinLegsChange(Number(e.target.value))}
+                        inputProps={{ min: 0 }}
+                    />
+                </span>
+            </Tooltip>
             <br />
             <Table
                 sx={{
@@ -327,15 +339,27 @@ export default function QuarterfinalTab({ isViewMode }) {
                                 <TableRow key={matchId}>
                                     <TableCell align="center">{matchId}</TableCell>
                                     <TableCell align="right">
-                                        <TextField
-                                            type={"number"}
-                                            value={match[`legs_${match.team1}`]}
-                                            disabled={status !== "qf" || isViewMode}
-                                            onChange={e => handleLegScoreChange(
-                                                matchId, match.team1, Number(e.target.value), match.team2
-                                            )}
-                                            inputProps={{ min: 0, max: winLegs }}
-                                        />
+                                        <Tooltip
+                                            title={
+                                                isViewMode ?
+                                                    "Keine Bearbeitung möglich (Beobachtungsmodus)" :
+                                                    (status != "qf") ?
+                                                        "Das Turnier befindet sich in einer anderen Stufe" :
+                                                        ""
+                                            }
+                                        >
+                                            <span>
+                                                <TextField
+                                                    type={"number"}
+                                                    value={match[`legs_${match.team1}`]}
+                                                    disabled={status !== "qf" || isViewMode}
+                                                    onChange={e => handleLegScoreChange(
+                                                        matchId, match.team1, Number(e.target.value), match.team2
+                                                    )}
+                                                    inputProps={{ min: 0, max: winLegs }}
+                                                />
+                                            </span>
+                                        </Tooltip>
                                     </TableCell>
                                     <TableCell
                                         sx={{
@@ -368,20 +392,32 @@ export default function QuarterfinalTab({ isViewMode }) {
                                         align="left"
                                         width="25%"
                                     >
-                                        <Tooltip title={teamNames[match.team2]}  enterDelay={1000}>
+                                        <Tooltip title={teamNames[match.team2]} enterDelay={1000}>
                                             {teamNames[match.team2]}
                                         </Tooltip>
                                     </TableCell>
                                     <TableCell align="left">
-                                        <TextField
-                                            type={"number"}
-                                            value={match[`legs_${match.team2}`]}
-                                            disabled={status !== "qf" || isViewMode}
-                                            onChange={e => handleLegScoreChange(
-                                                matchId, match.team2, Number(e.target.value), match.team1
-                                            )}
-                                            inputProps={{ min: 0, max: winLegs }}
-                                        />
+                                        <Tooltip
+                                            title={
+                                                isViewMode ?
+                                                    "Keine Bearbeitung möglich (Beobachtungsmodus)" :
+                                                    (status != "qf") ?
+                                                        "Das Turnier befindet sich in einer anderen Stufe" :
+                                                        ""
+                                            }
+                                        >
+                                            <span>
+                                                <TextField
+                                                    type={"number"}
+                                                    value={match[`legs_${match.team2}`]}
+                                                    disabled={status !== "qf" || isViewMode}
+                                                    onChange={e => handleLegScoreChange(
+                                                        matchId, match.team2, Number(e.target.value), match.team1
+                                                    )}
+                                                    inputProps={{ min: 0, max: winLegs }}
+                                                />
+                                            </span>
+                                        </Tooltip>
                                     </TableCell>
                                 </TableRow>
                             ))}
