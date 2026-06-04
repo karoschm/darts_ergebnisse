@@ -13,12 +13,14 @@ import { Box, Chip, Typography, useTheme, useMediaQuery } from "@mui/material";
 import PageContainer from "../PageContainer";
 import HeaderBar from "../HeaderBar";
 import TournamentTabs from "../TournamentTabs";
-import { useParams } from "react-router-dom";
+import { useNavigate, useParams } from "react-router-dom";
 
 export default function Running() {
+    const navigate = useNavigate();
+
+    const { tournamentId, stage } = useParams();
     const { currentTournamentId } = useTournament();
     const [status, setStatus] = useState("");
-    const [tabValue, setTabValue] = useState(0);
     
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -43,6 +45,24 @@ export default function Running() {
         finished: "success"
     };
 
+    const stageToTab = {
+        preliminary: 0,
+        quarterfinal: 1,
+        semifinal: 2,
+        final: 3,
+        standings: 4
+    };
+
+    const tabToStage = {
+        0: "preliminary",
+        1: "quarterfinal",
+        2: "semifinal",
+        3: "final",
+        4: "standings"
+    };
+
+    const tabValue = stageToTab[stage] ?? 0;
+
     useEffect(() => {
         if (!currentTournamentId) return;
 
@@ -55,8 +75,10 @@ export default function Running() {
     }, [status, currentTournamentId])
 
     const handleTabChange = (event, newTabValue) => {
-        setTabValue(newTabValue);
-    }
+        navigate(
+            `/tournament/${tournamentId}/${isViewMode ? "view" : "edit"}/running/${tabToStage[newTabValue]}`
+        );
+    };
 
     return (
         <PageContainer>

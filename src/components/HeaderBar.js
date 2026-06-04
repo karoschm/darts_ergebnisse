@@ -37,13 +37,11 @@ export default function HeaderBar({ tournamentId, status, statusLabelMap, status
             />
             <Tooltip title={isViewMode ? "Beobachtungsmodus" : "Bearbeitungsmodus"}>
                 <span>
-                    <IconButton disabled="true">
-                        {isViewMode ? (
-                            <VisibilityIcon />
-                        ) : (
-                            <EditIcon />
-                        )}
-                    </IconButton>
+                    {isViewMode ? (
+                        <VisibilityIcon />
+                    ) : (
+                        <EditIcon />
+                    )}
                 </span>
             </Tooltip>
 

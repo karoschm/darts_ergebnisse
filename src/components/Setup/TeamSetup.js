@@ -39,7 +39,7 @@ export default function TeamSetup() {
 
         await updateTeamNames(currentTournamentId, trimmedNames);
 
-        navigate(`/tournament/${currentTournamentId}/edit/running`);
+        navigate(`/tournament/${currentTournamentId}/edit/running/preliminary`);
     };
 
     const handleInputChange = async (id, value) => {
