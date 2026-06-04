@@ -1,8 +1,10 @@
-import { Box, Typography, Chip, Button } from "@mui/material";
+import { Box, Typography, Chip, Button, Tooltip } from "@mui/material";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import IconButton from "@mui/material/IconButton";
 import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import EditIcon from "@mui/icons-material/Edit"
 import { useThemeMode } from "../context/ThemeContext";
 
 export default function HeaderBar({ tournamentId, status, statusLabelMap, statusColorMap, isViewMode }) {
@@ -33,14 +35,27 @@ export default function HeaderBar({ tournamentId, status, statusLabelMap, status
                 color={statusColorMap[status]}
                 size="small"
             />
+            <Tooltip title={isViewMode ? "Beobachtungsmodus" : "Bearbeitungsmodus"}>
+                <span>
+                    <IconButton disabled="true">
+                        {isViewMode ? (
+                            <VisibilityIcon />
+                        ) : (
+                            <EditIcon />
+                        )}
+                    </IconButton>
+                </span>
+            </Tooltip>
 
-            <IconButton onClick={toggleDarkMode}>
-                {darkMode ? (
-                    <LightModeIcon />
-                ) : (
-                    <DarkModeIcon />
-                )}
-            </IconButton>
+            <Tooltip title={darkMode ? "Zum Lightmode wechseln" : "Zum Darkmode wechseln"}>
+                <IconButton onClick={toggleDarkMode}>
+                    {darkMode ? (
+                        <LightModeIcon />
+                    ) : (
+                        <DarkModeIcon />
+                    )}
+                </IconButton>
+            </Tooltip>
         </Box>
     );
 }
