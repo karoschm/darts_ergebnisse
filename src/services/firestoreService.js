@@ -114,6 +114,11 @@ export async function addTeamGame(tournamentID, team1ID, team2ID, matchday) {
     await setDoc(team2Ref, { matches: { [matchday + 1]: { opponent: team1ID, own_score: 0, opponent_score: 0 } } }, { merge: true });
 }
 
+export async function getAllMatchdays(tournamentID) {
+    const snapshot = await getDocs(collection(db, "tournaments", tournamentID, "matchdays"));
+    return snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+}
+
 export async function getMatchdayMatches(tournamentID, md) {
     const matchdayRef = doc(db, "tournaments", tournamentID, "matchdays", md);
     const matchdaySnap = await getDoc(matchdayRef);
@@ -184,6 +189,15 @@ export async function saveScore(tournamentID, md, matchKey, team1, newScore, tea
         own_score: ownScore,
         opponent_score: opponentScore
     });
+}
+
+export async function getKnockout(tournamentID, stage) {
+    const ref = doc(db, "tournaments", tournamentID, "knockout", stage);
+    const snapshot = await getDoc(ref);
+
+    if (!snapshot.exists()) return [];
+
+    return snapshot.data();
 }
 
 export async function saveKOScore(tournamentID, stage, matchKey, team, newScore, opponent, winLegs) {

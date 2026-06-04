@@ -14,6 +14,9 @@ import PageContainer from "../PageContainer";
 import HeaderBar from "../HeaderBar";
 import TournamentTabs from "../TournamentTabs";
 import { useNavigate, useParams } from "react-router-dom";
+import { exportTournamentResults } from "../../services/exportService";
+import Fab from "@mui/material/Fab";
+import DownloadIcon from "@mui/icons-material/Download";
 
 export default function Running() {
     const navigate = useNavigate();
@@ -80,6 +83,10 @@ export default function Running() {
         );
     };
 
+    const handleExport = async () => {
+        exportTournamentResults(currentTournamentId, status);
+    };
+
     return (
         <PageContainer>
 
@@ -106,6 +113,19 @@ export default function Running() {
                 {tabValue === 3 && <FinalTab isViewMode={isViewMode}/>}
                 {tabValue === 4 && <FinalStandings isViewMode={isViewMode}/>}
             </Box>
+
+            <Fab
+                color="primary"
+                onClick={handleExport}
+                sx={{
+                    position: "fixed",
+                    bottom: 24,
+                    right: 24,
+                    zIndex: 1000
+                }}
+            >
+                <DownloadIcon />
+            </Fab>
 
         </PageContainer>
     )
