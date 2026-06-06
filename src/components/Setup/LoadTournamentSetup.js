@@ -1,40 +1,40 @@
 import {
     Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
     FormControl,
     InputLabel,
     MenuItem,
-    Select,
-    TextField,
-    CircularProgress
+    Select
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { getAllTournaments, verifyPin } from "../../services/firestoreService";
+import { getAllTournaments, getTournamentStatus } from "../../services/firestoreService";
 import { useTournamentAuth } from "../../hooks/useTournamentAuth";
+import PinDialog from "../../components/PinDialog";
 
 export default function LoadTournamentSetup() {
     const navigate = useNavigate();
     const [tournaments, setTournaments] = useState([]);
     const [selectedTournament, setSelectedTournament] = useState("");
-
     const [pinDialogOpen, setPinDialogOpen] = useState(false);
-    const [pin, setPin] = useState("");
-    const [pinError, setPinError] = useState("");
-    const [pinLoading, setPinLoading] = useState(false);
 
     const { unlock } = useTournamentAuth(selectedTournament);
 
     const stateMapping = {
-        "setup": "Nicht gestartet",
-        "group": "Gruppenphase",
-        "qf": "Viertelfinale",
-        "sf": "Halbfinale",
-        "final": "Finale",
-        "finished": "Abgeschlossen"
+        setup:    "Nicht gestartet",
+        group:    "Gruppenphase",
+        qf:       "Viertelfinale",
+        sf:       "Halbfinale",
+        final:    "Finale",
+        finished: "Abgeschlossen"
+    };
+
+    const statusToStage = {
+        setup:    "preliminary",
+        group:    "preliminary",
+        qf:       "quarterfinal",
+        sf:       "semifinal",
+        final:    "final",
+        finished: "standings"
     };
 
     useEffect(() => {
@@ -45,53 +45,32 @@ export default function LoadTournamentSetup() {
         fetchData();
     }, []);
 
-    // ── Edit-Modus: PIN-Dialog öffnen ───────────────────────────────────────
+    const navigateToTournament = async (mode) => {
+        const status = await getTournamentStatus(selectedTournament);
+        const stage = statusToStage[status] ?? "preliminary";
+        navigate(`/tournament/${selectedTournament}/${mode}/running/${stage}`);
+    };
+
     const handleLoadTournamentForEdit = (e) => {
         e.preventDefault();
         if (!selectedTournament) return;
-        setPin("");
-        setPinError("");
         setPinDialogOpen(true);
     };
 
-    // ── View-Modus: kein PIN nötig ──────────────────────────────────────────
     const handleLoadTournamentForView = (e) => {
         e.preventDefault();
         if (!selectedTournament) return;
-        navigate(`/tournament/${selectedTournament}/view/running/preliminary`);
+        navigateToTournament("view");
     };
 
-    const handlePinChange = (e) => {
-        const value = e.target.value.replace(/\D/g, "").slice(0, 4);
-        setPin(value);
-        setPinError("");
+    const handlePinSuccess = () => {
+        unlock();
+        setPinDialogOpen(false);
+        navigateToTournament("edit");
     };
 
-    const handlePinSubmit = async () => {
-        if (pin.length !== 4) {
-            setPinError("Bitte gib einen 4-stelligen PIN ein.");
-            return;
-        }
-
-        setPinLoading(true);
-        try {
-            const valid = await verifyPin(selectedTournament, pin);
-            if (valid) {
-                unlock();
-                setPinDialogOpen(false);
-                navigate(`/tournament/${selectedTournament}/edit/running/preliminary`);
-            } else {
-                setPinError("Falscher PIN. Bitte versuche es erneut.");
-            }
-        } catch {
-            setPinError("Fehler bei der Überprüfung. Bitte versuche es erneut.");
-        } finally {
-            setPinLoading(false);
-        }
-    };
-
-    const handlePinKeyDown = (e) => {
-        if (e.key === "Enter") handlePinSubmit();
+    const handlePinCancel = () => {
+        setPinDialogOpen(false);
     };
 
     return (
@@ -138,42 +117,12 @@ export default function LoadTournamentSetup() {
                 </Button>
             </form>
 
-            {/* ── PIN-Dialog ──────────────────────────────────────────────── */}
-            <Dialog
+            <PinDialog
                 open={pinDialogOpen}
-                onClose={() => setPinDialogOpen(false)}
-                maxWidth="xs"
-                fullWidth
-            >
-                <DialogTitle>PIN eingeben</DialogTitle>
-                <DialogContent>
-                    <TextField
-                        autoFocus
-                        type="password"
-                        label="PIN (4 Ziffern)"
-                        value={pin}
-                        onChange={handlePinChange}
-                        onKeyDown={handlePinKeyDown}
-                        inputProps={{ inputMode: "numeric", maxLength: 4 }}
-                        error={!!pinError}
-                        helperText={pinError || " "}
-                        fullWidth
-                        sx={{ mt: 1 }}
-                    />
-                </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setPinDialogOpen(false)} disabled={pinLoading}>
-                        Abbrechen
-                    </Button>
-                    <Button
-                        onClick={handlePinSubmit}
-                        disabled={pin.length !== 4 || pinLoading}
-                        variant="contained"
-                    >
-                        {pinLoading ? <CircularProgress size={20} /> : "Bestätigen"}
-                    </Button>
-                </DialogActions>
-            </Dialog>
+                tournamentId={selectedTournament}
+                onSuccess={handlePinSuccess}
+                onCancel={handlePinCancel}
+            />
         </>
     );
 }

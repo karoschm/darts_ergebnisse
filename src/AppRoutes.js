@@ -18,6 +18,9 @@ export default function AppRoutes() {
           <Route path="/tournament/:tournamentId" element={<TournamentLayout />}>
             <Route path="teams" element={<TeamSetup />} />
             <Route path=":mode/running/:stage" element={<Running />} />
+            {/* Neu: alles andere innerhalb eines Turniers → RequireTournament leitet um */}
+            <Route path=":mode/*" element={<div />} />
+            <Route path="*" element={<div />} />
           </Route>
         </Route>
       </Routes>

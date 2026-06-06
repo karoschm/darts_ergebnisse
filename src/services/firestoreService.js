@@ -69,6 +69,13 @@ export async function updateTournamentStatus(tournamentID, newStatus) {
     await updateDoc(tournamentRef, { status: newStatus });
 }
 
+export async function getTournamentStatus(tournamentID) {
+    const tournamentRef = doc(db, "tournaments", tournamentID);
+    const tournamentSnap = await getDoc(tournamentRef);
+    if (!tournamentSnap.exists()) return null;
+    return tournamentSnap.data().status;
+}
+
 // ─── Teams ────────────────────────────────────────────────────────────────────
 
 async function createTeams(tournamentID, numberTeams) {
