@@ -10,7 +10,6 @@ const firebaseConfig =
         : devConfig;
 
 const app = initializeApp(firebaseConfig);
-console.log(firebaseConfig.projectId);
 
 export const db = getFirestore(app);
 

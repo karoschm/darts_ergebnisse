@@ -117,12 +117,6 @@ export async function exportTournamentResults(tournamentId, tournamentStatus) {
         // Abschlussplatzierungen Vorrunde
         const standingsPreliminarySheet = XLSX.utils.json_to_sheet(
             getTableOrder(teams)
-            // Object.entries(teams)
-            //     .sort((a, b) => {
-            //         if (b.wins !== a.wins) return b.wins - a.wins;
-            //         if (b.own_score !== a.own_score) return a.own_score - b.own_score;
-            //         return b.opponent_score - a.opponent_score;
-            //     })
                 .map((team, index) => ({
                     Platzierung: index + 1,
                     Team: team.name,

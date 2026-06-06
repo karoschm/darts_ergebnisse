@@ -1,17 +1,41 @@
 import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, onSnapshot } from "firebase/firestore";
 import { db } from "../firebase";
 
-export async function addTournament(tournamentName, numberTeams, numberMatchdays) {
+// ─── PIN Utilities ────────────────────────────────────────────────────────────
+
+export async function hashPin(pin, tournamentId) {
+    const msgBuffer = new TextEncoder().encode(pin + tournamentId);
+    const hashBuffer = await crypto.subtle.digest("SHA-256", msgBuffer);
+    return Array.from(new Uint8Array(hashBuffer))
+        .map(b => b.toString(16).padStart(2, "0"))
+        .join("");
+}
+
+export async function verifyPin(tournamentId, pin) {
+    const tournamentRef = doc(db, "tournaments", tournamentId);
+    const snap = await getDoc(tournamentRef);
+    if (!snap.exists()) return false;
+    const stored = snap.data().pinHash;
+    const entered = await hashPin(pin, tournamentId);
+    return stored === entered;
+}
+
+// ─── Tournament ───────────────────────────────────────────────────────────────
+
+export async function addTournament(tournamentName, numberTeams, numberMatchdays, pin) {
     const tournamentRef = doc(db, "tournaments", tournamentName);
     const tournamentSnap = await getDoc(tournamentRef);
     if (tournamentSnap.exists()) return `${tournamentName}_EXISTS`;
+
+    const pinHash = await hashPin(pin, tournamentName);
 
     try {
         await setDoc(tournamentRef, {
             status: "setup",
             teamCount: numberTeams,
             matchdays: numberMatchdays,
-            createdAt: new Date().toISOString()
+            createdAt: new Date().toISOString(),
+            pinHash
         });
     } catch (err) {
         if (err.code === "already-exists") return `${tournamentName}_EXISTS`;
@@ -44,6 +68,8 @@ export async function updateTournamentStatus(tournamentID, newStatus) {
     const tournamentRef = doc(db, "tournaments", tournamentID);
     await updateDoc(tournamentRef, { status: newStatus });
 }
+
+// ─── Teams ────────────────────────────────────────────────────────────────────
 
 async function createTeams(tournamentID, numberTeams) {
     const batch = writeBatch(db);
@@ -78,6 +104,8 @@ export async function updateTeamNames(tournamentID, teamNames) {
         await updateDoc(teamRef, { name: name ? name : id });
     })
 }
+
+// ─── Matchdays ────────────────────────────────────────────────────────────────
 
 export async function saveSchedule(tournamentID, schedule) {
     schedule.map(async (md, idx) => {
@@ -152,7 +180,6 @@ export async function saveScore(tournamentID, md, matchKey, team1, newScore, tea
         opponentScore += match.opponent_score;
         if (match.own_score < match.opponent_score) wins++;
         else if (match.own_score > match.opponent_score) losses++;
-        // Unentschieden zählen wir ggf. nicht als win/loss
     });
 
     await updateDoc(team1Ref, {
@@ -179,7 +206,6 @@ export async function saveScore(tournamentID, md, matchKey, team1, newScore, tea
         opponentScore += match.opponent_score;
         if (match.own_score < match.opponent_score) wins++;
         else if (match.own_score > match.opponent_score) losses++;
-        // Unentschieden zählen wir ggf. nicht als win/loss
     });
 
     await updateDoc(team2Ref, {
@@ -190,6 +216,8 @@ export async function saveScore(tournamentID, md, matchKey, team1, newScore, tea
         opponent_score: opponentScore
     });
 }
+
+// ─── Knockout ─────────────────────────────────────────────────────────────────
 
 export async function getKnockout(tournamentID, stage) {
     const ref = doc(db, "tournaments", tournamentID, "knockout", stage);
@@ -246,7 +274,6 @@ export async function generateQuarterfinals(tournamentID) {
         ...doc.data()
     }));
 
-    // Sortierung exakt wie Tabelle
     teams.sort((a, b) => {
         if (b.wins !== a.wins) return b.wins - a.wins;
         if (b.own_score !== a.own_score) return a.own_score - b.own_score;
@@ -367,38 +394,32 @@ export async function updateRankingFinals(tournamentID) {
         doc(db, "tournaments", tournamentID, "teams", finalWinner),
         { finalRank: 1, reachedStage: "final" }
     );
-
     await updateDoc(
         doc(db, "tournaments", tournamentID, "teams", finalLoser),
         { finalRank: 2, reachedStage: "final" }
     );
-
     await updateDoc(
         doc(db, "tournaments", tournamentID, "teams", place3Winner),
         { finalRank: 3, reachedStage: "semifinal" }
     );
-
     await updateDoc(
         doc(db, "tournaments", tournamentID, "teams", place3Loser),
         { finalRank: 4, reachedStage: "semifinal" }
     );
 }
 
+// ─── Subscriptions ────────────────────────────────────────────────────────────
+
 export function subscribeTeams(tournamentID, callback) {
     const teamsRef = collection(db, "tournaments", tournamentID, "teams");
-
     return onSnapshot(teamsRef, snapshot => {
-        const teams = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        const teams = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         callback(teams);
     });
 }
 
 export function subscribeMatchday(tournamentID, md, callback) {
     const matchdayRef = doc(db, "tournaments", tournamentID, "matchdays", md);
-
     return onSnapshot(matchdayRef, snap => {
         if (!snap.exists()) {
             callback({});
@@ -410,19 +431,14 @@ export function subscribeMatchday(tournamentID, md, callback) {
 
 export function subscribeAllMatchdays(tournamentID, callback) {
     const matchdaysRef = collection(db, "tournaments", tournamentID, "matchdays");
-
     return onSnapshot(matchdaysRef, snapshot => {
-        const matchdays = snapshot.docs.map(doc => ({
-            id: doc.id,
-            ...doc.data()
-        }));
+        const matchdays = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
         callback(matchdays);
     });
 }
 
 export function subscribeTournamentStatus(tournamentID, callback) {
     const tournamentRef = doc(db, "tournaments", tournamentID);
-
     return onSnapshot(tournamentRef, snap => {
         if (!snap.exists()) return;
         callback(snap.data().status);
@@ -431,12 +447,8 @@ export function subscribeTournamentStatus(tournamentID, callback) {
 
 export function subscribeKnockoutRound(tournamentID, stage, callback) {
     const koStageRef = doc(db, "tournaments", tournamentID, "knockout", stage);
-
     return onSnapshot(koStageRef, snap => {
-        if (!snap.exists()) {
-            callback({ matches: {} }); // Falls Runde noch nicht existiert
-            return;
-        }
+        if (!snap.exists()) { callback({ matches: {} }); return; }
         callback(snap.data());
     });
 }
