@@ -1,7 +1,12 @@
-import { Button } from "@mui/material";
+import { Button, Tooltip } from "@mui/material";
+import IconButton from "@mui/material/IconButton";
+import DarkModeIcon from "@mui/icons-material/DarkMode";
+import LightModeIcon from "@mui/icons-material/LightMode";
 import { useNavigate } from "react-router-dom";
+import { useThemeMode } from "../../context/ThemeContext";
 
 export default function NewTournamentLoadTournament() {
+    const { darkMode, toggleDarkMode } = useThemeMode();
     const navigate = useNavigate();
 
     const handleNewTournament = (e) => {
@@ -27,6 +32,18 @@ export default function NewTournamentLoadTournament() {
                 padding: "40px"
             }}
         >
+            
+            <Tooltip title={darkMode ? "Zum Lightmode wechseln" : "Zum Darkmode wechseln"}>
+                <IconButton onClick={toggleDarkMode}>
+                    {darkMode ? (
+                        <LightModeIcon />
+                    ) : (
+                        <DarkModeIcon />
+                    )}
+                </IconButton>
+            </Tooltip>
+            <br />
+            <br />
             <Button
                 key={"new_tournament"}
                 onClick={handleNewTournament}
