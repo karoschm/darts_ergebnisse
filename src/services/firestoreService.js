@@ -76,6 +76,23 @@ export async function getTournamentStatus(tournamentID) {
     return tournamentSnap.data().status;
 }
 
+export async function deleteTournament(tournamentID) {
+    const batch = writeBatch(db);
+ 
+    const subcollections = ["teams", "matchdays", "knockout"];
+ 
+    for (const sub of subcollections) {
+        const snapshot = await getDocs(
+            collection(db, "tournaments", tournamentID, sub)
+        );
+        snapshot.docs.forEach(d => batch.delete(d.ref));
+    }
+ 
+    batch.delete(doc(db, "tournaments", tournamentID));
+ 
+    await batch.commit();
+}
+
 // ─── Teams ────────────────────────────────────────────────────────────────────
 
 async function createTeams(tournamentID, numberTeams) {
