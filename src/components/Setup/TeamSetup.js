@@ -37,6 +37,8 @@ export default function TeamSetup() {
             Object.entries(teamNames).map(([key, value]) => [key, value.trim()])
         );
 
+        console.log(trimmedNames);
+
         await updateTeamNames(currentTournamentId, trimmedNames);
 
         navigate(`/tournament/${currentTournamentId}/edit/running/preliminary`);
@@ -66,6 +68,7 @@ export default function TeamSetup() {
             }}>
                 <TableBody>
                     {Object.values(teams)
+                        .filter(t => !t.isBye)
                         .sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)))
                         .map(team =>
                             <TableRow key={`row_${team.id}`}>

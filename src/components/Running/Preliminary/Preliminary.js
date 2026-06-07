@@ -1,22 +1,32 @@
 import Tabs from "@mui/material/Tabs";
 import Tab from "@mui/material/Tab";
-import { useEffect } from "react";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
-import { addTeamGame, generateQuarterfinals, getNumberMatchdays, saveSchedule, subscribeAllMatchdays, subscribeTeams, subscribeTournamentStatus, updateTournamentStatus } from "../../../services/firestoreService";
+import {
+    addTeamGame,
+    getNumberMatchdays,
+    getTournamentData,
+    saveSchedule,
+    subscribeAllMatchdays,
+    subscribeTeams,
+    subscribeTournamentStatus,
+    updateTournamentStatus,
+    generateFirstKORound,
+    nextStatus
+} from "../../../services/firestoreService";
 import StandingsTable from "./StandingsTable";
 import MatchdayTabs from "./MatchdayTabs";
 import { Button, useTheme, useMediaQuery } from "@mui/material";
 
-
 export default function Preliminary({ isViewMode }) {
     const { currentTournamentId } = useTournament();
-    const [teams, setTeams] = useState({});
+    const [teams, setTeams] = useState([]);
     const [status, setStatus] = useState("");
     const [preliminaryTabValue, setPreliminaryTabValue] = useState(0);
     const [numberMatchdays, setNumberMatchdays] = useState(0);
     const [allMatchdaysPlayed, setAllMatchdaysPlayed] = useState(false);
     const [scheduleAvailable, setScheduleAvailable] = useState(false);
+    const [koRounds, setKoRounds] = useState(0);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -27,15 +37,10 @@ export default function Preliminary({ isViewMode }) {
         const unsubscribes = [];
 
         async function fetchData() {
-            const unsubscribeTeams = subscribeTeams(currentTournamentId, (liveTeams) => {
-                setTeams(liveTeams);
-            });
+            const unsubscribeTeams = subscribeTeams(currentTournamentId, setTeams);
             unsubscribes.push(unsubscribeTeams);
 
-            const unsubscribeStatus = subscribeTournamentStatus(
-                currentTournamentId,
-                setStatus
-            );
+            const unsubscribeStatus = subscribeTournamentStatus(currentTournamentId, setStatus);
             unsubscribes.push(unsubscribeStatus);
 
             const unsubscribeAllMatchdays = subscribeAllMatchdays(
@@ -47,12 +52,9 @@ export default function Preliminary({ isViewMode }) {
                         return;
                     }
                     setScheduleAvailable(true);
-
-                    const allPlayed = matchdays.every(md => {
-                        const matches = md.matches || {};
-                        return Object.values(matches).every(match => match.played === true);
-                    });
-
+                    const allPlayed = matchdays.every(md =>
+                        Object.values(md.matches || {}).every(match => match.played === true)
+                    );
                     setAllMatchdaysPlayed(allPlayed);
                 }
             );
@@ -60,62 +62,52 @@ export default function Preliminary({ isViewMode }) {
 
             setNumberMatchdays(await getNumberMatchdays(currentTournamentId));
 
-            return () => {
-                unsubscribes.forEach(unsub => unsub());
-            };
+            const data = await getTournamentData(currentTournamentId);
+            setKoRounds(data?.koRounds ?? 0);
         }
+
         fetchData();
-    }, [status, currentTournamentId]);
+        return () => unsubscribes.forEach(unsub => unsub());
+    }, [currentTournamentId]);
 
     const handlePreliminaryTabChange = (event, newTabValue) => {
         event.preventDefault();
         setPreliminaryTabValue(newTabValue);
-    }
+    };
 
     const handleStartPreliminary = (e) => {
         e.preventDefault();
         updateTournamentStatus(currentTournamentId, "group");
-    }
+    };
 
-    const handleFinishPreliminary = (e) => {
+    const handleFinishPreliminary = async (e) => {
         e.preventDefault();
-        generateQuarterfinals(currentTournamentId);
-        updateTournamentStatus(currentTournamentId, "qf");
-    }
+        if (koRounds === 0) {
+            await updateTournamentStatus(currentTournamentId, "finished");
+        } else {
+            await generateFirstKORound(currentTournamentId, koRounds);
+            await updateTournamentStatus(currentTournamentId, nextStatus("group", koRounds));
+        }
+    };
 
     function generateRoundRobinSchedule(teamIDs) {
         if (teamIDs.length % 2 !== 0) {
             throw new Error("Anzahl der Teams muss gerade sein");
         }
 
-        const teams = [...teamIDs];
-        const n = teams.length;
+        const n = teamIDs.length;
         const rounds = n - 1;
         const matchesPerRound = n / 2;
-
         const schedule = [];
-
-        // Kopie für Rotation
-        let rotation = [...teams];
+        let rotation = [...teamIDs];
 
         for (let round = 0; round < rounds; round++) {
             const matches = [];
-
             for (let i = 0; i < matchesPerRound; i++) {
-                const team1 = rotation[i];
-                const team2 = rotation[n - 1 - i];
-
-                matches.push({ team1, team2 });
+                matches.push({ team1: rotation[i], team2: rotation[n - 1 - i] });
             }
-
             schedule.push(matches);
-
-            // 🔄 Rotation (erstes Team fixieren)
-            rotation = [
-                rotation[0],
-                rotation[n - 1],
-                ...rotation.slice(1, n - 1),
-            ];
+            rotation = [rotation[0], rotation[n - 1], ...rotation.slice(1, n - 1)];
         }
 
         return schedule;
@@ -126,14 +118,10 @@ export default function Preliminary({ isViewMode }) {
     }
 
     function generateSchedule() {
-        const teamIDs = Object.entries(teams).map(([index, team]) => team.id);
-
+        // Alle Teams inkl. BYE für die Spielplanerstellung verwenden
+        const teamIDs = teams.map(team => team.id);
         let fullSchedule = generateRoundRobinSchedule(teamIDs);
-
-        // optional mischen
         fullSchedule = shuffleSchedule(fullSchedule);
-
-        // nur gewünschte Anzahl Spieltage nehmen
         return fullSchedule.slice(0, numberMatchdays);
     }
 
@@ -141,12 +129,14 @@ export default function Preliminary({ isViewMode }) {
         e.preventDefault();
         const newSchedule = generateSchedule();
         saveSchedule(currentTournamentId, newSchedule);
-        newSchedule.map((teams, matchday) => {
-            Object.entries(teams).map(([i, { team1, team2 }]) => {
+        newSchedule.forEach((matchList, matchday) => {
+            Object.values(matchList).forEach(({ team1, team2 }) => {
                 addTeamGame(currentTournamentId, team1, team2, matchday);
             });
         });
-    }
+    };
+
+    const finishLabel = koRounds === 0 ? "Turnier abschließen" : "Vorrunde abschließen";
 
     return (
         <form
@@ -161,35 +151,27 @@ export default function Preliminary({ isViewMode }) {
             }}
         >
             <StandingsTable teams={teams} />
-            <br/>
-            <div style={{
-                display: "flex",
-                gap: "15px",
-                justifyContent: "center", 
-                marginTop: "10px"
-            }} >
-            {!isViewMode && (
-                <div>
-                    <Button
-                        key={"make_schedule"}
-                        onClick={handleMakeSchedule}
-                        disabled={status !== "setup"}
-                    >
-                        Vorrundenspielplan generieren
-                    </Button>
-                    <Button
-                        key={"start_preliminary"}
-                        onClick={handleStartPreliminary}
-                        disabled={status !== "setup" || !scheduleAvailable}
-                    >
-                        Vorrunde beginnen
-                    </Button>
-                </div>
-            )}
+            <br />
+            <div style={{ display: "flex", gap: "15px", justifyContent: "center", marginTop: "10px" }}>
+                {!isViewMode && (
+                    <div>
+                        <Button
+                            onClick={handleMakeSchedule}
+                            disabled={status !== "setup"}
+                        >
+                            Vorrundenspielplan generieren
+                        </Button>
+                        <Button
+                            onClick={handleStartPreliminary}
+                            disabled={status !== "setup" || !scheduleAvailable}
+                        >
+                            Vorrunde beginnen
+                        </Button>
+                    </div>
+                )}
             </div>
-            <br/>
+            <br />
             <Tabs
-                key={"preliminary_tabs"}
                 value={preliminaryTabValue}
                 onChange={handlePreliminaryTabChange}
                 variant={isMobile ? "scrollable" : "fullWidth"}
@@ -198,22 +180,18 @@ export default function Preliminary({ isViewMode }) {
             >
                 {[...Array(numberMatchdays).keys()].map(md => (
                     <Tab key={`tab_${md + 1}`} label={md + 1} value={md} />
-                ))
-                }
+                ))}
             </Tabs>
+
             {[...Array(numberMatchdays).keys()].map(md => (
                 <div
-                    style={{
-                        flex: 1,
-                        minWidth: 0,
-                        display: "flex",
-                        flexDirection: "column",
-                        alignItems: "center",
-                        textAlign: "center",
-                    }}
                     key={md}
                     role="tabpanel"
                     hidden={preliminaryTabValue !== md}
+                    style={{
+                        flex: 1, minWidth: 0, display: "flex",
+                        flexDirection: "column", alignItems: "center", textAlign: "center"
+                    }}
                 >
                     {preliminaryTabValue === md && (
                         <MatchdayTabs md={(md + 1).toString()} isViewMode={isViewMode} />
@@ -223,11 +201,10 @@ export default function Preliminary({ isViewMode }) {
             <br />
             {!isViewMode && (
                 <Button
-                    key={"end_preliminary"}
                     onClick={handleFinishPreliminary}
-                    disabled={!allMatchdaysPlayed || (status !== "group")}
+                    disabled={!allMatchdaysPlayed || status !== "group"}
                 >
-                    Vorrunde abschließen
+                    {finishLabel}
                 </Button>
             )}
         </form>

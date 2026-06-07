@@ -1,17 +1,8 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, useNavigate, useParams } from "react-router-dom";
-import { checkIfTournamentExists, getTournamentStatus } from "../services/firestoreService";
+import { checkIfTournamentExists, getTournamentData, statusToStage } from "../services/firestoreService";
 import { useTournamentAuth } from "../hooks/useTournamentAuth";
 import PinDialog from "../components/PinDialog";
-
-const statusToStage = {
-    setup:    "preliminary",
-    group:    "preliminary",
-    qf:       "quarterfinal",
-    sf:       "semifinal",
-    final:    "final",
-    finished: "standings"
-};
 
 export default function RequireTournament() {
     const { tournamentId, mode, stage } = useParams();
@@ -34,8 +25,9 @@ export default function RequireTournament() {
             }
 
             setTournamentExists(true);
-            const status = await getTournamentStatus(tournamentId);
-            setCorrectStage(statusToStage[status] ?? "preliminary");
+            const data = await getTournamentData(tournamentId);
+            // statusToStage braucht jetzt koRounds für dynamisches Mapping
+            setCorrectStage(statusToStage(data.status, data.koRounds ?? 0));
             setLoading(false);
         }
 
@@ -61,27 +53,12 @@ export default function RequireTournament() {
 
     if (loading) return <div>Lade Turnier...</div>;
 
-    // Turnier existiert nicht → Startseite
-    if (!tournamentExists) {
-        return <Navigate to="/" replace />;
-    }
+    if (!tournamentExists) return <Navigate to="/" replace />;
 
-    // /teams-Route explizit abfangen
-    if (!mode && window.location.pathname.endsWith("/teams")) {
-        return <Outlet />;
-    }
+    // /teams-Route: kein mode → nur Existenz geprüft, kein Redirect
+    if (!mode) return <Outlet />;
 
-    // Kein mode → View-Modus mit korrektem Stage
-    if (!mode) {
-        return (
-            <Navigate
-                to={`/tournament/${tournamentId}/view/running/${correctStage}`}
-                replace
-            />
-        );
-    }
-
-    // Edit-Modus ohne Unlock → PIN-Dialog, Outlet noch nicht rendern
+    // Edit ohne Unlock → PIN-Dialog
     if (mode === "edit" && !isUnlocked()) {
         return (
             <PinDialog
@@ -93,8 +70,7 @@ export default function RequireTournament() {
         );
     }
 
-    // stage fehlt, ist falsch, oder running fehlt in der URL
-    // → immer auf die korrekte vollständige URL umleiten
+    // Kein mode → View mit korrektem Stage
     if (!stage || stage !== correctStage) {
         return (
             <Navigate

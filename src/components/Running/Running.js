@@ -1,86 +1,83 @@
-import Tabs from "@mui/material/Tabs";
-import Tab from "@mui/material/Tab";
-import { useState } from "react";
-import Preliminary from "./Preliminary/Preliminary";
-import QuarterfinalTab from "./KOStage/QuarterfinalTab";
-import SemifinalTab from "./KOStage/SemifinalTab";
-import FinalTab from "./KOStage/FinalTab";
-import FinalStandings from "./FinalStandings/FinalStandings";
-import { useEffect } from "react";
-import { useTournament } from "../../context/TournamentContext";
-import { subscribeTournamentStatus } from "../../services/firestoreService";
-import { Box, Chip, Typography, useTheme, useMediaQuery } from "@mui/material";
-import PageContainer from "../PageContainer";
-import HeaderBar from "../HeaderBar";
-import TournamentTabs from "../TournamentTabs";
+import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-import { exportTournamentResults } from "../../services/exportService";
+import { Box, useTheme, useMediaQuery } from "@mui/material";
 import Fab from "@mui/material/Fab";
 import DownloadIcon from "@mui/icons-material/Download";
 
+import { useTournament } from "../../context/TournamentContext";
+import { subscribeTournamentStatus, getTournamentData, koRoundLabel, koStageKey } from "../../services/firestoreService";
+import { exportTournamentResults } from "../../services/exportService";
+
+import PageContainer from "../PageContainer";
+import HeaderBar from "../HeaderBar";
+import TournamentTabs from "../TournamentTabs";
+import Preliminary from "./Preliminary/Preliminary";
+import KORoundTab from "./KOStage/KORoundTab";
+import FinalStandings from "./FinalStandings/FinalStandings";
+
 export default function Running() {
     const navigate = useNavigate();
-
-    const { tournamentId, stage } = useParams();
+    const { tournamentId, mode, stage } = useParams();
     const { currentTournamentId } = useTournament();
+
     const [status, setStatus] = useState("");
-    
+    const [koRounds, setKoRounds] = useState(0);
+    const [hasThirdPlace, setHasThirdPlace] = useState(false);
+
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-    
-    const { mode } = useParams();
+
     const isViewMode = mode === "view";
-    const isEditMode = mode === "edit";
 
     const statusLabelMap = {
         group: "Vorrunde",
-        qf: "Viertelfinale",
-        sf: "Halbfinale",
-        final: "Finale",
-        finished: "Beendet"
+        finished: "Beendet",
+        ...Object.fromEntries(
+            Array.from({ length: 6 }, (_, i) => [
+                `ko_${i + 1}`,
+                koRoundLabel(koRounds, i + 1)
+            ])
+        )
     };
 
     const statusColorMap = {
         group: "default",
-        qf: "primary",
-        sf: "primary",
-        final: "secondary",
-        finished: "success"
+        finished: "success",
+        ...Object.fromEntries(
+            Array.from({ length: 6 }, (_, i) => [`ko_${i + 1}`, i + 1 === koRounds ? "secondary" : "primary"])
+        )
     };
 
-    const stageToTab = {
-        preliminary: 0,
-        quarterfinal: 1,
-        semifinal: 2,
-        final: 3,
-        standings: 4
-    };
+    // Tabs dynamisch aufbauen
+    // [ { label, stage } ]
+    const tabs = [
+        { label: "Vorrunde", stage: "preliminary" },
+        ...Array.from({ length: koRounds }, (_, i) => ({
+            label: koRoundLabel(koRounds, i + 1),
+            stage: koStageKey(i + 1)
+        })),
+        { label: "Abschlusstabelle", stage: "standings" }
+    ];
 
-    const tabToStage = {
-        0: "preliminary",
-        1: "quarterfinal",
-        2: "semifinal",
-        3: "final",
-        4: "standings"
-    };
-
-    const tabValue = stageToTab[stage] ?? 0;
+    const tabValue = tabs.findIndex(t => t.stage === stage) ?? 0;
 
     useEffect(() => {
         if (!currentTournamentId) return;
 
-        const unsubscribeStatus = subscribeTournamentStatus(
-            currentTournamentId,
-            setStatus
-        );
+        // Turnierdaten laden (koRounds, hasThirdPlace)
+        getTournamentData(currentTournamentId).then(data => {
+            if (!data) return;
+            setKoRounds(data.koRounds ?? 0);
+            setHasThirdPlace(data.hasThirdPlace ?? false);
+        });
 
-        return () => unsubscribeStatus();
-    }, [status, currentTournamentId])
+        const unsubscribe = subscribeTournamentStatus(currentTournamentId, setStatus);
+        return () => unsubscribe();
+    }, [currentTournamentId]);
 
-    const handleTabChange = (event, newTabValue) => {
-        navigate(
-            `/tournament/${tournamentId}/${isViewMode ? "view" : "edit"}/running/${tabToStage[newTabValue]}`
-        );
+    const handleTabChange = (_, newTabValue) => {
+        const newStage = tabs[newTabValue]?.stage ?? "preliminary";
+        navigate(`/tournament/${tournamentId}/${mode}/running/${newStage}`);
     };
 
     const handleExport = async () => {
@@ -89,7 +86,6 @@ export default function Running() {
 
     return (
         <PageContainer>
-
             <HeaderBar
                 tournamentId={currentTournamentId}
                 status={status}
@@ -99,34 +95,44 @@ export default function Running() {
             />
 
             <TournamentTabs
-                value={tabValue}
+                value={tabValue === -1 ? 0 : tabValue}
                 onChange={handleTabChange}
+                tabs={tabs}
                 variant={isMobile ? "scrollable" : "fullWidth"}
                 scrollButtons="auto"
                 sx={{ width: "100%" }}
             />
 
             <Box mt={3}>
-                {tabValue === 0 && <Preliminary isViewMode={isViewMode}/>}
-                {tabValue === 1 && <QuarterfinalTab isViewMode={isViewMode}/>}
-                {tabValue === 2 && <SemifinalTab isViewMode={isViewMode}/>}
-                {tabValue === 3 && <FinalTab isViewMode={isViewMode}/>}
-                {tabValue === 4 && <FinalStandings isViewMode={isViewMode}/>}
+                {stage === "preliminary" && (
+                    <Preliminary isViewMode={isViewMode} />
+                )}
+                {Array.from({ length: koRounds }, (_, i) => {
+                    const roundIndex = i + 1;
+                    const roundStage = koStageKey(roundIndex);
+                    return stage === roundStage && (
+                        <KORoundTab
+                            key={roundStage}
+                            isViewMode={isViewMode}
+                            roundIndex={roundIndex}
+                            koRounds={koRounds}
+                            hasThirdPlace={hasThirdPlace}
+                            stageKey={roundStage}
+                        />
+                    );
+                })}
+                {stage === "standings" && (
+                    <FinalStandings isViewMode={isViewMode} />
+                )}
             </Box>
 
             <Fab
                 color="primary"
                 onClick={handleExport}
-                sx={{
-                    position: "fixed",
-                    bottom: 24,
-                    right: 24,
-                    zIndex: 1000
-                }}
+                sx={{ position: "fixed", bottom: 24, right: 24, zIndex: 1000 }}
             >
                 <DownloadIcon />
             </Fab>
-
         </PageContainer>
-    )
+    );
 }
