@@ -54,6 +54,24 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
 
     const roundReady = mainMatches.length > 0 && mainMatches[0][1]?.team1;
 
+    const koStageMatchMap = {
+        1: [
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32
+        ],
+        2: [
+            1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 16, 15, 14, 13, 12, 11, 10, 9, 8, 7, 6, 5, 4, 3, 2, 1
+        ],
+        3: [
+            1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1, 1, 2, 3, 4, 5, 6, 7, 8, 8, 7, 6, 5, 4, 3, 2, 1
+        ],
+        4: [
+            1, 2, 3, 4, 4, 3, 2, 1, 1, 2, 3, 4, 4, 3, 2, 1, 1, 2, 3, 4, 4, 3, 2, 1, 1, 2, 3, 4, 4, 3, 2, 1
+        ],
+        5: [
+            1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1, 1, 2, 2, 1
+        ]
+    }
+
     useEffect(() => {
         if (!currentTournamentId) return;
 
@@ -141,9 +159,16 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
         const qualifiedCount = Math.pow(2, koRounds); // Gesamtanzahl qualifizierter Teams
         const rows = [];
         for (let i = 0; i < matchCount; i++) {
-            const rank1 = i + 1;
-            const rank2 = qualifiedCount - i; // Gegner: letzter gegen ersten etc.
-            rows.push({ rank1, rank2, key: `placeholder_${i}` });
+            if(qualifiedCount === matchCount * 2) {
+                const id1 = i + 1;
+                const id2 = qualifiedCount - i;
+                rows.push({ id1, id2, key: `placeholder_${i}` });
+            }
+            else {
+                const id1 = koStageMatchMap[5-koRounds+roundIndex][i];
+                const id2 = koStageMatchMap[5-koRounds+roundIndex][(matchCount*2)-i-1];
+                rows.push({ id1, id2, key: `placeholder_${i}` });
+            }
         }
         return rows;
     }
@@ -196,11 +221,11 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                     </div>
                 ) : (
                     <div>
-                        {renderPlaceholders().map(({ rank1, rank2, key }) => (
+                        {renderPlaceholders().map(({ id1, id2, koStageDict, key }) => (
                             <Card key={key} sx={{ width: "90vw", mx: "auto", mb: 2 }}>
-                                <div>VR Platz {rank1}</div>
+                                <div>{roundIndex === 1 ? 'VR Platz ' + id1 : 'Sieger R' + (roundIndex-1) + '_M' + id1}</div>
                                 <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
-                                <div>VR Platz {rank2}</div>
+                                <div>{roundIndex === 1 ? 'VR Platz ' + id2 : 'Sieger R' + (roundIndex-1) + '_M' + id2}</div>
                             </Card>
                         ))}
                     </div>
@@ -255,6 +280,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                             .map(([matchId, match]) => (
                                 <DesktopMatchRow
                                     key={matchId}
+                                    roundIndex={roundIndex}
                                     matchId={matchId}
                                     match={match}
                                     teamNames={teamNames}
@@ -272,6 +298,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     </TableCell>
                                 </TableRow>
                                 <DesktopMatchRow
+                                    roundIndex={roundIndex}
                                     matchId="place3"
                                     match={place3Match}
                                     teamNames={teamNames}
@@ -285,13 +312,13 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                     </TableBody>
                 ) : (
                     <TableBody>
-                        {renderPlaceholders().map(({ rank1, rank2, key }) => (
+                        {renderPlaceholders().map(({ id1, id2, key }) => (
                             <TableRow key={key}>
-                                <TableCell align="center">M{rank1}</TableCell>
+                                <TableCell align="center">R{roundIndex}_M{id1}</TableCell>
                                 <TableCell />
-                                <TableCell align="right">VR Platz {rank1}</TableCell>
+                                <TableCell align="right">{roundIndex === 1 ? 'VR Platz ' + id1 : 'Sieger R' + (roundIndex-1) + '_M' + id1}</TableCell>
                                 <TableCell align="center">vs</TableCell>
-                                <TableCell>VR Platz {rank2}</TableCell>
+                                <TableCell>{roundIndex === 1 ? 'VR Platz ' + id2 : 'Sieger R' + (roundIndex-1) + '_M' + id2}</TableCell>
                                 <TableCell />
                             </TableRow>
                         ))}
@@ -358,13 +385,13 @@ function MobileMatchCard({ matchId, match, teamNames, winLegs, disabled, onScore
     );
 }
 
-function DesktopMatchRow({ matchId, match, teamNames, winLegs, editTooltip, disabled, onScoreChange }) {
+function DesktopMatchRow({ roundIndex, matchId, match, teamNames, winLegs, editTooltip, disabled, onScoreChange }) {
     const team1 = match.team1;
     const team2 = match.team2;
 
     return (
         <TableRow key={matchId}>
-            <TableCell align="center">{matchId}</TableCell>
+            <TableCell align="center">R{roundIndex}_{matchId}</TableCell>
             <TableCell align="right">
                 <Tooltip title={editTooltip}>
                     <span>
