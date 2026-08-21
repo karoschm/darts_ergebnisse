@@ -163,6 +163,10 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
         return `Verlierer ${koRoundLabel(koRounds, roundIndex - 1)} M${id}`;
     }
 
+    function matchLabel(id) {
+        return `${label} ${id}`;
+    }
+
     // Platzhalter-Zeilen wenn Runde noch nicht generiert wurde
     function renderPlaceholders() {
         const qualifiedCount = Math.pow(2, koRounds); // Gesamtanzahl qualifizierter Teams
@@ -200,7 +204,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                 <br />
 
                 {isFinal && (
-                    <Typography variant="h2" align="center" sx={{ mt: 1, fontWeight: "bold" }}>Finale</Typography>
+                    <Typography variant="h2" align="center" sx={{ my: 1, fontWeight: "bold" }}>Finale</Typography>
                 )}
 
                 {roundReady ? (
@@ -211,6 +215,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                 <MobileMatchCard
                                     key={matchId}
                                     matchId={matchId}
+                                    matchLabel={matchLabel(Number(matchId.replace("M", "")))}
                                     match={match}
                                     teamNames={teamNames}
                                     winLegs={winLegs}
@@ -222,7 +227,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                         {isFinal && hasThirdPlace && place3Match && (
                             <>
                                 <br />
-                                <Typography variant="h2" sx={{ mt: 2, fontWeight: "bold" }}>Spiel um Platz 3</Typography>
+                                <Typography variant="h2" sx={{ my: 1, fontWeight: "bold" }}>Spiel um Platz 3</Typography>
                                 <MobileMatchCard
                                     matchId="place3"
                                     match={place3Match}
@@ -239,6 +244,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                     <div>
                         {renderPlaceholders().map(({ id1, id2, key }) => (
                             <Card key={key} sx={{ width: "90vw", mx: "auto", mb: 2 }}>
+                                {!isFinal && <div style={{ textAlign: "left", margin: "2px" }}>{matchLabel(id1)}</div>}
                                 <div>{winnerPlaceholderLabel(id1)}</div>
                                 <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
                                 <div>{winnerPlaceholderLabel(id2)}</div>
@@ -247,7 +253,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                         {isFinal && hasThirdPlace && (
                             <>
                                 <br />
-                                <Typography variant="h2" sx={{ mt: 2, fontWeight: "bold" }}>Spiel um Platz 3</Typography>
+                                <Typography variant="h2" sx={{ my: 1, fontWeight: "bold" }}>Spiel um Platz 3</Typography>
                                 {renderPlaceholders().map(({ id1, id2 }) => (
                                     <Card key="placeholder_place3" sx={{ width: "90vw", mx: "auto", mb: 2 }}>
                                         <div>{loserPlaceholderLabel(id1)}</div>
@@ -313,8 +319,8 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                             .map(([matchId, match]) => (
                                 <DesktopMatchRow
                                     key={matchId}
-                                    roundIndex={roundIndex}
                                     matchId={matchId}
+                                    matchLabel={matchLabel(Number(matchId.replace("M", "")))}
                                     match={match}
                                     teamNames={teamNames}
                                     winLegs={winLegs}
@@ -329,7 +335,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                     <TableBody>
                         {renderPlaceholders().map(({ id1, id2, key }) => (
                             <TableRow key={key}>
-                                {!isFinal && (<TableCell align="center">R{roundIndex}_M{id1}</TableCell>)}
+                                {!isFinal && (<TableCell align="center">{matchLabel(id1)}</TableCell>)}
                                 <TableCell />
                                 <TableCell align="right">{winnerPlaceholderLabel(id1)}</TableCell>
                                 <TableCell align="center">vs</TableCell>
@@ -360,7 +366,6 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                         <TableBody>
                             {place3Match?.team1 ? (
                                 <DesktopMatchRow
-                                    roundIndex={roundIndex}
                                     matchId="place3"
                                     match={place3Match}
                                     teamNames={teamNames}
@@ -397,13 +402,13 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
 
 // ─── Hilfkomponenten ──────────────────────────────────────────────────────────
 
-function MobileMatchCard({ matchId, match, teamNames, winLegs, disabled, onScoreChange, showMatchId = true }) {
+function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disabled, onScoreChange, showMatchId = true }) {
     const team1 = match.team1;
     const team2 = match.team2;
 
     return (
         <Card sx={{ width: "90vw", mx: "auto", mb: 2 }}>
-            {showMatchId && <div style={{ textAlign: "center", margin: "2px" }}>{matchId}</div>}
+            {showMatchId && <div style={{ textAlign: "center", margin: "2px" }}>{matchLabel}</div>}
             <div style={{ flex: 1, display: "flex", justifyContent: "space-between" }}>
                 <Typography sx={{
                     flex: 3, minWidth: 0, overflow: "hidden",
@@ -445,13 +450,13 @@ function MobileMatchCard({ matchId, match, teamNames, winLegs, disabled, onScore
     );
 }
 
-function DesktopMatchRow({ roundIndex, matchId, match, teamNames, winLegs, editTooltip, disabled, onScoreChange, showMatchId = true }) {
+function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs, editTooltip, disabled, onScoreChange, showMatchId = true }) {
     const team1 = match.team1;
     const team2 = match.team2;
 
     return (
         <TableRow key={matchId}>
-            {showMatchId && <TableCell align="center">R{roundIndex}_{matchId}</TableCell>}
+            {showMatchId && <TableCell align="center">{matchLabel}</TableCell>}
             <TableCell align="right">
                 <Tooltip title={editTooltip}>
                     <span>
