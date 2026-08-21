@@ -1,4 +1,5 @@
-import { Table, TableCell, TableHead, TableBody, TableRow, useTheme, useMediaQuery, Card, Typography } from "@mui/material";
+import { Table, TableCell, TableHead, TableBody, TableRow, useTheme, useMediaQuery, Card, Typography, Tabs, Tab } from "@mui/material";
+import { useState } from "react";
 import { groupLabel } from "../../../services/firestoreService";
 
 function sortTeams(teams, scoreMode) {
@@ -67,21 +68,30 @@ function SingleTable({ teams, isMobile, title }) {
 export default function StandingsTable({ teams, scoreMode = "points", groupCount = 1 }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+    const [groupTab, setGroupTab] = useState(0);
 
     if (groupCount <= 1) {
         return <SingleTable teams={sortTeams(Object.values(teams), scoreMode)} isMobile={isMobile} />;
     }
 
     return (
-        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "24px", width: "100%" }}>
-            {Array.from({ length: groupCount }, (_, g) => (
-                <SingleTable
-                    key={`group_${g}`}
-                    teams={sortTeams(Object.values(teams).filter(t => (t.group ?? 0) === g), scoreMode)}
-                    isMobile={isMobile}
-                    title={`Gruppe ${groupLabel(g)}`}
-                />
-            ))}
+        <div style={{ width: "100%" }}>
+            <Tabs
+                value={groupTab}
+                onChange={(e, newValue) => setGroupTab(newValue)}
+                variant={isMobile ? "scrollable" : "standard"}
+                scrollButtons="auto"
+                centered={!isMobile}
+                sx={{ mb: 1 }}
+            >
+                {Array.from({ length: groupCount }, (_, g) => (
+                    <Tab key={`tab_group_${g}`} label={`Gruppe ${groupLabel(g)}`} value={g} />
+                ))}
+            </Tabs>
+            <SingleTable
+                teams={sortTeams(Object.values(teams).filter(t => (t.group ?? 0) === groupTab), scoreMode)}
+                isMobile={isMobile}
+            />
         </div>
     );
 }

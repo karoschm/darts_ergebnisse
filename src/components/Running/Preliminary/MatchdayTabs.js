@@ -136,7 +136,7 @@ export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", win
         const prevGroup = index > 0 ? (matches[matchEntries[index - 1]].group ?? 0) : null;
         if (group === prevGroup) return null;
         return (
-            <Typography key={`group_heading_${group}`} variant="h6" sx={{ mt: 2, mb: 1, width: "100%" }}>
+            <Typography key={`group_heading_${group}`} variant="h6" sx={{ mt: 2, mb: 1, width: "100%", textAlign: "center" }}>
                 Gruppe {groupLabel(group)}
             </Typography>
         );
@@ -224,7 +224,7 @@ export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", win
         return (
             <TableRow key={`group_heading_${group}`}>
                 <TableCell colSpan={6}>
-                    <Typography variant="h6" sx={{ mt: index > 0 ? 2 : 0 }}>
+                    <Typography variant="h6" sx={{ mt: index > 0 ? 2 : 0, textAlign: "center" }}>
                         Gruppe {groupLabel(group)}
                     </Typography>
                 </TableCell>
