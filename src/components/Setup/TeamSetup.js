@@ -4,9 +4,11 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTournament } from "../../context/TournamentContext";
 import { getAllTeams, updateTeamNames, updateTeamGroups, getTournamentData, groupLabel } from "../../services/firestoreService";
+import useFormStatus from "../../hooks/useFormStatus";
 
 export default function TeamSetup() {
     const navigate = useNavigate();
+    const { errorMessage, showError } = useFormStatus();
     const { currentTournamentId } = useTournament();
     const [teams, setTeams] = useState({});
     const [teamNames, setTeamNames] = useState({});
@@ -38,9 +40,11 @@ export default function TeamSetup() {
             const loadedGroupCount = tournamentData?.groupCount ?? 1;
             setGroupCount(loadedGroupCount);
 
-            // Default-Gruppenzuweisung: reihum verteilt, vom Nutzer unten überschreibbar
+            // Default-Gruppenzuweisung: gleichmäßig reihum verteilt, vom Nutzer unten überschreibbar.
+            // Bewusst nicht team.group als Fallback genutzt: createTeams() setzt dort bereits
+            // "0" als Platzhalter für alle Teams, wodurch die Rundum-Verteilung nie gegriffen hätte.
             const groups = realTeams.reduce((acc, team, index) => {
-                acc[team.id] = team.group ?? (index % loadedGroupCount);
+                acc[team.id] = index % loadedGroupCount;
                 return acc;
             }, {});
             setTeamGroups(groups);
@@ -50,6 +54,20 @@ export default function TeamSetup() {
 
     const handleSubmit = async (e) => {
         e.preventDefault();
+
+        if (groupCount > 1) {
+            const realTeamIds = Object.values(teams).filter(t => !t.isBye).map(t => t.id);
+            const countsPerGroup = Array(groupCount).fill(0);
+            realTeamIds.forEach(id => {
+                const g = teamGroups[id] ?? 0;
+                countsPerGroup[g] = (countsPerGroup[g] ?? 0) + 1;
+            });
+            const expectedPerGroup = realTeamIds.length / groupCount;
+            if (countsPerGroup.some(count => count !== expectedPerGroup)) {
+                const breakdown = countsPerGroup.map((count, g) => `${groupLabel(g)}: ${count}`).join(", ");
+                return showError(`Jede Gruppe muss genau ${expectedPerGroup} Teams enthalten (aktuell ${breakdown}).`);
+            }
+        }
 
         const trimmedNames = Object.fromEntries(
             Object.entries(teamNames).map(([key, value]) => [key, value.trim()])
@@ -129,6 +147,9 @@ export default function TeamSetup() {
             <Button type="submit">
                 Turnier starten
             </Button>
+            {errorMessage && (
+                <div style={{ color: "red", marginTop: "10px" }}>{errorMessage}</div>
+            )}
         </form>
     );
 }
