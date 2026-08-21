@@ -63,6 +63,19 @@ export default function NewTournamentSetup() {
         setNumberMatchdays(prev => Math.min(Number(prev) || 1, maxMatchdays));
     };
 
+    // Höchstens so viele Qualifikanten pro Gruppe, wie eine ganze KO-Runde füllen können —
+    // da die Gruppenanzahl (wegen der Zweierpotenz-Validierung) selbst immer eine Zweierpotenz
+    // ist, muss auch die Qualifikantenzahl pro Gruppe eine sein: die größte Zweierpotenz, die
+    // nicht größer als die Gruppengröße ist (Bsp. 14 Teams/2 Gruppen → 7 Teams/Gruppe → max. 4).
+    const maxQualifiersPerGroup = (teamsInGroup) =>
+        teamsInGroup > 0 ? Math.pow(2, Math.floor(Math.log2(teamsInGroup))) : 1;
+
+    const clampQualifiersPerGroup = (teamCount, newGroupCount) => {
+        const perGroup = newGroupCount > 0 ? teamCount / newGroupCount : teamCount;
+        const max = maxQualifiersPerGroup(perGroup);
+        setQualifiersPerGroup(prev => Math.min(Number(prev) || 1, max));
+    };
+
     // Falls aktuell gewählte Option durch Teamanzahl-Änderung ungültig wird → zurücksetzen
     const handleTeamCountChange = (e) => {
         const newCount = Number(e.target.value);
@@ -73,12 +86,14 @@ export default function NewTournamentSetup() {
             setKoRounds(maxValid);
         }
         clampMatchdays(newCount, groupCount);
+        clampQualifiersPerGroup(newCount, groupCount);
     };
 
     const handleGroupCountChange = (e) => {
         const newGroupCount = Math.max(1, Number(e.target.value));
         setGroupCount(newGroupCount);
         clampMatchdays(numberTeams, newGroupCount);
+        clampQualifiersPerGroup(numberTeams, newGroupCount);
     };
 
     // Turniermodus-Auswahl bildet drei Optionen auf die zwei intern gespeicherten Werte
@@ -306,8 +321,8 @@ export default function NewTournamentSetup() {
                                 <TextField
                                     type="number"
                                     value={qualifiersPerGroup}
-                                    onChange={e => setQualifiersPerGroup(Number(e.target.value))}
-                                    inputProps={{ min: 1 }}
+                                    onChange={e => setQualifiersPerGroup(Math.min(Number(e.target.value), maxQualifiersPerGroup(teamsPerGroup)))}
+                                    inputProps={{ min: 1, max: maxQualifiersPerGroup(teamsPerGroup) }}
                                     label="Qualifikanten pro Gruppe"
                                 />
                                 <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: groupsKoRoundsValid ? 0.7 : 1, color: groupsKoRoundsValid ? "inherit" : "orange" }}>
