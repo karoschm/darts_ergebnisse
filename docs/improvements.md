@@ -74,7 +74,7 @@ Mit dem Projektinhaber wurden folgende Prioritäten und Design-Entscheidungen fe
 ### Reihenfolge & Begründung
 
 ```
-Phase 0  Aufräumen (toter Code, Bugfixes, die sonst mit neuen Features kollidieren)
+Phase 0  Aufräumen (toter Code, Bugfixes, die sonst mit neuen Features kollidieren) ✅ Umgesetzt (2026-08-21)
 Phase 1  Security-Fix (Anonymous Auth + Firestore Rules + blinder PIN-Check)
 Phase 2  Transaktionen + Konflikt-UX (baut auf den neuen Rules aus Phase 1 auf)
 Phase 3a Leg-Modus für die Vorrunde
@@ -85,7 +85,7 @@ Phase 4  PDF/Print-Export + Excel-Export-Bugfix/Erweiterung
 
 Phase 1 und 2 fassen dieselben Schreibpfade an (`saveScore`, `saveKOScore`, `deleteTournament`) — die transaktionale Umsetzung in Phase 2 muss gegen die *neuen* Rules aus Phase 1 entwickelt werden, sonst doppelte Testarbeit. Phase 3 verändert das Datenmodell (Gruppen, Leg-Felder in der Vorrunde, KO ohne Vorrunde) und steht vor Phase 4, damit der Export nur einmal gegen den finalen Zustand gebaut wird. Innerhalb Phase 3: 3a zuerst (isolierteste Änderung), 3b danach (in sich geschlossene State-Machine-Erweiterung), 3c zuletzt (größter Eingriff ins Datenmodell).
 
-### Phase 0 – Aufräumen
+### Phase 0 – Aufräumen ✅ Umgesetzt (2026-08-21)
 
 **Löschen** (verifiziert: nirgends importiert/gemountet):
 - `src/components/Running/KOStage/QuarterfinalTab.js`
