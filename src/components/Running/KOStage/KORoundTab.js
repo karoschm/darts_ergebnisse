@@ -154,6 +154,15 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
 
     const finishLabel = isFinal ? "Turnier abschließen" : `${label} abschließen`;
 
+    function winnerPlaceholderLabel(id) {
+        if (roundIndex === 1) return 'VR Platz ' + id;
+        return `Sieger ${koRoundLabel(koRounds, roundIndex - 1)} M${id}`;
+    }
+
+    function loserPlaceholderLabel(id) {
+        return `Verlierer ${koRoundLabel(koRounds, roundIndex - 1)} M${id}`;
+    }
+
     // Platzhalter-Zeilen wenn Runde noch nicht generiert wurde
     function renderPlaceholders() {
         const qualifiedCount = Math.pow(2, koRounds); // Gesamtanzahl qualifizierter Teams
@@ -190,6 +199,10 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                 />
                 <br />
 
+                {isFinal && (
+                    <Typography variant="h2" align="center" sx={{ mt: 1, fontWeight: "bold" }}>Finale</Typography>
+                )}
+
                 {roundReady ? (
                     <div>
                         {mainMatches
@@ -203,11 +216,13 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     winLegs={winLegs}
                                     disabled={status !== statusKey || isViewMode}
                                     onScoreChange={handleLegScoreChange}
+                                    showMatchId={!isFinal}
                                 />
                             ))}
                         {isFinal && hasThirdPlace && place3Match && (
                             <>
-                                <Typography variant="subtitle1" sx={{ mt: 2 }}>Spiel um Platz 3</Typography>
+                                <br />
+                                <Typography variant="h2" sx={{ mt: 2, fontWeight: "bold" }}>Spiel um Platz 3</Typography>
                                 <MobileMatchCard
                                     matchId="place3"
                                     match={place3Match}
@@ -215,19 +230,33 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     winLegs={winLegs}
                                     disabled={status !== statusKey || isViewMode}
                                     onScoreChange={handleLegScoreChange}
+                                    showMatchId={false}
                                 />
                             </>
                         )}
                     </div>
                 ) : (
                     <div>
-                        {renderPlaceholders().map(({ id1, id2, koStageDict, key }) => (
+                        {renderPlaceholders().map(({ id1, id2, key }) => (
                             <Card key={key} sx={{ width: "90vw", mx: "auto", mb: 2 }}>
-                                <div>{roundIndex === 1 ? 'VR Platz ' + id1 : 'Sieger R' + (roundIndex-1) + '_M' + id1}</div>
+                                <div>{winnerPlaceholderLabel(id1)}</div>
                                 <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
-                                <div>{roundIndex === 1 ? 'VR Platz ' + id2 : 'Sieger R' + (roundIndex-1) + '_M' + id2}</div>
+                                <div>{winnerPlaceholderLabel(id2)}</div>
                             </Card>
                         ))}
+                        {isFinal && hasThirdPlace && (
+                            <>
+                                <br />
+                                <Typography variant="h2" sx={{ mt: 2, fontWeight: "bold" }}>Spiel um Platz 3</Typography>
+                                {renderPlaceholders().map(({ id1, id2 }) => (
+                                    <Card key="placeholder_place3" sx={{ width: "90vw", mx: "auto", mb: 2 }}>
+                                        <div>{loserPlaceholderLabel(id1)}</div>
+                                        <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                                        <div>{loserPlaceholderLabel(id2)}</div>
+                                    </Card>
+                                ))}
+                            </>
+                        )}
                     </div>
                 )}
 
@@ -260,11 +289,15 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
             </Tooltip>
             <br />
 
+            {isFinal && (
+                <Typography variant="h2" align="center" sx={{ mt: 1, fontWeight: "bold" }}>Finale</Typography>
+            )}
+
             <Table sx={{ width: "80vw", mx: "auto", mb: 2, maxWidth: 800 }}
                 style={{ borderCollapse: "collapse", alignContent: "center" }}>
                 <TableHead>
                     <TableRow>
-                        <TableCell align="center" width="15%">Match</TableCell>
+                        {!isFinal && (<TableCell align="center" width="15%">Match</TableCell>)}
                         <TableCell align="right" width="10%">Legs</TableCell>
                         <TableCell align="right" width="25%">Team 1</TableCell>
                         <TableCell align="center" width="10%"></TableCell>
@@ -288,15 +321,44 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     editTooltip={editTooltip}
                                     disabled={status !== statusKey || isViewMode}
                                     onScoreChange={handleLegScoreChange}
+                                    showMatchId={!isFinal}
                                 />
                             ))}
-                        {isFinal && hasThirdPlace && place3Match && (
-                            <>
-                                <TableRow>
-                                    <TableCell colSpan={6}>
-                                        <Typography variant="subtitle2" align="center">Spiel um Platz 3</Typography>
-                                    </TableCell>
-                                </TableRow>
+                    </TableBody>
+                ) : (
+                    <TableBody>
+                        {renderPlaceholders().map(({ id1, id2, key }) => (
+                            <TableRow key={key}>
+                                {!isFinal && (<TableCell align="center">R{roundIndex}_M{id1}</TableCell>)}
+                                <TableCell />
+                                <TableCell align="right">{winnerPlaceholderLabel(id1)}</TableCell>
+                                <TableCell align="center">vs</TableCell>
+                                <TableCell>{winnerPlaceholderLabel(id2)}</TableCell>
+                                <TableCell />
+                            </TableRow>
+                        ))}
+                    </TableBody>
+                )}
+            </Table>
+            <br />
+            <br />
+
+            {isFinal && hasThirdPlace && (
+                <>
+                    <Typography variant="h2" align="center" sx={{ mt: 1, fontWeight: "bold" }}>Spiel um Platz 3</Typography>
+                    <Table sx={{ width: "80vw", mx: "auto", mb: 2, maxWidth: 800 }}
+                        style={{ borderCollapse: "collapse", alignContent: "center" }}>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell align="right" width="10%">Legs</TableCell>
+                                <TableCell align="right" width="25%">Team 1</TableCell>
+                                <TableCell align="center" width="10%"></TableCell>
+                                <TableCell align="left" width="25%">Team 2</TableCell>
+                                <TableCell align="left" width="10%">Legs</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            {place3Match?.team1 ? (
                                 <DesktopMatchRow
                                     roundIndex={roundIndex}
                                     matchId="place3"
@@ -306,25 +368,23 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     editTooltip={editTooltip}
                                     disabled={status !== statusKey || isViewMode}
                                     onScoreChange={handleLegScoreChange}
+                                    showMatchId={false}
                                 />
-                            </>
-                        )}
-                    </TableBody>
-                ) : (
-                    <TableBody>
-                        {renderPlaceholders().map(({ id1, id2, key }) => (
-                            <TableRow key={key}>
-                                <TableCell align="center">R{roundIndex}_M{id1}</TableCell>
-                                <TableCell />
-                                <TableCell align="right">{roundIndex === 1 ? 'VR Platz ' + id1 : 'Sieger R' + (roundIndex-1) + '_M' + id1}</TableCell>
-                                <TableCell align="center">vs</TableCell>
-                                <TableCell>{roundIndex === 1 ? 'VR Platz ' + id2 : 'Sieger R' + (roundIndex-1) + '_M' + id2}</TableCell>
-                                <TableCell />
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                )}
-            </Table>
+                            ) : (
+                                renderPlaceholders().map(({ id1, id2 }) => (
+                                    <TableRow key="placeholder_place3">
+                                        <TableCell />
+                                        <TableCell align="right">{loserPlaceholderLabel(id1)}</TableCell>
+                                        <TableCell align="center">vs</TableCell>
+                                        <TableCell>{loserPlaceholderLabel(id2)}</TableCell>
+                                        <TableCell />
+                                    </TableRow>
+                                ))
+                            )}
+                        </TableBody>
+                    </Table>
+                </>
+            )}
             <br />
             {!isViewMode && (
                 <Button onClick={handleFinishRound} disabled={!allMatchesPlayed || status !== statusKey}>
@@ -337,13 +397,13 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
 
 // ─── Hilfkomponenten ──────────────────────────────────────────────────────────
 
-function MobileMatchCard({ matchId, match, teamNames, winLegs, disabled, onScoreChange }) {
+function MobileMatchCard({ matchId, match, teamNames, winLegs, disabled, onScoreChange, showMatchId = true }) {
     const team1 = match.team1;
     const team2 = match.team2;
 
     return (
         <Card sx={{ width: "90vw", mx: "auto", mb: 2 }}>
-            <div style={{ textAlign: "center", margin: "2px" }}>{matchId}</div>
+            {showMatchId && <div style={{ textAlign: "center", margin: "2px" }}>{matchId}</div>}
             <div style={{ flex: 1, display: "flex", justifyContent: "space-between" }}>
                 <Typography sx={{
                     flex: 3, minWidth: 0, overflow: "hidden",
@@ -385,13 +445,13 @@ function MobileMatchCard({ matchId, match, teamNames, winLegs, disabled, onScore
     );
 }
 
-function DesktopMatchRow({ roundIndex, matchId, match, teamNames, winLegs, editTooltip, disabled, onScoreChange }) {
+function DesktopMatchRow({ roundIndex, matchId, match, teamNames, winLegs, editTooltip, disabled, onScoreChange, showMatchId = true }) {
     const team1 = match.team1;
     const team2 = match.team2;
 
     return (
         <TableRow key={matchId}>
-            <TableCell align="center">R{roundIndex}_{matchId}</TableCell>
+            {showMatchId && <TableCell align="center">R{roundIndex}_{matchId}</TableCell>}
             <TableCell align="right">
                 <Tooltip title={editTooltip}>
                     <span>
