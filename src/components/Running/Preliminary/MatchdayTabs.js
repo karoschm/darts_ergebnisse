@@ -37,11 +37,17 @@ export default function MatchdayTabs({ md, isViewMode }) {
         };
     }, [currentTournamentId, md]);
 
-    function handleScoreChange(matchKey, team, newScore, opponent) {
+    // Nur lokalen State aktualisieren — Speichern erfolgt erst bei onBlur (handleScoreBlur),
+    // damit nicht bei jedem Tastendruck/Pfeiltasten-Klick eine eigene Transaktion feuert
+    // (führte sonst zu überholenden Schreibvorgängen und sichtbarem Zurückspringen des Scores).
+    function handleScoreChange(matchKey, team, newScore) {
         setMatches(prev => ({
             ...prev,
             [matchKey]: { ...prev[matchKey], [`score_${team}`]: newScore }
         }));
+    }
+
+    function handleScoreBlur(matchKey, team, newScore, opponent) {
         saveScore(currentTournamentId, md, matchKey, team, newScore, opponent);
     }
 
@@ -109,7 +115,8 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                     type="number"
                                     value={match[`score_${team1}`]}
                                     disabled={status !== "group" || isViewMode}
-                                    onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value), team2)}
+                                    onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value))}
+                                    onBlur={e => handleScoreBlur(mNumber, team1, Number(e.target.value), team2)}
                                     fullWidth
                                     inputProps={{ min: 0, max: 501 }}
                                 />
@@ -130,7 +137,8 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                     type="number"
                                     value={match[`score_${team2}`]}
                                     disabled={status !== "group" || isViewMode}
-                                    onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value), team1)}
+                                    onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value))}
+                                    onBlur={e => handleScoreBlur(mNumber, team2, Number(e.target.value), team1)}
                                     fullWidth
                                     inputProps={{ min: 0, max: 501 }}
                                 />
@@ -171,8 +179,8 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                             style={{ width: "60px" }}
                                             disabled={status !== "group" || isViewMode}
                                             value={scoreTeam1}
-                                            onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value), team2)}
-                                            onBlur={e => saveScore(currentTournamentId, md, mNumber, team1, Number(e.target.value), team2)}
+                                            onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value))}
+                                            onBlur={e => handleScoreBlur(mNumber, team1, Number(e.target.value), team2)}
                                             inputProps={{ min: 0, max: 501 }}
                                         />
                                     </span>
@@ -197,8 +205,8 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                             style={{ width: "60px" }}
                                             disabled={status !== "group" || isViewMode}
                                             value={scoreTeam2}
-                                            onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value), team1)}
-                                            onBlur={e => saveScore(currentTournamentId, md, mNumber, team2, Number(e.target.value), team1)}
+                                            onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value))}
+                                            onBlur={e => handleScoreBlur(mNumber, team2, Number(e.target.value), team1)}
                                             inputProps={{ min: 0, max: 501 }}
                                         />
                                     </span>

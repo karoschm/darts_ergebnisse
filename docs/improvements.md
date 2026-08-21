@@ -175,9 +175,11 @@ service cloud.firestore {
 
 ### Phase 2 – Konflikterkennung (Transaktionen + Dirty-State-UI)
 
-**2.1 Transaktionale Writes:** `saveScore`, `saveKOScore`, `addTeamGame` von Read-Modify-Write auf `runTransaction()` umstellen. Gemeinsamer Helper wird in Phase 3a wiederverwendet. `updateAllKOsPlayed` auf `writeBatch` umstellen.
+**2.1 Transaktionale Writes:** ✅ Umgesetzt (2026-08-21). `saveScore`, `saveKOScore`, `addTeamGame` von Read-Modify-Write auf `runTransaction()` umgestellt. Gemeinsamer Helper `computeTeamStats` extrahiert (wird in Phase 3a wiederverwendet). `updateAllKOsPlayed` auf `writeBatch` umgestellt.
 
-**2.2 MatchdayTabs.js – Dirty-State-Bug:** `subscribeMatchday` überschreibt aktuell den kompletten lokalen State bei jedem Snapshot, auch während der Nutzer tippt. Fix: dirty-Flag pro Feld, gesetzt bei `onChange`, gelöscht nach `onBlur`-Save; beim Snapshot-Merge behalten dirty Felder den lokalen Wert. Mobile-Ansicht (speichert aktuell bei jedem Tastendruck) auf das Onblur-Muster vereinheitlichen.
+**2.2 MatchdayTabs.js / KORoundTab.js – Save-per-Keystroke-Bug:** ✅ Teilweise umgesetzt (2026-08-21). Bug gefunden (nicht nur in `MatchdayTabs.js`, auch in `KORoundTab.js`): `onChange` löste bei jedem Tastendruck/Pfeiltasten-Klick direkt einen `saveScore`/`saveKOScore`-Aufruf aus (Desktop-Vorrunde sogar doppelt, da zusätzlich `onBlur` speicherte). Bei schnellen Eingaben (z.B. "99" tippen oder Pfeiltasten spammen) überholten sich die parallelen Firestore-Transaktionen, wodurch der Score sichtbar zurücksprang und teils ein unbehandelter `FirebaseError` ("stored version does not match required base version") den Browser erreichte. Fix: `onChange` aktualisiert nur noch lokalen State, `saveScore`/`saveKOScore` wird ausschließlich bei `onBlur` aufgerufen (Mobile-Ansicht dafür auf das Onblur-Muster umgestellt, in `KORoundTab.js` neuer `onScoreBlur`-Prop durch `MobileMatchCard`/`DesktopMatchRow` durchgereicht).
+
+Noch offen aus der ursprünglichen Phase 2.2: `subscribeMatchday`/`subscribeKnockoutRound` überschreiben weiterhin den kompletten lokalen State bei jedem Snapshot; ein echtes dirty-Flag pro Feld (behält lokalen Wert beim Snapshot-Merge, auch über das Blur-Save hinaus) ist noch nicht umgesetzt — siehe 2.3.
 
 **2.3 KORoundTab.js – gemeinsamer Hook:** Neuer Hook `src/hooks/useDirtyField.js` (lokaler Wert, Dirty-Flag, Commit, Merge-Regel), gemeinsam genutzt in `MatchdayTabs.js` und `KORoundTab.js`. Zusatzfund: `winLegs` in `KORoundTab.js` ist reiner lokaler State, nicht persistiert — als Tournament-Feld persistieren (dasselbe Feld wie in Phase 3a).
 

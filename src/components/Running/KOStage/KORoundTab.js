@@ -110,7 +110,19 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
         };
     }, [currentTournamentId, stageKey]);
 
-    function handleLegScoreChange(matchKey, team, newScore, opponent) {
+    // Nur lokalen State aktualisieren — Speichern erfolgt erst bei onBlur (handleLegScoreBlur),
+    // damit nicht bei jedem Tastendruck/Pfeiltasten-Klick eine eigene Transaktion feuert.
+    function handleLegScoreChange(matchKey, team, newScore) {
+        setRoundData(prev => ({
+            ...prev,
+            matches: {
+                ...prev.matches,
+                [matchKey]: { ...prev.matches[matchKey], [`legs_${team}`]: newScore }
+            }
+        }));
+    }
+
+    function handleLegScoreBlur(matchKey, team, newScore, opponent) {
         saveKOScore(currentTournamentId, stageKey, matchKey, team, newScore, opponent, winLegs);
     }
 
@@ -221,6 +233,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     winLegs={winLegs}
                                     disabled={status !== statusKey || isViewMode}
                                     onScoreChange={handleLegScoreChange}
+                                    onScoreBlur={handleLegScoreBlur}
                                     showMatchId={!isFinal}
                                 />
                             ))}
@@ -235,6 +248,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     winLegs={winLegs}
                                     disabled={status !== statusKey || isViewMode}
                                     onScoreChange={handleLegScoreChange}
+                                    onScoreBlur={handleLegScoreBlur}
                                     showMatchId={false}
                                 />
                             </>
@@ -327,6 +341,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     editTooltip={editTooltip}
                                     disabled={status !== statusKey || isViewMode}
                                     onScoreChange={handleLegScoreChange}
+                                    onScoreBlur={handleLegScoreBlur}
                                     showMatchId={!isFinal}
                                 />
                             ))}
@@ -373,6 +388,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     editTooltip={editTooltip}
                                     disabled={status !== statusKey || isViewMode}
                                     onScoreChange={handleLegScoreChange}
+                                    onScoreBlur={handleLegScoreBlur}
                                     showMatchId={false}
                                 />
                             ) : (
@@ -402,7 +418,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
 
 // ─── Hilfkomponenten ──────────────────────────────────────────────────────────
 
-function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disabled, onScoreChange, showMatchId = true }) {
+function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disabled, onScoreChange, onScoreBlur, showMatchId = true }) {
     const team1 = match.team1;
     const team2 = match.team2;
 
@@ -422,7 +438,8 @@ function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disab
                     type="number"
                     value={match[`legs_${team1}`]}
                     disabled={disabled}
-                    onChange={e => onScoreChange(matchId, team1, Number(e.target.value), team2)}
+                    onChange={e => onScoreChange(matchId, team1, Number(e.target.value))}
+                    onBlur={e => onScoreBlur(matchId, team1, Number(e.target.value), team2)}
                     fullWidth
                     inputProps={{ min: 0, max: winLegs }}
                 />
@@ -441,7 +458,8 @@ function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disab
                     type="number"
                     value={match[`legs_${team2}`]}
                     disabled={disabled}
-                    onChange={e => onScoreChange(matchId, team2, Number(e.target.value), team1)}
+                    onChange={e => onScoreChange(matchId, team2, Number(e.target.value))}
+                    onBlur={e => onScoreBlur(matchId, team2, Number(e.target.value), team1)}
                     fullWidth
                     inputProps={{ min: 0, max: winLegs }}
                 />
@@ -450,7 +468,7 @@ function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disab
     );
 }
 
-function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs, editTooltip, disabled, onScoreChange, showMatchId = true }) {
+function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs, editTooltip, disabled, onScoreChange, onScoreBlur, showMatchId = true }) {
     const team1 = match.team1;
     const team2 = match.team2;
 
@@ -464,7 +482,8 @@ function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs, editT
                             type="number"
                             value={match[`legs_${team1}`]}
                             disabled={disabled}
-                            onChange={e => onScoreChange(matchId, team1, Number(e.target.value), team2)}
+                            onChange={e => onScoreChange(matchId, team1, Number(e.target.value))}
+                            onBlur={e => onScoreBlur(matchId, team1, Number(e.target.value), team2)}
                             inputProps={{ min: 0, max: winLegs }}
                         />
                     </span>
@@ -500,7 +519,8 @@ function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs, editT
                             type="number"
                             value={match[`legs_${team2}`]}
                             disabled={disabled}
-                            onChange={e => onScoreChange(matchId, team2, Number(e.target.value), team1)}
+                            onChange={e => onScoreChange(matchId, team2, Number(e.target.value))}
+                            onBlur={e => onScoreBlur(matchId, team2, Number(e.target.value), team1)}
                             inputProps={{ min: 0, max: winLegs }}
                         />
                     </span>

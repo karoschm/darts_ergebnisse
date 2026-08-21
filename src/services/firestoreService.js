@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, onSnapshot } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, runTransaction, onSnapshot } from "firebase/firestore";
 import { db, auth } from "../firebase";
 
 // ─── PIN Utilities ────────────────────────────────────────────────────────────
@@ -265,44 +265,50 @@ export async function saveSchedule(tournamentID, schedule) {
     }
 }
 
+// Rechnet Siege/Niederlagen/Gesamtscores aus den Matches eines Teams neu.
+// Niedrigerer Score gewinnt (Punktemodus). Gemeinsam genutzt von addTeamGame/saveScore.
+function computeTeamStats(matches) {
+    let wins = 0, losses = 0, ownScore = 0, opponentScore = 0;
+    Object.values(matches).forEach(match => {
+        ownScore += match.own_score;
+        opponentScore += match.opponent_score;
+        if (match.own_score < match.opponent_score) wins++;
+        else if (match.own_score > match.opponent_score) losses++;
+    });
+    return { wins, losses, own_score: ownScore, opponent_score: opponentScore };
+}
+
 export async function addTeamGame(tournamentID, team1ID, team2ID, matchday) {
     const isByeMatch = team1ID === "BYE" || team2ID === "BYE";
     const realTeam = team1ID === "BYE" ? team2ID : team1ID;
     const byeTeam = team1ID === "BYE" ? team1ID : team2ID;
- 
+
     if (isByeMatch) {
         // Echtes Team bekommt Sieg (own_score 0, opponent_score 1 → niedrigerer Score gewinnt)
         const realTeamRef = doc(db, "tournaments", tournamentID, "teams", realTeam);
-        const realTeamSnap = await getDoc(realTeamRef);
-        const data = realTeamSnap.data();
-        const matches = { ...data.matches };
-        matches[matchday + 1] = { opponent: byeTeam, own_score: 0, opponent_score: 1 };
- 
-        // Siege/Niederlagen/Scores neu berechnen
-        let wins = 0, losses = 0, ownScore = 0, opponentScore = 0;
-        Object.values(matches).forEach(match => {
-            ownScore += match.own_score;
-            opponentScore += match.opponent_score;
-            if (match.own_score < match.opponent_score) wins++;
-            else if (match.own_score > match.opponent_score) losses++;
+        await runTransaction(db, async (transaction) => {
+            const realTeamSnap = await transaction.get(realTeamRef);
+            const matches = { ...realTeamSnap.data().matches };
+            matches[matchday + 1] = { opponent: byeTeam, own_score: 0, opponent_score: 1 };
+            transaction.update(realTeamRef, { matches, ...computeTeamStats(matches) });
         });
- 
-        await updateDoc(realTeamRef, { matches, wins, losses, own_score: ownScore, opponent_score: opponentScore });
         // BYE-Team wird nicht aktualisiert
         return;
     }
- 
+
     // Normales Spiel — unverändert
     const team1Ref = doc(db, "tournaments", tournamentID, "teams", team1ID);
-    await setDoc(team1Ref, {
-        matches: { [matchday + 1]: { opponent: team2ID, own_score: 0, opponent_score: 0 } },
-        wins: 0, losses: 0, own_score: 0, opponent_score: 0
-    }, { merge: true });
- 
     const team2Ref = doc(db, "tournaments", tournamentID, "teams", team2ID);
-    await setDoc(team2Ref, {
-        matches: { [matchday + 1]: { opponent: team1ID, own_score: 0, opponent_score: 0 } }
-    }, { merge: true });
+    await runTransaction(db, async (transaction) => {
+        transaction.set(team1Ref, {
+            matches: { [matchday + 1]: { opponent: team2ID, own_score: 0, opponent_score: 0 } },
+            wins: 0, losses: 0, own_score: 0, opponent_score: 0
+        }, { merge: true });
+
+        transaction.set(team2Ref, {
+            matches: { [matchday + 1]: { opponent: team1ID, own_score: 0, opponent_score: 0 } }
+        }, { merge: true });
+    });
 }
 
 export async function getAllMatchdays(tournamentID) {
@@ -319,40 +325,28 @@ export async function getMatchdayMatches(tournamentID, md) {
 
 export async function saveScore(tournamentID, md, matchKey, team1, newScore, team2) {
     const matchdayRef = doc(db, "tournaments", tournamentID, "matchdays", md);
-    const matchdaySnap = await getDoc(matchdayRef);
-    const oppScore = matchdaySnap.data().matches[`${matchKey}`][`score_${team2}`];
-    await updateDoc(matchdayRef, {
-        [`matches.${matchKey}.score_${team1}`]: newScore,
-        [`matches.${matchKey}.played`]: newScore !== null && newScore !== "" && oppScore !== null && oppScore !== ""
-    });
-
     const team1Ref = doc(db, "tournaments", tournamentID, "teams", team1);
-    const team1Snap = await getDoc(team1Ref);
-    const team1Matches = { ...team1Snap.data().matches };
-    team1Matches[md] = { ...team1Matches[md], own_score: newScore };
-
-    let wins = 0, losses = 0, ownScore = 0, opponentScore = 0;
-    Object.values(team1Matches).forEach(match => {
-        ownScore += match.own_score;
-        opponentScore += match.opponent_score;
-        if (match.own_score < match.opponent_score) wins++;
-        else if (match.own_score > match.opponent_score) losses++;
-    });
-    await updateDoc(team1Ref, { matches: team1Matches, wins, losses, own_score: ownScore, opponent_score: opponentScore });
-
     const team2Ref = doc(db, "tournaments", tournamentID, "teams", team2);
-    const team2Snap = await getDoc(team2Ref);
-    const team2Matches = { ...team2Snap.data().matches };
-    team2Matches[md] = { ...team2Matches[md], opponent_score: newScore };
 
-    wins = 0; losses = 0; ownScore = 0; opponentScore = 0;
-    Object.values(team2Matches).forEach(match => {
-        ownScore += match.own_score;
-        opponentScore += match.opponent_score;
-        if (match.own_score < match.opponent_score) wins++;
-        else if (match.own_score > match.opponent_score) losses++;
+    await runTransaction(db, async (transaction) => {
+        const matchdaySnap = await transaction.get(matchdayRef);
+        const team1Snap = await transaction.get(team1Ref);
+        const team2Snap = await transaction.get(team2Ref);
+
+        const oppScore = matchdaySnap.data().matches[`${matchKey}`][`score_${team2}`];
+        transaction.update(matchdayRef, {
+            [`matches.${matchKey}.score_${team1}`]: newScore,
+            [`matches.${matchKey}.played`]: newScore !== null && newScore !== "" && oppScore !== null && oppScore !== ""
+        });
+
+        const team1Matches = { ...team1Snap.data().matches };
+        team1Matches[md] = { ...team1Matches[md], own_score: newScore };
+        transaction.update(team1Ref, { matches: team1Matches, ...computeTeamStats(team1Matches) });
+
+        const team2Matches = { ...team2Snap.data().matches };
+        team2Matches[md] = { ...team2Matches[md], opponent_score: newScore };
+        transaction.update(team2Ref, { matches: team2Matches, ...computeTeamStats(team2Matches) });
     });
-    await updateDoc(team2Ref, { matches: team2Matches, wins, losses, own_score: ownScore, opponent_score: opponentScore });
 }
 
 export async function setMatchPlayed(tournamentID, md, matchKey) {
@@ -371,12 +365,15 @@ export async function getKnockout(tournamentID, stage) {
 
 export async function saveKOScore(tournamentID, stage, matchKey, team, newScore, opponent, winLegs) {
     const koStageRef = doc(db, "tournaments", tournamentID, "knockout", stage);
-    const koStageSnap = await getDoc(koStageRef);
-    const opp_score = koStageSnap.data().matches[`${matchKey}`][`legs_${opponent}`];
 
-    await updateDoc(koStageRef, {
-        [`matches.${matchKey}.legs_${team}`]: newScore,
-        [`matches.${matchKey}.played`]: (newScore === winLegs || opp_score === winLegs) && newScore !== opp_score
+    await runTransaction(db, async (transaction) => {
+        const koStageSnap = await transaction.get(koStageRef);
+        const opp_score = koStageSnap.data().matches[`${matchKey}`][`legs_${opponent}`];
+
+        transaction.update(koStageRef, {
+            [`matches.${matchKey}.legs_${team}`]: newScore,
+            [`matches.${matchKey}.played`]: (newScore === winLegs || opp_score === winLegs) && newScore !== opp_score
+        });
     });
 }
 
@@ -385,16 +382,19 @@ export async function updateAllKOsPlayed(tournamentID, stage, winLegs) {
     const koStageSnap = await getDoc(koStageRef);
     const koStageMatches = koStageSnap.data().matches;
 
+    const updates = {};
     Object.entries(koStageMatches).forEach(([matchKey, m]) => {
         const team1_score = m[`legs_${m.team1}`];
         const team2_score = m[`legs_${m.team2}`];
-        updateDoc(koStageRef, {
-            [`matches.${matchKey}.played`]:
-                ((team1_score > team2_score && team1_score === winLegs) ||
-                 (team2_score > team1_score && team2_score === winLegs)) &&
-                team1_score !== team2_score
-        });
+        updates[`matches.${matchKey}.played`] =
+            ((team1_score > team2_score && team1_score === winLegs) ||
+             (team2_score > team1_score && team2_score === winLegs)) &&
+            team1_score !== team2_score;
     });
+
+    const batch = writeBatch(db);
+    batch.update(koStageRef, updates);
+    await batch.commit();
 }
 
 /**
