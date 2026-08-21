@@ -51,6 +51,14 @@ export default function NewTournamentSetup() {
         return KO_ROUND_OPTIONS.filter(opt => Math.pow(2, opt.rounds) <= numberTeams);
     }, [numberTeams]);
 
+    // Maximal sinnvolle Spieltagsanzahl: vollständiger Rundenplan innerhalb einer Gruppe (n-1),
+    // nicht bezogen auf die Gesamtteamzahl — Gruppen spielen unabhängig voneinander.
+    const clampMatchdays = (teamCount, newGroupCount) => {
+        const perGroup = newGroupCount > 0 ? teamCount / newGroupCount : teamCount;
+        const maxMatchdays = Math.max(1, perGroup - 1);
+        setNumberMatchdays(prev => Math.min(Number(prev) || 1, maxMatchdays));
+    };
+
     // Falls aktuell gewählte Option durch Teamanzahl-Änderung ungültig wird → zurücksetzen
     const handleTeamCountChange = (e) => {
         const newCount = Number(e.target.value);
@@ -60,10 +68,13 @@ export default function NewTournamentSetup() {
             const maxValid = Math.floor(Math.log2(newCount));
             setKoRounds(maxValid);
         }
+        clampMatchdays(newCount, groupCount);
     };
 
     const handleGroupCountChange = (e) => {
-        setGroupCount(Math.max(1, Number(e.target.value)));
+        const newGroupCount = Math.max(1, Number(e.target.value));
+        setGroupCount(newGroupCount);
+        clampMatchdays(numberTeams, newGroupCount);
     };
 
     const handlePinChange = (e) => {
@@ -205,16 +216,6 @@ export default function NewTournamentSetup() {
                     />
                     <br /><br />
 
-                    <label>Wie viele Spieltage soll die Vorrunde haben?</label>
-                    <TextField
-                        type="number"
-                        value={numberMatchdays}
-                        onChange={e => setNumberMatchdays(e.target.value)}
-                        inputProps={{ min: 1, max: numberTeams - 1 }}
-                        label="Anzahl Spieltage Vorrunde"
-                    />
-                    <br /><br />
-
                     <label>In wie viele Gruppen soll die Vorrunde aufgeteilt werden?</label>
                     <TextField
                         type="number"
@@ -230,6 +231,16 @@ export default function NewTournamentSetup() {
                                 : "Die Teamanzahl muss durch die Gruppenanzahl teilbar sein"}
                         </div>
                     )}
+                    <br /><br />
+
+                    <label>Wie viele Spieltage soll die Vorrunde haben?</label>
+                    <TextField
+                        type="number"
+                        value={numberMatchdays}
+                        onChange={e => setNumberMatchdays(e.target.value)}
+                        inputProps={{ min: 1, max: Math.max(1, teamsPerGroup - 1) }}
+                        label="Anzahl Spieltage Vorrunde"
+                    />
                     <br /><br />
 
                     <label>Wie soll die Vorrunde gewertet werden?</label>
