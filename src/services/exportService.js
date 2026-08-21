@@ -1,5 +1,5 @@
 import * as XLSX from "xlsx";
-import { getAllMatchdays, getAllTeams, getKnockout } from "./firestoreService";
+import { getAllMatchdays, getAllTeams, getKnockout, getTournamentData } from "./firestoreService";
 
 function appendKORound(
     workbook,
@@ -30,9 +30,13 @@ function appendKORound(
     );
 }
 
-function getTableOrder(teams) {
+function getTableOrder(teams, scoreMode = "points") {
     const sortedTeams = Object.values(teams).sort((a, b) => {
         if (b.wins !== a.wins) return b.wins - a.wins;
+        if (scoreMode === "legs") {
+            if (b.own_score !== a.own_score) return b.own_score - a.own_score;
+            return a.opponent_score - b.opponent_score;
+        }
         if (b.own_score !== a.own_score) return a.own_score - b.own_score;
         return b.opponent_score - a.opponent_score;
     });
@@ -47,6 +51,10 @@ export async function exportTournamentResults(tournamentId, tournamentStatus) {
         final: 3,
         finished: 4
     }
+
+    const tournamentData = await getTournamentData(tournamentId);
+    const preliminaryScoreMode = tournamentData?.preliminaryScoreMode ?? "points";
+    const preliminaryFieldPrefix = preliminaryScoreMode === "legs" ? "legs" : "score";
 
     const teams = await getAllTeams(tournamentId);
     const matchdays = await getAllMatchdays(tournamentId);
@@ -97,9 +105,9 @@ export async function exportTournamentResults(tournamentId, tournamentStatus) {
                 preliminaryRows.push({
                     Spieltag: Number(matchdayId) + 1,
                     Team1: match.team1,
-                    Punkte1: match[`score_${match.team1}`],
+                    Punkte1: match[`${preliminaryFieldPrefix}_${match.team1}`],
                     Team2: match.team2,
-                    Punkte2: match[`score_${match.team2}`],
+                    Punkte2: match[`${preliminaryFieldPrefix}_${match.team2}`],
                     Gespielt: match.played ? "Ja" : "Nein"
                 });
             });
@@ -116,7 +124,7 @@ export async function exportTournamentResults(tournamentId, tournamentStatus) {
 
         // Abschlussplatzierungen Vorrunde
         const standingsPreliminarySheet = XLSX.utils.json_to_sheet(
-            getTableOrder(teams)
+            getTableOrder(teams, preliminaryScoreMode)
                 .map((team, index) => ({
                     Platzierung: index + 1,
                     Team: team.name,

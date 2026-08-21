@@ -1,6 +1,6 @@
 import { Table, TableCell, TableHead, TableBody, TableRow, useTheme, useMediaQuery, Card, Typography } from "@mui/material";
 
-export default function StandingsTable({ teams }) {
+export default function StandingsTable({ teams, scoreMode = "points" }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -9,6 +9,10 @@ export default function StandingsTable({ teams }) {
             .filter(t => !t.isBye) // BYE nie anzeigen
             .sort((a, b) => {
                 if (b.wins !== a.wins) return b.wins - a.wins;
+                if (scoreMode === "legs") {
+                    if (b.own_score !== a.own_score) return b.own_score - a.own_score;
+                    return a.opponent_score - b.opponent_score;
+                }
                 if (b.own_score !== a.own_score) return a.own_score - b.own_score;
                 return b.opponent_score - a.opponent_score;
             });

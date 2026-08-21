@@ -193,7 +193,7 @@ Rest von Phase 2.2 ✅ Umgesetzt (2026-08-21): `subscribeMatchday`/`subscribeKno
 
 **Verifikation:** Emulator-Test für parallele Transaktionen; manuell zwei Geräte/Tabs gleichzeitig auf demselben Matchday; `react-scripts test` für `useDirtyField`.
 
-### Phase 3a – Leg-Modus für die Vorrunde
+### Phase 3a – Leg-Modus für die Vorrunde ✅ Umgesetzt (2026-08-21)
 
 - `tournaments/{id}`: neue Felder `preliminaryScoreMode: "points" | "legs"` (Default `"points"`), `winLegs: number`.
 - Bei `"legs"`: Matches bekommen `legs_<team>`-Felder statt `score_<team>` (identisch zum bestehenden KO-Schema).
@@ -201,6 +201,8 @@ Rest von Phase 2.2 ✅ Umgesetzt (2026-08-21): `subscribeMatchday`/`subscribeKno
 - `firestoreService.js`: `saveSchedule`/`saveScore` modusabhängig.
 - `StandingsTable.js` / `exportService.js`: Sortierung ist hart auf "niedrigerer Score gewinnt" codiert — im Legs-Modus gilt das Gegenteil, muss modusabhängig werden.
 - Empfehlung: gemeinsame modusfähige Eingabekomponente (`src/components/Running/MatchScoreInput.js`) statt Duplikation.
+
+**Umsetzung:** `addTournament` speichert `preliminaryScoreMode`/`winLegs` auf dem Turnier-Root-Dokument. `saveSchedule`, `saveScore`, `addTeamGame` und `computeTeamStats` in `firestoreService.js` nehmen jetzt `scoreMode`/`winLegs`-Parameter entgegen und wählen darüber sowohl das Feldpräfix (`score_`/`legs_`) als auch die Sieg-Richtung (niedriger vs. höher gewinnt) und die "played"-Bedingung (Feld gefüllt vs. Gewinnlegs erreicht). `generateFirstKORound` bekommt denselben `scoreMode`-Parameter für den Tie-Break beim Vorrunden-Ranking. `StandingsTable.js` und `exportService.js` sortieren modusabhängig. `Preliminary.js` lädt Modus/Gewinnlegs aus den Turnierdaten und reicht sie an `StandingsTable`/`MatchdayTabs`/die Firestore-Aufrufe durch; `MatchdayTabs.js` nutzt ein lokales `fieldPrefix`/`maxScore` statt hartcodierter `score_`/`501`-Werte. Bewusst **keine** eigene `MatchScoreInput`-Komponente eingeführt (Empfehlung war optional) — die Duplikation in `MatchdayTabs.js` (Mobile/Desktop) blieb unverändert bestehen, nur parametrisiert, um den Diff klein zu halten.
 
 **Nicht im Scope:** Moduswechsel nach Turniererstellung, gemischte Modi pro Spieltag.
 

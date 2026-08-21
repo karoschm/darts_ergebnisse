@@ -16,7 +16,7 @@ import {
 } from "../../../services/firestoreService";
 import StandingsTable from "./StandingsTable";
 import MatchdayTabs from "./MatchdayTabs";
-import { Button, useTheme, useMediaQuery } from "@mui/material";
+import { Button, Typography, useTheme, useMediaQuery } from "@mui/material";
 
 export default function Preliminary({ isViewMode }) {
     const { currentTournamentId } = useTournament();
@@ -27,6 +27,8 @@ export default function Preliminary({ isViewMode }) {
     const [allMatchdaysPlayed, setAllMatchdaysPlayed] = useState(false);
     const [scheduleAvailable, setScheduleAvailable] = useState(false);
     const [koRounds, setKoRounds] = useState(0);
+    const [preliminaryScoreMode, setPreliminaryScoreMode] = useState("points");
+    const [winLegs, setWinLegs] = useState(3);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -64,6 +66,8 @@ export default function Preliminary({ isViewMode }) {
 
             const data = await getTournamentData(currentTournamentId);
             setKoRounds(data?.koRounds ?? 0);
+            setPreliminaryScoreMode(data?.preliminaryScoreMode ?? "points");
+            setWinLegs(data?.winLegs ?? 3);
         }
 
         fetchData();
@@ -85,7 +89,7 @@ export default function Preliminary({ isViewMode }) {
         if (koRounds === 0) {
             await updateTournamentStatus(currentTournamentId, "finished");
         } else {
-            await generateFirstKORound(currentTournamentId, koRounds);
+            await generateFirstKORound(currentTournamentId, koRounds, preliminaryScoreMode);
             await updateTournamentStatus(currentTournamentId, nextStatus("group", koRounds));
         }
     };
@@ -128,15 +132,18 @@ export default function Preliminary({ isViewMode }) {
     const handleMakeSchedule = (e) => {
         e.preventDefault();
         const newSchedule = generateSchedule();
-        saveSchedule(currentTournamentId, newSchedule);
+        saveSchedule(currentTournamentId, newSchedule, preliminaryScoreMode, winLegs);
         newSchedule.forEach((matchList, matchday) => {
             Object.values(matchList).forEach(({ team1, team2 }) => {
-                addTeamGame(currentTournamentId, team1, team2, matchday);
+                addTeamGame(currentTournamentId, team1, team2, matchday, preliminaryScoreMode, winLegs);
             });
         });
     };
 
     const finishLabel = koRounds === 0 ? "Turnier abschließen" : "Vorrunde abschließen";
+    const scoreModeLabel = preliminaryScoreMode === "legs"
+        ? `Wertung: Gewinnlegs (First to ${winLegs})`
+        : "Wertung: Punkte";
 
     return (
         <form
@@ -150,7 +157,10 @@ export default function Preliminary({ isViewMode }) {
                 padding: "20px 20px 60px 20px"
             }}
         >
-            <StandingsTable teams={teams} />
+            <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                {scoreModeLabel}
+            </Typography>
+            <StandingsTable teams={teams} scoreMode={preliminaryScoreMode} />
             <br />
             <div style={{ display: "flex", gap: "15px", justifyContent: "center", marginTop: "10px" }}>
                 {!isViewMode && (
@@ -194,7 +204,12 @@ export default function Preliminary({ isViewMode }) {
                     }}
                 >
                     {preliminaryTabValue === md && (
-                        <MatchdayTabs md={(md + 1).toString()} isViewMode={isViewMode} />
+                        <MatchdayTabs
+                            md={(md + 1).toString()}
+                            isViewMode={isViewMode}
+                            scoreMode={preliminaryScoreMode}
+                            winLegs={winLegs}
+                        />
                     )}
                 </div>
             ))}

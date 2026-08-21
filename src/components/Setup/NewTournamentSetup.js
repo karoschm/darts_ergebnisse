@@ -24,6 +24,8 @@ export default function NewTournamentSetup() {
     const [tournamentName, setTournamentName] = useState("");
     const [koRounds, setKoRounds] = useState(3);
     const [hasThirdPlace, setHasThirdPlace] = useState(true);
+    const [preliminaryScoreMode, setPreliminaryScoreMode] = useState("points");
+    const [winLegs, setWinLegs] = useState(3);
     const [pin, setPin] = useState("");
     const [pinConfirm, setPinConfirm] = useState("");
 
@@ -64,7 +66,8 @@ export default function NewTournamentSetup() {
         if (pin !== pinConfirm) return showError("Die PINs stimmen nicht überein.");
 
         const tournamentID = await addTournament(
-            trimmedName, numberTeams, numberMatchdays, koRounds, hasThirdPlace, pin
+            trimmedName, numberTeams, numberMatchdays, koRounds, hasThirdPlace, pin,
+            preliminaryScoreMode, winLegs
         );
 
         if (tournamentID === trimmedName) {
@@ -112,6 +115,34 @@ export default function NewTournamentSetup() {
                 inputProps={{ min: 1, max: numberTeams - 1 }}
                 label="Anzahl Spieltage Vorrunde"
             />
+            <br /><br />
+
+            <label>Wie soll die Vorrunde gewertet werden?</label>
+            <br />
+            <FormControl sx={{ minWidth: 220 }}>
+                <InputLabel>Wertungsmodus Vorrunde</InputLabel>
+                <Select
+                    value={preliminaryScoreMode}
+                    label="Wertungsmodus Vorrunde"
+                    onChange={e => setPreliminaryScoreMode(e.target.value)}
+                >
+                    <MenuItem value="points">Punkte</MenuItem>
+                    <MenuItem value="legs">Gewinnlegs</MenuItem>
+                </Select>
+            </FormControl>
+            {preliminaryScoreMode === "legs" && (
+                <>
+                    <br /><br />
+                    <label>Gewinnlegs: First to</label>
+                    <TextField
+                        type="number"
+                        value={winLegs}
+                        onChange={e => setWinLegs(Number(e.target.value))}
+                        inputProps={{ min: 1 }}
+                        label="Gewinnlegs"
+                    />
+                </>
+            )}
             <br /><br />
 
             <label>Bei welcher Stufe soll die KO-Runde beginnen?</label>

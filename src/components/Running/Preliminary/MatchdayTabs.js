@@ -8,7 +8,7 @@ import { getClientId } from "../../../hooks/useClientId";
 // Nach dieser Zeit gilt ein "editingAt"-Zeitstempel als veraltet (z.B. Tab ohne Blur geschlossen)
 const EDITING_STALE_MS = 12000;
 
-export default function MatchdayTabs({ md, isViewMode }) {
+export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", winLegs = 3 }) {
     const { currentTournamentId } = useTournament();
     const [matches, setMatches] = useState({});
     const [teamNames, setTeamNames] = useState({});
@@ -20,6 +20,9 @@ export default function MatchdayTabs({ md, isViewMode }) {
     const { markDirty, mergeSnapshot } = useDirtyField();
     const focusedMatchRef = useRef(null);
     const clientIdRef = useRef(getClientId());
+
+    const fieldPrefix = scoreMode === "legs" ? "legs" : "score";
+    const maxScore = scoreMode === "legs" ? winLegs : 501;
 
     useEffect(() => {
         if (!currentTournamentId) return;
@@ -56,10 +59,10 @@ export default function MatchdayTabs({ md, isViewMode }) {
     // damit nicht bei jedem Tastendruck/Pfeiltasten-Klick eine eigene Transaktion feuert
     // (führte sonst zu überholenden Schreibvorgängen und sichtbarem Zurückspringen des Scores).
     function handleScoreChange(matchKey, team, newScore) {
-        markDirty(matchKey, `score_${team}`, newScore);
+        markDirty(matchKey, `${fieldPrefix}_${team}`, newScore);
         setMatches(prev => ({
             ...prev,
-            [matchKey]: { ...prev[matchKey], [`score_${team}`]: newScore }
+            [matchKey]: { ...prev[matchKey], [`${fieldPrefix}_${team}`]: newScore }
         }));
     }
 
@@ -69,8 +72,8 @@ export default function MatchdayTabs({ md, isViewMode }) {
     }
 
     function handleScoreBlur(matchKey, team, newScore, opponent) {
-        markDirty(matchKey, `score_${team}`, newScore);
-        saveScore(currentTournamentId, md, matchKey, team, newScore, opponent);
+        markDirty(matchKey, `${fieldPrefix}_${team}`, newScore);
+        saveScore(currentTournamentId, md, matchKey, team, newScore, opponent, scoreMode, winLegs);
         clearMatchdayEditing(currentTournamentId, md, matchKey);
         if (focusedMatchRef.current === matchKey) focusedMatchRef.current = null;
     }
@@ -146,13 +149,13 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                 <TextField
                                     style={{ flex: 1, minWidth: "60px" }}
                                     type="number"
-                                    value={match[`score_${team1}`]}
+                                    value={match[`${fieldPrefix}_${team1}`]}
                                     disabled={status !== "group" || isViewMode}
                                     onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value))}
                                     onFocus={() => handleScoreFocus(mNumber)}
                                     onBlur={e => handleScoreBlur(mNumber, team1, Number(e.target.value), team2)}
                                     fullWidth
-                                    inputProps={{ min: 0, max: 501 }}
+                                    inputProps={{ min: 0, max: maxScore }}
                                 />
                             </div>
                             <div style={{ textAlign: "right", margin: "4px" }}>vs</div>
@@ -169,13 +172,13 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                 <TextField
                                     style={{ flex: 1, minWidth: "60px" }}
                                     type="number"
-                                    value={match[`score_${team2}`]}
+                                    value={match[`${fieldPrefix}_${team2}`]}
                                     disabled={status !== "group" || isViewMode}
                                     onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value))}
                                     onFocus={() => handleScoreFocus(mNumber)}
                                     onBlur={e => handleScoreBlur(mNumber, team2, Number(e.target.value), team1)}
                                     fullWidth
-                                    inputProps={{ min: 0, max: 501 }}
+                                    inputProps={{ min: 0, max: maxScore }}
                                 />
                             </div>
                             {isBeingEditedByOther(match) && (
@@ -199,8 +202,8 @@ export default function MatchdayTabs({ md, isViewMode }) {
 
                     const team1 = match.team1;
                     const team2 = match.team2;
-                    const scoreTeam1 = match[`score_${team1}`];
-                    const scoreTeam2 = match[`score_${team2}`];
+                    const scoreTeam1 = match[`${fieldPrefix}_${team1}`];
+                    const scoreTeam2 = match[`${fieldPrefix}_${team2}`];
                     const gamePlayed = match.played;
 
                     const editTooltip = isViewMode
@@ -222,7 +225,7 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                             onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value))}
                                             onFocus={() => handleScoreFocus(mNumber)}
                                             onBlur={e => handleScoreBlur(mNumber, team1, Number(e.target.value), team2)}
-                                            inputProps={{ min: 0, max: 501 }}
+                                            inputProps={{ min: 0, max: maxScore }}
                                         />
                                     </span>
                                 </Tooltip>
@@ -249,7 +252,7 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                             onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value))}
                                             onFocus={() => handleScoreFocus(mNumber)}
                                             onBlur={e => handleScoreBlur(mNumber, team2, Number(e.target.value), team1)}
-                                            inputProps={{ min: 0, max: 501 }}
+                                            inputProps={{ min: 0, max: maxScore }}
                                         />
                                     </span>
                                 </Tooltip>

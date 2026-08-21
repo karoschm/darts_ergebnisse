@@ -80,7 +80,7 @@ export function statusToStage(status, koRounds) {
 
 // ─── Tournament ───────────────────────────────────────────────────────────────
 
-export async function addTournament(tournamentName, numberTeams, numberMatchdays, koRounds, hasThirdPlace, pin) {
+export async function addTournament(tournamentName, numberTeams, numberMatchdays, koRounds, hasThirdPlace, pin, preliminaryScoreMode = "points", winLegs = 3) {
     const uid = auth.currentUser?.uid;
     if (!uid) return `${tournamentName}_ERROR`;
 
@@ -97,6 +97,8 @@ export async function addTournament(tournamentName, numberTeams, numberMatchdays
             matchdays: numberMatchdays,
             koRounds,
             hasThirdPlace: koRounds > 0 ? hasThirdPlace : false,
+            preliminaryScoreMode,
+            winLegs,
             createdAt: new Date().toISOString()
         });
         await setDoc(doc(db, "tournaments", tournamentName, "private", "pin"), { hash: pinHash });
@@ -223,42 +225,45 @@ export async function updateTeamNames(tournamentID, teamNames) {
 
 // ─── Matchdays ────────────────────────────────────────────────────────────────
 
-export async function saveSchedule(tournamentID, schedule) {
+export async function saveSchedule(tournamentID, schedule, scoreMode = "points", winLegs = 3) {
+    const fieldPrefix = scoreMode === "legs" ? "legs" : "score";
+
     for (const [idx, md] of schedule.entries()) {
         const matchday = String(idx + 1);
         const matchdayRef = doc(db, "tournaments", tournamentID, "matchdays", matchday);
         const matchdaySnap = await getDoc(matchdayRef);
         if (matchdaySnap.exists()) await deleteDoc(matchdayRef);
- 
+
         const matchesObject = Object.fromEntries(
             Object.entries(md).map(([i, { team1, team2 }]) => {
                 const isByeMatch = team1 === "BYE" || team2 === "BYE";
                 const realTeam = team1 === "BYE" ? team2 : team1;
                 const byeTeam = team1 === "BYE" ? team1 : team2;
- 
+
                 if (isByeMatch) {
-                    // Echtes Team gewinnt 0:1 gegen BYE
+                    // Echtes Team gewinnt gegen BYE (Punktemodus: niedriger gewinnt → 0:1,
+                    // Legsmodus: höher gewinnt → winLegs:0)
                     return [i, {
                         team1: realTeam,
                         team2: byeTeam,
-                        [`score_${realTeam}`]: 0,
-                        [`score_${byeTeam}`]: 1,
+                        [`${fieldPrefix}_${realTeam}`]: scoreMode === "legs" ? winLegs : 0,
+                        [`${fieldPrefix}_${byeTeam}`]: scoreMode === "legs" ? 0 : 1,
                         played: true,
                         isByeMatch: true
                     }];
                 }
- 
+
                 return [i, {
                     team1,
                     team2,
-                    [`score_${team1}`]: 0,
-                    [`score_${team2}`]: 0,
+                    [`${fieldPrefix}_${team1}`]: 0,
+                    [`${fieldPrefix}_${team2}`]: 0,
                     played: false,
                     isByeMatch: false
                 }];
             })
         );
- 
+
         await setDoc(
             doc(db, "tournaments", tournamentID, "matchdays", matchday),
             { matches: matchesObject }
@@ -267,31 +272,40 @@ export async function saveSchedule(tournamentID, schedule) {
 }
 
 // Rechnet Siege/Niederlagen/Gesamtscores aus den Matches eines Teams neu.
-// Niedrigerer Score gewinnt (Punktemodus). Gemeinsam genutzt von addTeamGame/saveScore.
-function computeTeamStats(matches) {
+// Punktemodus: niedrigerer Score gewinnt. Legsmodus: höherer Score gewinnt.
+// Gemeinsam genutzt von addTeamGame/saveScore.
+function computeTeamStats(matches, scoreMode = "points") {
     let wins = 0, losses = 0, ownScore = 0, opponentScore = 0;
     Object.values(matches).forEach(match => {
         ownScore += match.own_score;
         opponentScore += match.opponent_score;
-        if (match.own_score < match.opponent_score) wins++;
-        else if (match.own_score > match.opponent_score) losses++;
+        if (match.own_score === match.opponent_score) return;
+        const ownWins = scoreMode === "legs"
+            ? match.own_score > match.opponent_score
+            : match.own_score < match.opponent_score;
+        if (ownWins) wins++;
+        else losses++;
     });
     return { wins, losses, own_score: ownScore, opponent_score: opponentScore };
 }
 
-export async function addTeamGame(tournamentID, team1ID, team2ID, matchday) {
+export async function addTeamGame(tournamentID, team1ID, team2ID, matchday, scoreMode = "points", winLegs = 3) {
     const isByeMatch = team1ID === "BYE" || team2ID === "BYE";
     const realTeam = team1ID === "BYE" ? team2ID : team1ID;
     const byeTeam = team1ID === "BYE" ? team1ID : team2ID;
 
     if (isByeMatch) {
-        // Echtes Team bekommt Sieg (own_score 0, opponent_score 1 → niedrigerer Score gewinnt)
+        // Echtes Team bekommt Sieg (Punktemodus: 0:1, niedriger gewinnt. Legsmodus: winLegs:0, höher gewinnt)
         const realTeamRef = doc(db, "tournaments", tournamentID, "teams", realTeam);
         await runTransaction(db, async (transaction) => {
             const realTeamSnap = await transaction.get(realTeamRef);
             const matches = { ...realTeamSnap.data().matches };
-            matches[matchday + 1] = { opponent: byeTeam, own_score: 0, opponent_score: 1 };
-            transaction.update(realTeamRef, { matches, ...computeTeamStats(matches) });
+            matches[matchday + 1] = {
+                opponent: byeTeam,
+                own_score: scoreMode === "legs" ? winLegs : 0,
+                opponent_score: scoreMode === "legs" ? 0 : 1
+            };
+            transaction.update(realTeamRef, { matches, ...computeTeamStats(matches, scoreMode) });
         });
         // BYE-Team wird nicht aktualisiert
         return;
@@ -324,29 +338,33 @@ export async function getMatchdayMatches(tournamentID, md) {
     return matchdaySnap.data().matches;
 }
 
-export async function saveScore(tournamentID, md, matchKey, team1, newScore, team2) {
+export async function saveScore(tournamentID, md, matchKey, team1, newScore, team2, scoreMode = "points", winLegs = 3) {
     const matchdayRef = doc(db, "tournaments", tournamentID, "matchdays", md);
     const team1Ref = doc(db, "tournaments", tournamentID, "teams", team1);
     const team2Ref = doc(db, "tournaments", tournamentID, "teams", team2);
+    const fieldPrefix = scoreMode === "legs" ? "legs" : "score";
 
     await runTransaction(db, async (transaction) => {
         const matchdaySnap = await transaction.get(matchdayRef);
         const team1Snap = await transaction.get(team1Ref);
         const team2Snap = await transaction.get(team2Ref);
 
-        const oppScore = matchdaySnap.data().matches[`${matchKey}`][`score_${team2}`];
+        const oppScore = matchdaySnap.data().matches[`${matchKey}`][`${fieldPrefix}_${team2}`];
+        const played = scoreMode === "legs"
+            ? (newScore === winLegs || oppScore === winLegs) && newScore !== oppScore
+            : newScore !== null && newScore !== "" && oppScore !== null && oppScore !== "";
         transaction.update(matchdayRef, {
-            [`matches.${matchKey}.score_${team1}`]: newScore,
-            [`matches.${matchKey}.played`]: newScore !== null && newScore !== "" && oppScore !== null && oppScore !== ""
+            [`matches.${matchKey}.${fieldPrefix}_${team1}`]: newScore,
+            [`matches.${matchKey}.played`]: played
         });
 
         const team1Matches = { ...team1Snap.data().matches };
         team1Matches[md] = { ...team1Matches[md], own_score: newScore };
-        transaction.update(team1Ref, { matches: team1Matches, ...computeTeamStats(team1Matches) });
+        transaction.update(team1Ref, { matches: team1Matches, ...computeTeamStats(team1Matches, scoreMode) });
 
         const team2Matches = { ...team2Snap.data().matches };
         team2Matches[md] = { ...team2Matches[md], opponent_score: newScore };
-        transaction.update(team2Ref, { matches: team2Matches, ...computeTeamStats(team2Matches) });
+        transaction.update(team2Ref, { matches: team2Matches, ...computeTeamStats(team2Matches, scoreMode) });
     });
 }
 
@@ -489,14 +507,18 @@ export async function generateKORound(tournamentID, roundIndex, qualifiedTeams, 
  * Erste KO-Runde aus Vorrunden-Ergebnissen generieren.
  * Qualifiziert werden die besten 2^koRounds Teams.
  */
-export async function generateFirstKORound(tournamentID, koRounds) {
+export async function generateFirstKORound(tournamentID, koRounds, scoreMode = "points") {
     const teamsSnap = await getDocs(collection(db, "tournaments", tournamentID, "teams"));
     const teams = teamsSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(t => !t.isBye); // BYE nie qualifizieren
- 
+
     teams.sort((a, b) => {
         if (b.wins !== a.wins) return b.wins - a.wins;
+        if (scoreMode === "legs") {
+            if (b.own_score !== a.own_score) return b.own_score - a.own_score;
+            return a.opponent_score - b.opponent_score;
+        }
         if (b.own_score !== a.own_score) return a.own_score - b.own_score;
         return b.opponent_score - a.opponent_score;
     });
