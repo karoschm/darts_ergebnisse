@@ -1,6 +1,6 @@
 import {
     Button, Table, TableBody, TableCell, TableHead, TableRow,
-    TextField, Typography, useTheme, useMediaQuery, Card, Tooltip
+    TextField, Typography, useTheme, useMediaQuery, Card, Tooltip, CircularProgress
 } from "@mui/material";
 import { useEffect, useState, useRef } from "react";
 import { useTournament } from "../../../context/TournamentContext";
@@ -45,6 +45,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
     const [roundData, setRoundData] = useState({ matches: {} });
     const [allMatchesPlayed, setAllMatchesPlayed] = useState(false);
     const [winLegs, setWinLegs] = useState(3);
+    const [loading, setLoading] = useState(true);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -115,6 +116,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                     const mainPlayed = matches.length > 0 && matches.every(([, m]) => m.played);
                     const p3Played = !isFinal || !hasThirdPlace || !place3 || place3.played;
                     setAllMatchesPlayed(mainPlayed && p3Played);
+                    setLoading(false);
                 }
             );
 
@@ -237,6 +239,17 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
             }
         }
         return rows;
+    }
+
+    if (loading) {
+        return (
+            <div style={{
+                flex: 1, minWidth: 0, display: "flex", flexDirection: "column",
+                alignItems: "center", justifyContent: "center", padding: "60px 20px"
+            }}>
+                <CircularProgress />
+            </div>
+        );
     }
 
     if (isMobile) {
