@@ -1,5 +1,5 @@
 import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, onSnapshot } from "firebase/firestore";
-import { db } from "../firebase";
+import { db, auth } from "../firebase";
 
 // ─── PIN Utilities ────────────────────────────────────────────────────────────
 
@@ -11,13 +11,22 @@ export async function hashPin(pin, tournamentId) {
         .join("");
 }
 
-export async function verifyPin(tournamentId, pin) {
-    const tournamentRef = doc(db, "tournaments", tournamentId);
-    const snap = await getDoc(tournamentRef);
-    if (!snap.exists()) return false;
-    const stored = snap.data().pinHash;
-    const entered = await hashPin(pin, tournamentId);
-    return stored === entered;
+// Versucht den PIN serverseitig zu bestätigen: der Client erfährt den echten
+// Hash nie, nur ob der Write gegen die Firestore-Rule erfolgreich war.
+export async function verifyPinAndUnlock(tournamentId, pin) {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return false;
+
+    const pinHashAttempt = await hashPin(pin, tournamentId);
+    const editorRef = doc(db, "tournaments", tournamentId, "authorizedEditors", uid);
+
+    try {
+        await setDoc(editorRef, { pinHashAttempt, grantedAt: new Date().toISOString() });
+        return true;
+    } catch (err) {
+        if (err.code === "permission-denied") return false;
+        throw err;
+    }
 }
 
 // ─── KO Round Helpers ─────────────────────────────────────────────────────────
@@ -72,6 +81,9 @@ export function statusToStage(status, koRounds) {
 // ─── Tournament ───────────────────────────────────────────────────────────────
 
 export async function addTournament(tournamentName, numberTeams, numberMatchdays, koRounds, hasThirdPlace, pin) {
+    const uid = auth.currentUser?.uid;
+    if (!uid) return `${tournamentName}_ERROR`;
+
     const tournamentRef = doc(db, "tournaments", tournamentName);
     const tournamentSnap = await getDoc(tournamentRef);
     if (tournamentSnap.exists()) return `${tournamentName}_EXISTS`;
@@ -85,10 +97,17 @@ export async function addTournament(tournamentName, numberTeams, numberMatchdays
             matchdays: numberMatchdays,
             koRounds,
             hasThirdPlace: koRounds > 0 ? hasThirdPlace : false,
-            createdAt: new Date().toISOString(),
-            pinHash
+            createdAt: new Date().toISOString()
+        });
+        await setDoc(doc(db, "tournaments", tournamentName, "private", "pin"), { hash: pinHash });
+        // pinHashAttempt muss dem gerade geschriebenen Hash entsprechen, damit die
+        // authorizedEditors-Create-Rule greift (Ersteller kennt den PIN ja bereits).
+        await setDoc(doc(db, "tournaments", tournamentName, "authorizedEditors", uid), {
+            pinHashAttempt: pinHash,
+            grantedAt: new Date().toISOString()
         });
     } catch (err) {
+        console.error("addTournament fehlgeschlagen:", err);
         if (err.code === "already-exists") return `${tournamentName}_EXISTS`;
         return `${tournamentName}_ERROR`;
     }
@@ -136,7 +155,7 @@ export async function updateTournamentStatus(tournamentID, newStatus) {
 export async function deleteTournament(tournamentID) {
     const batch = writeBatch(db);
 
-    const subcollections = ["teams", "matchdays", "knockout"];
+    const subcollections = ["teams", "matchdays", "knockout", "private", "authorizedEditors"];
     for (const sub of subcollections) {
         const snapshot = await getDocs(
             collection(db, "tournaments", tournamentID, sub)

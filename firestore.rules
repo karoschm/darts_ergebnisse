@@ -1,0 +1,33 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /tournaments/{tournamentId} {
+      allow read: if true;
+      allow create: if request.auth != null && !("pinHash" in request.resource.data);
+      allow update, delete: if exists(/databases/$(database)/documents/tournaments/$(tournamentId)/authorizedEditors/$(request.auth.uid));
+
+      match /private/pin {
+        allow read: if false;
+        allow create: if request.auth != null
+                      && request.resource.data.hash is string
+                      && request.resource.data.hash.size() == 64;
+        allow update: if false; // PIN-Änderung: out of scope
+        allow delete: if exists(/databases/$(database)/documents/tournaments/$(tournamentId)/authorizedEditors/$(request.auth.uid));
+      }
+
+      match /authorizedEditors/{uid} {
+        allow read: if request.auth != null && request.auth.uid == uid;
+        allow create: if request.auth != null && request.auth.uid == uid
+                      && request.resource.data.pinHashAttempt ==
+                         get(/databases/$(database)/documents/tournaments/$(tournamentId)/private/pin).data.hash;
+        allow delete: if exists(/databases/$(database)/documents/tournaments/$(tournamentId)/authorizedEditors/$(request.auth.uid));
+        allow update: if false;
+      }
+
+      match /{subcollection}/{docId} {
+        allow read: if true;
+        allow write, delete: if exists(/databases/$(database)/documents/tournaments/$(tournamentId)/authorizedEditors/$(request.auth.uid));
+      }
+    }
+  }
+}

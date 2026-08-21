@@ -25,6 +25,7 @@ yarn-error.log*
 # Firebase
 .firebase/
 hosting.*.cache
+scripts/serviceAccountKey*.json
 
 # React
 build/

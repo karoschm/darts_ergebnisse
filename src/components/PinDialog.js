@@ -8,7 +8,7 @@ import {
     TextField
 } from "@mui/material";
 import { useState } from "react";
-import { verifyPin } from "../services/firestoreService";
+import { verifyPinAndUnlock } from "../services/firestoreService";
 
 export default function PinDialog({ open, tournamentId, onSuccess, onCancel }) {
     const [pin, setPin] = useState("");
@@ -29,7 +29,7 @@ export default function PinDialog({ open, tournamentId, onSuccess, onCancel }) {
 
         setLoading(true);
         try {
-            const valid = await verifyPin(tournamentId, pin);
+            const valid = await verifyPinAndUnlock(tournamentId, pin);
             if (valid) {
                 setPin("");
                 onSuccess();

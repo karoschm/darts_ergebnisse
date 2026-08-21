@@ -44,5 +44,9 @@
       "last 1 firefox version",
       "last 1 safari version"
     ]
+  },
+  "devDependencies": {
+    "@firebase/rules-unit-testing": "^5.0.2",
+    "firebase-tools": "^15.28.1"
   }
 }

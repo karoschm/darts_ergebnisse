@@ -75,7 +75,7 @@ Mit dem Projektinhaber wurden folgende Prioritäten und Design-Entscheidungen fe
 
 ```
 Phase 0  Aufräumen (toter Code, Bugfixes, die sonst mit neuen Features kollidieren) ✅ Umgesetzt (2026-08-21)
-Phase 1  Security-Fix (Anonymous Auth + Firestore Rules + blinder PIN-Check)
+Phase 1  Security-Fix (Anonymous Auth + Firestore Rules + blinder PIN-Check) ✅ Umgesetzt (2026-08-21)
 Phase 2  Transaktionen + Konflikt-UX (baut auf den neuen Rules aus Phase 1 auf)
 Phase 3a Leg-Modus für die Vorrunde
 Phase 3b Direkt-KO-Modus ohne Vorrunde
@@ -97,7 +97,7 @@ Phase 1 und 2 fassen dieselben Schreibpfade an (`saveScore`, `saveKOScore`, `del
 
 **Verifikation:** `npm run build`, manuelles Laden eines Turniers mit `koRounds >= 4`.
 
-### Phase 1 – Security-Fix (Anonymous Auth + blinder PIN-Check)
+### Phase 1 – Security-Fix (Anonymous Auth + blinder PIN-Check) ✅ Umgesetzt (2026-08-21)
 
 **Kernidee:** `pinHash` verschwindet aus dem öffentlich lesbaren `tournaments/{id}`-Dokument. Firebase Anonymous Auth (kostenlos, Spark-kompatibel) liefert eine stabile `request.auth.uid` pro Browser-Session.
 

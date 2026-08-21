@@ -7,6 +7,7 @@ import CssBaseline from "@mui/material/CssBaseline";
 import { useMemo } from "react";
 
 import { ThemeProviderCustom, useThemeMode } from "./context/ThemeContext";
+import { AuthProvider } from "./context/AuthContext";
 import { getTheme } from "./theme/theme";
 
 function AppWithTheme() {
@@ -29,9 +30,11 @@ const root = ReactDOM.createRoot(
 );
 
 root.render(
-  <ThemeProviderCustom>
-    <AppWithTheme />
-  </ThemeProviderCustom>
+  <AuthProvider>
+    <ThemeProviderCustom>
+      <AppWithTheme />
+    </ThemeProviderCustom>
+  </AuthProvider>
 );
 
 // If you want to start measuring performance in your app, pass a function
