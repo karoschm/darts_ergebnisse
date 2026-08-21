@@ -19,7 +19,7 @@ export default function StandingsTable({ teams, scoreMode = "points" }) {
     }
 
     return isMobile ? (
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", overflowAnchor: "none" }}>
             {getTableOrder().map((team, index) => (
                 <Card key={team.id} sx={{ width: "90vw", mx: "auto", mb: 2 }}>
                     <Typography
@@ -37,7 +37,7 @@ export default function StandingsTable({ teams, scoreMode = "points" }) {
             ))}
         </div>
     ) : (
-        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center" }}>
+        <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", overflowAnchor: "none" }}>
             <h2>Tabelle</h2>
             <Table style={{ borderCollapse: "collapse", alignContent: "center" }}>
                 <TableHead>
