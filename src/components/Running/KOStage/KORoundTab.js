@@ -19,6 +19,7 @@ import {
     nextStatus,
     koStageKey,
     koRoundLabel,
+    groupLabel,
     setKOEditing,
     clearKOEditing
 } from "../../../services/firestoreService";
@@ -46,6 +47,8 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
     const [allMatchesPlayed, setAllMatchesPlayed] = useState(false);
     const [winLegs, setWinLegs] = useState(3);
     const [loading, setLoading] = useState(true);
+    const [groupCount, setGroupCount] = useState(1);
+    const [koGroupOrder, setKoGroupOrder] = useState(null);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -98,6 +101,13 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                 return acc;
             }, {});
             setTeamNames(names);
+
+            // Nur für die Platzhalter der ersten KO-Runde relevant (siehe winnerPlaceholderLabel)
+            if (roundIndex === 1) {
+                const tournamentData = await getTournamentData(currentTournamentId);
+                setGroupCount(tournamentData?.groupCount ?? 1);
+                setKoGroupOrder(tournamentData?.koGroupOrder ?? null);
+            }
 
             unsubscribeKnockout = subscribeKnockoutRound(
                 currentTournamentId,
@@ -215,8 +225,21 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
 
     const finishLabel = isFinal ? "Turnier abschließen" : `${label} abschließen`;
 
+    // id ist die 1-basierte Position in der interleaveGroups-Setzliste (siehe firestoreService.js):
+    // erst alle Rang-1-Teams aller Gruppen (in koGroupOrder-Reihenfolge), dann alle Rang-2, ...
+    function preliminaryPlaceholderLabel(id) {
+        if (groupCount <= 1) return 'VR Platz ' + id;
+        const order = koGroupOrder && koGroupOrder.length === groupCount
+            ? koGroupOrder
+            : Array.from({ length: groupCount }, (_, i) => i);
+        const zeroBased = id - 1;
+        const rankWithinGroup = Math.floor(zeroBased / groupCount) + 1;
+        const group = order[zeroBased % groupCount];
+        return `${rankWithinGroup}. Gruppe ${groupLabel(group)}`;
+    }
+
     function winnerPlaceholderLabel(id) {
-        if (roundIndex === 1) return 'VR Platz ' + id;
+        if (roundIndex === 1) return preliminaryPlaceholderLabel(id);
         return `Sieger ${koRoundLabel(koRounds, roundIndex - 1)} ${id}`;
     }
 

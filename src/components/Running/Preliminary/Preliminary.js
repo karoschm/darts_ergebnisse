@@ -31,6 +31,7 @@ export default function Preliminary({ isViewMode }) {
     const [winLegs, setWinLegs] = useState(3);
     const [groupCount, setGroupCount] = useState(1);
     const [qualifiersPerGroup, setQualifiersPerGroup] = useState(0);
+    const [koGroupOrder, setKoGroupOrder] = useState(null);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -72,6 +73,7 @@ export default function Preliminary({ isViewMode }) {
             setWinLegs(data?.winLegs ?? 3);
             setGroupCount(data?.groupCount ?? 1);
             setQualifiersPerGroup(data?.qualifiersPerGroup ?? Math.pow(2, data?.koRounds ?? 0));
+            setKoGroupOrder(data?.koGroupOrder ?? null);
         }
 
         fetchData();
@@ -93,7 +95,7 @@ export default function Preliminary({ isViewMode }) {
         if (koRounds === 0) {
             await updateTournamentStatus(currentTournamentId, "finished");
         } else {
-            await generateFirstKORound(currentTournamentId, koRounds, preliminaryScoreMode, groupCount, qualifiersPerGroup);
+            await generateFirstKORound(currentTournamentId, koRounds, preliminaryScoreMode, groupCount, qualifiersPerGroup, koGroupOrder);
             await updateTournamentStatus(currentTournamentId, nextStatus("group", koRounds));
         }
     };

@@ -543,13 +543,48 @@ export async function generateKORound(tournamentID, roundIndex, qualifiedTeams, 
     await setDoc(doc(db, "tournaments", tournamentID, "knockout", stageKey), { matches, winLegs: 3 });
 }
 
-// Fügt Rang-für-Rang (1. aller Gruppen, dann 2. aller Gruppen, ...) zu einer
-// einzigen Liste zusammen — bewusst einfaches Interleaving ohne Anti-Gruppen-Seeding.
-function interleaveGroups(groupedArrays) {
+export function shuffleArray(arr) {
+    return [...arr].sort(() => Math.random() - 0.5);
+}
+
+// Legt einmalig fest, welche Gruppe auf welche KO-Bracket-Position kommt (siehe
+// interleaveGroups). Wird bereits bei der Gruppeneinteilung in TeamSetup.js persistiert
+// (nicht erst bei der KO-Rundengenerierung), damit die Platzhalter in KORoundTab.js schon
+// während der laufenden Vorrunde die tatsächlich gültige Zuordnung anzeigen können.
+export async function setKnockoutGroupOrder(tournamentID, groupOrder) {
+    const tournamentRef = doc(db, "tournaments", tournamentID);
+    await updateDoc(tournamentRef, { koGroupOrder: groupOrder });
+}
+
+// Fügt Rang-für-Rang (1. aller Gruppen, dann 2. aller Gruppen, ...) zu einer einzigen
+// Liste zusammen, wobei `groupOrder` (ein einmalig zufällig bestimmtes, aber über alle
+// Rang-Stufen hinweg IDENTISCH angewendetes Permutations-Array der Gruppen-Indizes)
+// bestimmt, welche Gruppe welche Bracket-Position belegt.
+//
+// Die Reihenfolge *zwischen* den Rang-Stufen (erst alle Rang-1, dann alle Rang-2, ...)
+// bleibt dabei erhalten — das ist es, was `generateKORound`s "1 vs letzter Platz"-Paarung
+// rekursiv über alle Runden hinweg zur klassischen Turnierbaum-Setzung macht (stärkste
+// Teams treffen früh auf die schwächsten, zwei Rang-1-Teams treffen sich erst im Finale).
+//
+// Dass `groupOrder` für JEDE Rang-Stufe identisch ist (statt pro Stufe neu gemischt),
+// ist kein Zufall, sondern die eigentliche Pointe: Runde 1 spiegelt Bracket-Position p
+// immer gegen Position (Anzahl Gruppen - 1 - p) derselben oder einer benachbarten
+// Rang-Stufe (siehe generateKORound). Bei fester Zuordnung Position→Gruppe sitzt eine
+// gegebene Gruppe in JEDER Rang-Stufe an derselben Position p — und da die Gruppenanzahl
+// dank der Validierung in NewTournamentSetup.js (Produkt aus Gruppenanzahl und
+// Qualifikanten/Gruppe muss eine Zweierpotenz sein) immer eine Zweierpotenz und damit
+// gerade ist, gilt p ≠ (Anzahl Gruppen - 1 - p) für jedes p — eine Gruppe kann sich in
+// Runde 1 also nie selbst begegnen. Bei einer pro Stufe *neu* gemischten Reihenfolge wäre
+// das nicht garantiert (Position p könnte in Stufe A zu Gruppe X, in der gespiegelten
+// Stufe B zufällig ebenfalls zu Gruppe X gehören).
+function interleaveGroups(groupedArrays, groupOrder) {
+    const order = groupOrder && groupOrder.length === groupedArrays.length
+        ? groupOrder
+        : groupedArrays.map((_, i) => i);
     const result = [];
     const maxLen = Math.max(0, ...groupedArrays.map(g => g.length));
     for (let i = 0; i < maxLen; i++) {
-        groupedArrays.forEach(g => { if (g[i]) result.push(g[i]); });
+        order.forEach(g => { if (groupedArrays[g][i]) result.push(groupedArrays[g][i]); });
     }
     return result;
 }
@@ -558,9 +593,11 @@ function interleaveGroups(groupedArrays) {
  * Erste KO-Runde aus Vorrunden-Ergebnissen generieren.
  * Ohne Gruppen (groupCount=1): qualifiziert werden die besten 2^koRounds Teams.
  * Mit Gruppen: pro Gruppe qualifizieren sich die besten `qualifiersPerGroup` Teams,
- * die Setzliste wird anschließend rangweise über die Gruppen hinweg interleaved.
+ * die Setzliste wird anschließend rangweise über die Gruppen hinweg interleaved
+ * (siehe interleaveGroups für die Details zur Setzung und Gruppen-Kollisionsvermeidung).
+ * `groupOrder` sollte die per `setKnockoutGroupOrder` gespeicherte Reihenfolge sein.
  */
-export async function generateFirstKORound(tournamentID, koRounds, scoreMode = "points", groupCount = 1, qualifiersPerGroup = null) {
+export async function generateFirstKORound(tournamentID, koRounds, scoreMode = "points", groupCount = 1, qualifiersPerGroup = null, groupOrder = null) {
     const teamsSnap = await getDocs(collection(db, "tournaments", tournamentID, "teams"));
     const teams = teamsSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
@@ -584,8 +621,8 @@ export async function generateFirstKORound(tournamentID, koRounds, scoreMode = "
         teams.filter(t => (t.group ?? 0) === g).sort(sortByRank)
     );
 
-    const qualified = interleaveGroups(groups.map(g => g.slice(0, effectiveQualifiersPerGroup)));
-    const eliminated = interleaveGroups(groups.map(g => g.slice(effectiveQualifiersPerGroup)));
+    const qualified = interleaveGroups(groups.map(g => g.slice(0, effectiveQualifiersPerGroup)), groupOrder);
+    const eliminated = interleaveGroups(groups.map(g => g.slice(effectiveQualifiersPerGroup)), groupOrder);
 
     const batch = writeBatch(db);
     qualified.forEach((team, index) => {

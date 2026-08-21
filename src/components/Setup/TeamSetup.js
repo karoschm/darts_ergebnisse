@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTournament } from "../../context/TournamentContext";
-import { getAllTeams, updateTeamNames, updateTeamGroups, getTournamentData, groupLabel } from "../../services/firestoreService";
+import { getAllTeams, updateTeamNames, updateTeamGroups, setKnockoutGroupOrder, shuffleArray, getTournamentData, groupLabel } from "../../services/firestoreService";
 import useFormStatus from "../../hooks/useFormStatus";
 
 export default function TeamSetup() {
@@ -76,6 +76,12 @@ export default function TeamSetup() {
         await updateTeamNames(currentTournamentId, trimmedNames);
         if (groupCount > 1) {
             await updateTeamGroups(currentTournamentId, teamGroups);
+            // Einmalig zufällig festlegen, welche Gruppe auf welche KO-Bracket-Position kommt
+            // (siehe interleaveGroups in firestoreService.js) — bereits hier statt erst bei der
+            // KO-Rundengenerierung, damit die Platzhalter in der KO-Ansicht während der gesamten
+            // Vorrunde die tatsächlich gültige Zuordnung zeigen können.
+            const groupOrder = shuffleArray(Array.from({ length: groupCount }, (_, i) => i));
+            await setKnockoutGroupOrder(currentTournamentId, groupOrder);
         }
 
         if (tournamentMode === "directko") {
