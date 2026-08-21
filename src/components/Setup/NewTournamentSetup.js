@@ -27,6 +27,8 @@ export default function NewTournamentSetup() {
     const [hasThirdPlace, setHasThirdPlace] = useState(true);
     const [preliminaryScoreMode, setPreliminaryScoreMode] = useState("points");
     const [winLegs, setWinLegs] = useState(3);
+    const [groupCount, setGroupCount] = useState(1);
+    const [qualifiersPerGroup, setQualifiersPerGroup] = useState(1);
     const [pin, setPin] = useState("");
     const [pinConfirm, setPinConfirm] = useState("");
     const [mode, setMode] = useState("roundrobin");
@@ -59,6 +61,26 @@ export default function NewTournamentSetup() {
         }
     };
 
+    // Vorschlag für Qualifikanten/Gruppe passend nachziehen, wenn möglich (bleibt sonst
+    // wie vom Nutzer gesetzt, Validierung erfolgt final erst beim Absenden)
+    const handleGroupCountChange = (e) => {
+        const newGroupCount = Math.max(1, Number(e.target.value));
+        setGroupCount(newGroupCount);
+        const qualified = Math.pow(2, koRounds);
+        if (koRounds > 0 && qualified % newGroupCount === 0) {
+            setQualifiersPerGroup(qualified / newGroupCount);
+        }
+    };
+
+    const handleKoRoundsChange = (e) => {
+        const newKoRounds = Number(e.target.value);
+        setKoRounds(newKoRounds);
+        const qualified = Math.pow(2, newKoRounds);
+        if (newKoRounds > 0 && qualified % groupCount === 0) {
+            setQualifiersPerGroup(qualified / groupCount);
+        }
+    };
+
     const handlePinChange = (e) => {
         setPin(e.target.value.replace(/\D/g, "").slice(0, 4));
     };
@@ -74,12 +96,25 @@ export default function NewTournamentSetup() {
         if (pin.length !== 4) return showError("Der PIN muss genau 4 Ziffern haben.");
         if (pin !== pinConfirm) return showError("Die PINs stimmen nicht überein.");
 
+        if (!isDirectKO && groupCount > 1) {
+            if (numberTeams % groupCount !== 0) {
+                return showError("Die Teamanzahl muss durch die Gruppenanzahl teilbar sein (gleich große Gruppen).");
+            }
+            if ((numberTeams / groupCount) % 2 !== 0) {
+                return showError("Jede Gruppe muss eine gerade Anzahl Teams haben.");
+            }
+            if (koRounds > 0 && groupCount * qualifiersPerGroup !== Math.pow(2, koRounds)) {
+                return showError("Gruppenanzahl × Qualifikanten pro Gruppe muss der Anzahl KO-Teilnehmer entsprechen.");
+            }
+        }
+
         const effectiveTeamCount = isDirectKO ? directKoTeamCount : numberTeams;
         const effectiveKoRounds = isDirectKO ? directKoRounds : koRounds;
+        const effectiveGroupCount = isDirectKO ? 1 : groupCount;
 
         const tournamentID = await addTournament(
             trimmedName, effectiveTeamCount, numberMatchdays, effectiveKoRounds, hasThirdPlace, pin,
-            preliminaryScoreMode, winLegs, mode, seeding
+            preliminaryScoreMode, winLegs, mode, seeding, effectiveGroupCount, qualifiersPerGroup
         );
 
         if (tournamentID === trimmedName) {
@@ -177,6 +212,23 @@ export default function NewTournamentSetup() {
                     />
                     <br /><br />
 
+                    <label>In wie viele Gruppen soll die Vorrunde aufgeteilt werden?</label>
+                    <TextField
+                        type="number"
+                        value={groupCount}
+                        onChange={handleGroupCountChange}
+                        inputProps={{ min: 1 }}
+                        label="Anzahl Gruppen"
+                    />
+                    {groupCount > 1 && (
+                        <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: 0.7 }}>
+                            {numberTeams % groupCount === 0
+                                ? `${numberTeams / groupCount} Teams pro Gruppe`
+                                : "Die Teamanzahl muss durch die Gruppenanzahl teilbar sein"}
+                        </div>
+                    )}
+                    <br /><br />
+
                     <label>Wie soll die Vorrunde gewertet werden?</label>
                     <br />
                     <FormControl sx={{ minWidth: 220 }}>
@@ -212,7 +264,7 @@ export default function NewTournamentSetup() {
                         <Select
                             value={koRounds}
                             label="KO-Runde beginnen bei"
-                            onChange={e => setKoRounds(Number(e.target.value))}
+                            onChange={handleKoRoundsChange}
                         >
                             {availableKoOptions.map(opt => (
                                 <MenuItem key={opt.rounds} value={opt.rounds}>
@@ -225,6 +277,25 @@ export default function NewTournamentSetup() {
                         <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: 0.7 }}>
                             {qualifiedTeams} Teams qualifizieren sich für die KO-Runde
                         </div>
+                    )}
+                    {groupCount > 1 && koRounds > 0 && (
+                        <>
+                            <br /><br />
+                            <label>Wie viele Teams pro Gruppe qualifizieren sich für die KO-Runde?</label>
+                            <TextField
+                                type="number"
+                                value={qualifiersPerGroup}
+                                onChange={e => setQualifiersPerGroup(Number(e.target.value))}
+                                inputProps={{ min: 1 }}
+                                label="Qualifikanten pro Gruppe"
+                            />
+                            {groupCount * qualifiersPerGroup !== qualifiedTeams && (
+                                <div style={{ marginTop: 8, fontSize: "0.85rem", color: "orange" }}>
+                                    {groupCount} Gruppen × {qualifiersPerGroup} Qualifikanten = {groupCount * qualifiersPerGroup},
+                                    muss aber {qualifiedTeams} ergeben
+                                </div>
+                            )}
+                        </>
                     )}
                     <br />
                 </>

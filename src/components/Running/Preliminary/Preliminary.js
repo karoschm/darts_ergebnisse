@@ -29,6 +29,8 @@ export default function Preliminary({ isViewMode }) {
     const [koRounds, setKoRounds] = useState(0);
     const [preliminaryScoreMode, setPreliminaryScoreMode] = useState("points");
     const [winLegs, setWinLegs] = useState(3);
+    const [groupCount, setGroupCount] = useState(1);
+    const [qualifiersPerGroup, setQualifiersPerGroup] = useState(0);
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -68,6 +70,8 @@ export default function Preliminary({ isViewMode }) {
             setKoRounds(data?.koRounds ?? 0);
             setPreliminaryScoreMode(data?.preliminaryScoreMode ?? "points");
             setWinLegs(data?.winLegs ?? 3);
+            setGroupCount(data?.groupCount ?? 1);
+            setQualifiersPerGroup(data?.qualifiersPerGroup ?? Math.pow(2, data?.koRounds ?? 0));
         }
 
         fetchData();
@@ -89,7 +93,7 @@ export default function Preliminary({ isViewMode }) {
         if (koRounds === 0) {
             await updateTournamentStatus(currentTournamentId, "finished");
         } else {
-            await generateFirstKORound(currentTournamentId, koRounds, preliminaryScoreMode);
+            await generateFirstKORound(currentTournamentId, koRounds, preliminaryScoreMode, groupCount, qualifiersPerGroup);
             await updateTournamentStatus(currentTournamentId, nextStatus("group", koRounds));
         }
     };
@@ -122,11 +126,37 @@ export default function Preliminary({ isViewMode }) {
     }
 
     function generateSchedule() {
-        // Alle Teams inkl. BYE für die Spielplanerstellung verwenden
-        const teamIDs = teams.map(team => team.id);
-        let fullSchedule = generateRoundRobinSchedule(teamIDs);
-        fullSchedule = shuffleSchedule(fullSchedule);
-        return fullSchedule.slice(0, numberMatchdays);
+        if (groupCount <= 1) {
+            // Alle Teams inkl. BYE für die Spielplanerstellung verwenden (unverändertes Verhalten)
+            const teamIDs = teams.map(team => team.id);
+            let fullSchedule = generateRoundRobinSchedule(teamIDs);
+            fullSchedule = shuffleSchedule(fullSchedule);
+            return fullSchedule.slice(0, numberMatchdays).map(round =>
+                round.map(match => ({ ...match, group: 0 }))
+            );
+        }
+
+        // Mehrere Gruppen: pro Gruppe ein eigener, unabhängig gemischter Rundenplan
+        // (gleich große Gruppen vorausgesetzt, daher gleiche Rundenzahl je Gruppe),
+        // matchdayweise über die Gruppen hinweg zusammengeführt.
+        const schedulesByGroup = [];
+        for (let g = 0; g < groupCount; g++) {
+            const groupTeamIDs = teams.filter(t => !t.isBye && (t.group ?? 0) === g).map(t => t.id);
+            let groupSchedule = generateRoundRobinSchedule(groupTeamIDs);
+            groupSchedule = shuffleSchedule(groupSchedule);
+            schedulesByGroup.push(groupSchedule);
+        }
+
+        const roundsCount = schedulesByGroup[0]?.length ?? 0;
+        const merged = [];
+        for (let r = 0; r < roundsCount; r++) {
+            const roundMatches = [];
+            schedulesByGroup.forEach((schedule, g) => {
+                (schedule[r] || []).forEach(match => roundMatches.push({ ...match, group: g }));
+            });
+            merged.push(roundMatches);
+        }
+        return merged.slice(0, numberMatchdays);
     }
 
     const handleMakeSchedule = (e) => {
@@ -160,7 +190,7 @@ export default function Preliminary({ isViewMode }) {
             <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
                 {scoreModeLabel}
             </Typography>
-            <StandingsTable teams={teams} scoreMode={preliminaryScoreMode} />
+            <StandingsTable teams={teams} scoreMode={preliminaryScoreMode} groupCount={groupCount} />
             <br />
             <div style={{ display: "flex", gap: "15px", justifyContent: "center", marginTop: "10px" }}>
                 {!isViewMode && (
@@ -209,6 +239,7 @@ export default function Preliminary({ isViewMode }) {
                             isViewMode={isViewMode}
                             scoreMode={preliminaryScoreMode}
                             winLegs={winLegs}
+                            groupCount={groupCount}
                         />
                     )}
                 </div>

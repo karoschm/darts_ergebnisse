@@ -225,7 +225,7 @@ Rest von Phase 2.2 ✅ Umgesetzt (2026-08-21): `subscribeMatchday`/`subscribeKno
 
 **Verifikation:** Turnier mit `directko`+`random` und `directko`+`manual` durchspielen; zusätzlich ein Direkt-KO-Turnier mit nicht-Zweierpotenz-Teamanzahl (z.B. 5 oder 6 Teams) durchspielen und prüfen, dass die Freilos-Spiele korrekt automatisch gewertet werden und die Abschlusstabelle stimmt.
 
-### Phase 3c – Mehrere Gruppen in der Vorrunde
+### Phase 3c – Mehrere Gruppen in der Vorrunde ✅ Umgesetzt (2026-08-21)
 
 Größter Eingriff, bewusst zuletzt.
 
@@ -237,9 +237,23 @@ Größter Eingriff, bewusst zuletzt.
 - `generateFirstKORound` erweitert: pro Gruppe Top-N ermitteln, einfaches Interleaving zu einer Seed-Liste.
 - Direkt-KO (3b) und Gruppen (3c) schließen sich gegenseitig aus.
 
-**Nicht im Scope:** ungleich große Gruppen, zusätzliche Tiebreak-Regeln, ausgefeiltes Cross-Gruppen-Seeding.
+**Umsetzung:** `addTournament` speichert `groupCount` (Default 1) sowie, wenn `groupCount > 1`, `qualifiersPerGroup` auf dem Turnier-Root-Dokument; bei `mode === "directko"` wird `groupCount` unabhängig vom übergebenen Wert hart auf 1 erzwungen (gegenseitiger Ausschluss zu 3b). Neue Helper `groupLabel(index)` (`firestoreService.js`) liefert die Anzeige-Bezeichnung ("A", "B", …) aus dem 0-basierten `group`-Index. Neue Funktion `updateTeamGroups` schreibt die Gruppenzuweisung batchweise auf die Team-Dokumente.
 
-**Verifikation:** 8 Teams / 2 Gruppen à 4 / `qualifiersPerGroup=2` durchspielen.
+`NewTournamentSetup.js` bekommt (nur im Modus "Vorrunde + KO-Runde") ein Feld "Anzahl Gruppen" sowie, sobald `groupCount > 1` und `koRounds > 0`, ein Feld "Qualifikanten pro Gruppe" (Default wird bei Änderung von Gruppenanzahl/KO-Runden automatisch nachgezogen, wenn er evenly aufgeht). Validierung beim Absenden (zusätzlich zur bereits im Entwurf genannten Teilbarkeits-Prüfung): jede Gruppe muss eine **gerade** Teamanzahl haben (`(teamCount / groupCount) % 2 === 0`) — bewusste v1-Einschränkung, da sonst pro Gruppe ein eigenes Freilos-Handling nötig wäre (analog zum globalen BYE-Team aus Phase 3b, aber pro Gruppe), was den Eingriff unverhältnismäßig vergrößert hätte. Diese Einschränkung ist nirgends im ursprünglichen Entwurf explizit genannt, ergänzt aber nur die bereits vorgesehene "gleich große Gruppen"-Vereinfachung.
+
+`TeamSetup.js`: Teams (`teams/{teamId}.group`, Default beim Anlegen `0`) werden beim Laden automatisch reihum auf die Gruppen verteilt (`index % groupCount`), zeigt bei `groupCount > 1` pro Team zusätzlich ein Dropdown zur manuellen Überschreibung. Beim Absenden wird `updateTeamGroups` nur aufgerufen, wenn `groupCount > 1` (unverändertes Verhalten bei einer Gruppe).
+
+`Preliminary.js`: `generateSchedule()` erzeugt bei `groupCount > 1` pro Gruppe einen eigenen, unabhängig gemischten Rundenplan (`generateRoundRobinSchedule` pro Gruppe, da gleich große Gruppen garantiert sind) und führt sie matchdayweise zusammen (Runde *r* aller Gruppen landet auf demselben Spieltag); jedes Match trägt fortan ein `group`-Feld (persistiert über `saveSchedule`/`matches.*.group`). Bei `groupCount === 1` bleibt das bisherige Verhalten (inkl. optionalem globalen BYE-Team) unverändert. `handleFinishPreliminary` ruft `generateFirstKORound` mit `groupCount`/`qualifiersPerGroup` auf.
+
+`generateFirstKORound` (`firestoreService.js`): teilt Teams zunächst nach `group` auf, sortiert pro Gruppe nach der bestehenden Tie-Break-Logik, nimmt pro Gruppe die besten `qualifiersPerGroup` (bzw. bei `groupCount === 1` weiterhin `2^koRounds`) und fügt Qualifizierte wie Ausgeschiedene getrennt per neuem Helper `interleaveGroups` rangweise zusammen (Rang 1 aller Gruppen, dann Rang 2 aller Gruppen, …) — bewusst kein Anti-Gruppen-Seeding. Die resultierende interleavte Liste geht unverändert in die bestehende `generateKORound`-Paarung (1 vs. letzter Platz, …) ein.
+
+`StandingsTable.js`: bei `groupCount > 1` eine eigene Tabelle pro Gruppe (Überschrift "Gruppe A"/"Gruppe B"/…, responsive nebeneinander per Flex-Wrap), bei `groupCount === 1` unverändert eine einzelne Tabelle.
+
+**Zusatzfund/-ergänzung (nicht explizit im ursprünglichen Entwurf, aber notwendig für Nutzbarkeit):** Da mehrere Gruppen sich jetzt denselben Spieltag teilen, wären die Spiele in `MatchdayTabs.js` ohne Kennzeichnung nicht mehr eindeutig einer Gruppe zuzuordnen. `MatchdayTabs.js` sortiert die Matches eines Spieltags bei `groupCount > 1` daher zunächst nach `group`, zeigt eine "Gruppe X"-Überschrift, sobald sich die Gruppe zur vorigen Zeile ändert (Mobile-Card-Liste und Desktop-Tabelle je mit eigener, aber analoger Umsetzung), und lässt das Verhalten bei `groupCount === 1` unverändert.
+
+**Nicht im Scope:** ungleich große Gruppen, ungerade Gruppengrößen (Freilos pro Gruppe), zusätzliche Tiebreak-Regeln, ausgefeiltes Cross-Gruppen-Seeding.
+
+**Verifikation:** 8 Teams / 2 Gruppen à 4 / `qualifiersPerGroup=2` durchspielen — insbesondere prüfen, dass beide Gruppen-Tabellen korrekt getrennt sind, die Spieltage die Spiele beider Gruppen mit klarer Gruppenkennzeichnung zeigen, und die generierte erste KO-Runde die erwartete interleavte Paarung (A1 vs. B2, B1 vs. A2 bei 2 Qualifikanten/Gruppe) enthält.
 
 ### Phase 3d – Bugfix + Rangfolge ohne Spiel um Platz 3
 

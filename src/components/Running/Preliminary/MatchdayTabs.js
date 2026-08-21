@@ -1,14 +1,14 @@
 import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography, useTheme, useMediaQuery, Card, Tooltip } from "@mui/material";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, Fragment } from "react";
 import { useTournament } from "../../../context/TournamentContext";
-import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus, setMatchdayEditing, clearMatchdayEditing } from "../../../services/firestoreService";
+import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus, setMatchdayEditing, clearMatchdayEditing, groupLabel } from "../../../services/firestoreService";
 import useDirtyField from "../../../hooks/useDirtyField";
 import { getClientId } from "../../../hooks/useClientId";
 
 // Nach dieser Zeit gilt ein "editingAt"-Zeitstempel als veraltet (z.B. Tab ohne Blur geschlossen)
 const EDITING_STALE_MS = 12000;
 
-export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", winLegs = 3 }) {
+export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", winLegs = 3, groupCount = 1 }) {
     const { currentTournamentId } = useTournament();
     const [matches, setMatches] = useState({});
     const [teamNames, setTeamNames] = useState({});
@@ -121,84 +121,124 @@ export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", win
         );
     }
 
-    const matchEntries = Object.keys(matches).sort((a, b) => a.localeCompare(b));
+    const matchEntries = groupCount > 1
+        ? Object.keys(matches).sort((a, b) => {
+            const groupDiff = (matches[a].group ?? 0) - (matches[b].group ?? 0);
+            return groupDiff !== 0 ? groupDiff : a.localeCompare(b);
+        })
+        : Object.keys(matches).sort((a, b) => a.localeCompare(b));
+
+    // Gruppenüberschrift rendern, sobald sich die Gruppe zur vorigen Zeile ändert
+    // (mehrere Gruppen teilen sich denselben Spieltag, ohne das wäre unklar, wer gegen wen spielt)
+    function maybeGroupHeading(mNumber, index) {
+        if (groupCount <= 1) return null;
+        const group = matches[mNumber].group ?? 0;
+        const prevGroup = index > 0 ? (matches[matchEntries[index - 1]].group ?? 0) : null;
+        if (group === prevGroup) return null;
+        return (
+            <Typography key={`group_heading_${group}`} variant="h6" sx={{ mt: 2, mb: 1, width: "100%" }}>
+                Gruppe {groupLabel(group)}
+            </Typography>
+        );
+    }
 
     if (isMobile) {
         return (
             <div>
                 <br />
-                {matchEntries.map((mNumber) => {
+                {matchEntries.map((mNumber, index) => {
                     const match = matches[mNumber];
-                    if (match.isByeMatch) return renderByeMatch(mNumber, match);
+                    const heading = maybeGroupHeading(mNumber, index);
+                    if (match.isByeMatch) return <div key={`wrap_${mNumber}`}>{heading}{renderByeMatch(mNumber, match)}</div>;
 
                     const team1 = match.team1;
                     const team2 = match.team2;
 
                     return (
-                        <Card key={mNumber} sx={{ width: "90vw", mx: "auto", mb: 2 }}>
-                            <div style={{ flex: 1, display: "flex", justifyContent: "space-between" }}>
-                                <Typography
-                                    sx={{
-                                        flex: 3, minWidth: 0, overflow: "hidden",
-                                        textOverflow: "ellipsis", whiteSpace: "nowrap",
-                                        fontSize: teamNames[team1]?.length > 20 ? "0.75rem" : "1rem"
-                                    }}
-                                >
-                                    {teamNames[team1]}
-                                </Typography>
-                                <TextField
-                                    style={{ flex: 1, minWidth: "60px" }}
-                                    type="number"
-                                    value={match[`${fieldPrefix}_${team1}`]}
-                                    disabled={status !== "group" || isViewMode}
-                                    onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value))}
-                                    onFocus={() => handleScoreFocus(mNumber)}
-                                    onBlur={e => handleScoreBlur(mNumber, team1, Number(e.target.value), team2)}
-                                    fullWidth
-                                    inputProps={{ min: 0, max: maxScore }}
-                                />
-                            </div>
-                            <div style={{ textAlign: "right", margin: "4px" }}>vs</div>
-                            <div style={{ flex: 1, display: "flex", justifyContent: "space-between" }}>
-                                <Typography
-                                    sx={{
-                                        flex: 3, minWidth: 0, overflow: "hidden",
-                                        textOverflow: "ellipsis", whiteSpace: "nowrap",
-                                        fontSize: teamNames[team2]?.length > 20 ? "0.75rem" : "1rem"
-                                    }}
-                                >
-                                    {teamNames[team2]}
-                                </Typography>
-                                <TextField
-                                    style={{ flex: 1, minWidth: "60px" }}
-                                    type="number"
-                                    value={match[`${fieldPrefix}_${team2}`]}
-                                    disabled={status !== "group" || isViewMode}
-                                    onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value))}
-                                    onFocus={() => handleScoreFocus(mNumber)}
-                                    onBlur={e => handleScoreBlur(mNumber, team2, Number(e.target.value), team1)}
-                                    fullWidth
-                                    inputProps={{ min: 0, max: maxScore }}
-                                />
-                            </div>
-                            {isBeingEditedByOther(match) && (
-                                <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center" }}>
-                                    Wird gerade auf einem anderen Gerät bearbeitet…
-                                </Typography>
-                            )}
-                        </Card>
+                        <div key={`wrap_${mNumber}`}>
+                            {heading}
+                            <Card sx={{ width: "90vw", mx: "auto", mb: 2 }}>
+                                <div style={{ flex: 1, display: "flex", justifyContent: "space-between" }}>
+                                    <Typography
+                                        sx={{
+                                            flex: 3, minWidth: 0, overflow: "hidden",
+                                            textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                            fontSize: teamNames[team1]?.length > 20 ? "0.75rem" : "1rem"
+                                        }}
+                                    >
+                                        {teamNames[team1]}
+                                    </Typography>
+                                    <TextField
+                                        style={{ flex: 1, minWidth: "60px" }}
+                                        type="number"
+                                        value={match[`${fieldPrefix}_${team1}`]}
+                                        disabled={status !== "group" || isViewMode}
+                                        onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value))}
+                                        onFocus={() => handleScoreFocus(mNumber)}
+                                        onBlur={e => handleScoreBlur(mNumber, team1, Number(e.target.value), team2)}
+                                        fullWidth
+                                        inputProps={{ min: 0, max: maxScore }}
+                                    />
+                                </div>
+                                <div style={{ textAlign: "right", margin: "4px" }}>vs</div>
+                                <div style={{ flex: 1, display: "flex", justifyContent: "space-between" }}>
+                                    <Typography
+                                        sx={{
+                                            flex: 3, minWidth: 0, overflow: "hidden",
+                                            textOverflow: "ellipsis", whiteSpace: "nowrap",
+                                            fontSize: teamNames[team2]?.length > 20 ? "0.75rem" : "1rem"
+                                        }}
+                                    >
+                                        {teamNames[team2]}
+                                    </Typography>
+                                    <TextField
+                                        style={{ flex: 1, minWidth: "60px" }}
+                                        type="number"
+                                        value={match[`${fieldPrefix}_${team2}`]}
+                                        disabled={status !== "group" || isViewMode}
+                                        onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value))}
+                                        onFocus={() => handleScoreFocus(mNumber)}
+                                        onBlur={e => handleScoreBlur(mNumber, team2, Number(e.target.value), team1)}
+                                        fullWidth
+                                        inputProps={{ min: 0, max: maxScore }}
+                                    />
+                                </div>
+                                {isBeingEditedByOther(match) && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center" }}>
+                                        Wird gerade auf einem anderen Gerät bearbeitet…
+                                    </Typography>
+                                )}
+                            </Card>
+                        </div>
                     );
                 })}
             </div>
         );
     }
 
+    function maybeGroupHeadingRow(mNumber, index) {
+        if (groupCount <= 1) return null;
+        const group = matches[mNumber].group ?? 0;
+        const prevGroup = index > 0 ? (matches[matchEntries[index - 1]].group ?? 0) : null;
+        if (group === prevGroup) return null;
+        return (
+            <TableRow key={`group_heading_${group}`}>
+                <TableCell colSpan={6}>
+                    <Typography variant="h6" sx={{ mt: index > 0 ? 2 : 0 }}>
+                        Gruppe {groupLabel(group)}
+                    </Typography>
+                </TableCell>
+            </TableRow>
+        );
+    }
+
     return (
         <Table sx={{ width: "80vw", mx: "auto", mb: 2, maxWidth: 800 }} style={{ borderCollapse: "collapse" }}>
             <TableBody>
-                {matchEntries.map((mNumber) => {
+                {matchEntries.map((mNumber, index) => {
                     const match = matches[mNumber];
-                    if (match.isByeMatch) return renderByeMatch(mNumber, match);
+                    const headingRow = maybeGroupHeadingRow(mNumber, index);
+                    if (match.isByeMatch) return <Fragment key={`wrap_${mNumber}`}>{headingRow}{renderByeMatch(mNumber, match)}</Fragment>;
 
                     const team1 = match.team1;
                     const team2 = match.team2;
@@ -212,8 +252,11 @@ export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", win
                             ? "Das Turnier befindet sich in einer anderen Stufe"
                             : "";
 
-                    return gamePlayed ? (
-                        <TableRow key={mNumber}>
+                    return (
+                    <Fragment key={`wrap_${mNumber}`}>
+                        {headingRow}
+                        {gamePlayed ? (
+                        <TableRow>
                             <TableCell align="right" width="10%">
                                 <Tooltip title={editTooltip}>
                                     <span>
@@ -266,7 +309,7 @@ export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", win
                             </TableCell>
                         </TableRow>
                     ) : (
-                        <TableRow key={mNumber}>
+                        <TableRow>
                             <TableCell width="10%" />
                             <TableCell align="right" width="25%">{teamNames[team1]}</TableCell>
                             <TableCell align="center" width="10%">vs</TableCell>
@@ -280,6 +323,8 @@ export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", win
                                 )}
                             </TableCell>
                         </TableRow>
+                        )}
+                    </Fragment>
                     );
                 })}
             </TableBody>

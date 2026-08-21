@@ -1,26 +1,25 @@
 import { Table, TableCell, TableHead, TableBody, TableRow, useTheme, useMediaQuery, Card, Typography } from "@mui/material";
+import { groupLabel } from "../../../services/firestoreService";
 
-export default function StandingsTable({ teams, scoreMode = "points" }) {
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+function sortTeams(teams, scoreMode) {
+    return teams
+        .filter(t => !t.isBye) // BYE nie anzeigen
+        .sort((a, b) => {
+            if (b.wins !== a.wins) return b.wins - a.wins;
+            if (scoreMode === "legs") {
+                if (b.own_score !== a.own_score) return b.own_score - a.own_score;
+                return a.opponent_score - b.opponent_score;
+            }
+            if (b.own_score !== a.own_score) return a.own_score - b.own_score;
+            return b.opponent_score - a.opponent_score;
+        });
+}
 
-    function getTableOrder() {
-        return Object.values(teams)
-            .filter(t => !t.isBye) // BYE nie anzeigen
-            .sort((a, b) => {
-                if (b.wins !== a.wins) return b.wins - a.wins;
-                if (scoreMode === "legs") {
-                    if (b.own_score !== a.own_score) return b.own_score - a.own_score;
-                    return a.opponent_score - b.opponent_score;
-                }
-                if (b.own_score !== a.own_score) return a.own_score - b.own_score;
-                return b.opponent_score - a.opponent_score;
-            });
-    }
-
+function SingleTable({ teams, isMobile, title }) {
     return isMobile ? (
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", overflowAnchor: "none" }}>
-            {getTableOrder().map((team, index) => (
+            {title && <h3>{title}</h3>}
+            {teams.map((team, index) => (
                 <Card key={team.id} sx={{ width: "90vw", mx: "auto", mb: 2 }}>
                     <Typography
                         sx={{
@@ -38,7 +37,7 @@ export default function StandingsTable({ teams, scoreMode = "points" }) {
         </div>
     ) : (
         <div style={{ flex: 1, minWidth: 0, display: "flex", flexDirection: "column", alignItems: "center", textAlign: "center", overflowAnchor: "none" }}>
-            <h2>Tabelle</h2>
+            <h2>{title || "Tabelle"}</h2>
             <Table style={{ borderCollapse: "collapse", alignContent: "center" }}>
                 <TableHead>
                     <TableRow>
@@ -50,7 +49,7 @@ export default function StandingsTable({ teams, scoreMode = "points" }) {
                     </TableRow>
                 </TableHead>
                 <TableBody>
-                    {getTableOrder().map((team, index) => (
+                    {teams.map((team, index) => (
                         <TableRow key={`row_${team.name}`}>
                             <TableCell>{index + 1}.</TableCell>
                             <TableCell align="center">{team.name}</TableCell>
@@ -61,6 +60,28 @@ export default function StandingsTable({ teams, scoreMode = "points" }) {
                     ))}
                 </TableBody>
             </Table>
+        </div>
+    );
+}
+
+export default function StandingsTable({ teams, scoreMode = "points", groupCount = 1 }) {
+    const theme = useTheme();
+    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+    if (groupCount <= 1) {
+        return <SingleTable teams={sortTeams(Object.values(teams), scoreMode)} isMobile={isMobile} />;
+    }
+
+    return (
+        <div style={{ display: "flex", flexWrap: "wrap", justifyContent: "center", gap: "24px", width: "100%" }}>
+            {Array.from({ length: groupCount }, (_, g) => (
+                <SingleTable
+                    key={`group_${g}`}
+                    teams={sortTeams(Object.values(teams).filter(t => (t.group ?? 0) === g), scoreMode)}
+                    isMobile={isMobile}
+                    title={`Gruppe ${groupLabel(g)}`}
+                />
+            ))}
         </div>
     );
 }

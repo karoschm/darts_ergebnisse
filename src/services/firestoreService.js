@@ -58,6 +58,11 @@ export function koRoundLabel(koRounds, roundIndex) {
     return KO_ROUND_NAMES[roundsFromFinal] ?? `Runde ${roundIndex}`;
 }
 
+// Gruppenbezeichnung anhand des 0-basierten Gruppenindex ("A", "B", ...)
+export function groupLabel(groupIndex) {
+    return String.fromCharCode(65 + groupIndex);
+}
+
 // Nächster Status nach dem aktuellen
 export function nextStatus(currentStatus, koRounds, mode = "roundrobin") {
     if (currentStatus === "setup" && mode === "directko") return koRounds > 0 ? koStatusKey(1) : "finished";
@@ -82,7 +87,7 @@ export function statusToStage(status, koRounds, mode = "roundrobin") {
 
 // ─── Tournament ───────────────────────────────────────────────────────────────
 
-export async function addTournament(tournamentName, numberTeams, numberMatchdays, koRounds, hasThirdPlace, pin, preliminaryScoreMode = "points", winLegs = 3, mode = "roundrobin", seeding = "random") {
+export async function addTournament(tournamentName, numberTeams, numberMatchdays, koRounds, hasThirdPlace, pin, preliminaryScoreMode = "points", winLegs = 3, mode = "roundrobin", seeding = "random", groupCount = 1, qualifiersPerGroup = null) {
     const uid = auth.currentUser?.uid;
     if (!uid) return `${tournamentName}_ERROR`;
 
@@ -91,6 +96,8 @@ export async function addTournament(tournamentName, numberTeams, numberMatchdays
     if (tournamentSnap.exists()) return `${tournamentName}_EXISTS`;
 
     const pinHash = await hashPin(pin, tournamentName);
+    // Gruppen (3c) und Direkt-KO (3b) schließen sich gegenseitig aus
+    const effectiveGroupCount = mode === "directko" ? 1 : groupCount;
 
     try {
         await setDoc(tournamentRef, {
@@ -102,6 +109,8 @@ export async function addTournament(tournamentName, numberTeams, numberMatchdays
             preliminaryScoreMode,
             winLegs,
             mode,
+            groupCount: effectiveGroupCount,
+            ...(effectiveGroupCount > 1 ? { qualifiersPerGroup: qualifiersPerGroup ?? Math.pow(2, koRounds) } : {}),
             ...(mode === "directko" ? { seeding } : {}),
             createdAt: new Date().toISOString()
         });
@@ -196,7 +205,8 @@ async function createTeams(tournamentID, numberTeams, includeByeTeam) {
             preliminaryRank: -1,
             reachedStage: "preliminary",
             finalRank: -1,
-            isBye: false
+            isBye: false,
+            group: 0
         });
     }
  
@@ -232,6 +242,15 @@ export async function updateTeamNames(tournamentID, teamNames) {
     });
 }
 
+// Weist Teams ihrer Vorrunden-Gruppe zu (0-basierter Index, siehe groupLabel).
+export async function updateTeamGroups(tournamentID, teamGroups) {
+    const batch = writeBatch(db);
+    Object.entries(teamGroups).forEach(([id, group]) => {
+        batch.update(doc(db, "tournaments", tournamentID, "teams", id), { group });
+    });
+    await batch.commit();
+}
+
 // ─── Matchdays ────────────────────────────────────────────────────────────────
 
 export async function saveSchedule(tournamentID, schedule, scoreMode = "points", winLegs = 3) {
@@ -244,7 +263,7 @@ export async function saveSchedule(tournamentID, schedule, scoreMode = "points",
         if (matchdaySnap.exists()) await deleteDoc(matchdayRef);
 
         const matchesObject = Object.fromEntries(
-            Object.entries(md).map(([i, { team1, team2 }]) => {
+            Object.entries(md).map(([i, { team1, team2, group = 0 }]) => {
                 const isByeMatch = team1 === "BYE" || team2 === "BYE";
                 const realTeam = team1 === "BYE" ? team2 : team1;
                 const byeTeam = team1 === "BYE" ? team1 : team2;
@@ -258,7 +277,8 @@ export async function saveSchedule(tournamentID, schedule, scoreMode = "points",
                         [`${fieldPrefix}_${realTeam}`]: scoreMode === "legs" ? winLegs : 0,
                         [`${fieldPrefix}_${byeTeam}`]: scoreMode === "legs" ? 0 : 1,
                         played: true,
-                        isByeMatch: true
+                        isByeMatch: true,
+                        group
                     }];
                 }
 
@@ -268,7 +288,8 @@ export async function saveSchedule(tournamentID, schedule, scoreMode = "points",
                     [`${fieldPrefix}_${team1}`]: 0,
                     [`${fieldPrefix}_${team2}`]: 0,
                     played: false,
-                    isByeMatch: false
+                    isByeMatch: false,
+                    group
                 }];
             })
         );
@@ -522,17 +543,30 @@ export async function generateKORound(tournamentID, roundIndex, qualifiedTeams, 
     await setDoc(doc(db, "tournaments", tournamentID, "knockout", stageKey), { matches, winLegs: 3 });
 }
 
+// Fügt Rang-für-Rang (1. aller Gruppen, dann 2. aller Gruppen, ...) zu einer
+// einzigen Liste zusammen — bewusst einfaches Interleaving ohne Anti-Gruppen-Seeding.
+function interleaveGroups(groupedArrays) {
+    const result = [];
+    const maxLen = Math.max(0, ...groupedArrays.map(g => g.length));
+    for (let i = 0; i < maxLen; i++) {
+        groupedArrays.forEach(g => { if (g[i]) result.push(g[i]); });
+    }
+    return result;
+}
+
 /**
  * Erste KO-Runde aus Vorrunden-Ergebnissen generieren.
- * Qualifiziert werden die besten 2^koRounds Teams.
+ * Ohne Gruppen (groupCount=1): qualifiziert werden die besten 2^koRounds Teams.
+ * Mit Gruppen: pro Gruppe qualifizieren sich die besten `qualifiersPerGroup` Teams,
+ * die Setzliste wird anschließend rangweise über die Gruppen hinweg interleaved.
  */
-export async function generateFirstKORound(tournamentID, koRounds, scoreMode = "points") {
+export async function generateFirstKORound(tournamentID, koRounds, scoreMode = "points", groupCount = 1, qualifiersPerGroup = null) {
     const teamsSnap = await getDocs(collection(db, "tournaments", tournamentID, "teams"));
     const teams = teamsSnap.docs
         .map(d => ({ id: d.id, ...d.data() }))
         .filter(t => !t.isBye); // BYE nie qualifizieren
 
-    teams.sort((a, b) => {
+    const sortByRank = (a, b) => {
         if (b.wins !== a.wins) return b.wins - a.wins;
         if (scoreMode === "legs") {
             if (b.own_score !== a.own_score) return b.own_score - a.own_score;
@@ -540,22 +574,37 @@ export async function generateFirstKORound(tournamentID, koRounds, scoreMode = "
         }
         if (b.own_score !== a.own_score) return a.own_score - b.own_score;
         return b.opponent_score - a.opponent_score;
-    });
- 
-    const qualifiedCount = Math.pow(2, koRounds);
-    const qualified = teams.slice(0, qualifiedCount);
- 
+    };
+
+    const effectiveQualifiersPerGroup = groupCount > 1
+        ? (qualifiersPerGroup ?? Math.pow(2, koRounds))
+        : Math.pow(2, koRounds);
+
+    const groups = Array.from({ length: groupCount }, (_, g) =>
+        teams.filter(t => (t.group ?? 0) === g).sort(sortByRank)
+    );
+
+    const qualified = interleaveGroups(groups.map(g => g.slice(0, effectiveQualifiersPerGroup)));
+    const eliminated = interleaveGroups(groups.map(g => g.slice(effectiveQualifiersPerGroup)));
+
     const batch = writeBatch(db);
-    teams.forEach((team, index) => {
-        const isQualified = index < qualifiedCount;
+    qualified.forEach((team, index) => {
         batch.update(doc(db, "tournaments", tournamentID, "teams", team.id), {
             preliminaryRank: index + 1,
-            finalRank: isQualified ? -1 : index + 1,
-            reachedStage: isQualified ? koStageKey(1) : "preliminary"
+            finalRank: -1,
+            reachedStage: koStageKey(1)
+        });
+    });
+    eliminated.forEach((team, index) => {
+        const rank = qualified.length + index + 1;
+        batch.update(doc(db, "tournaments", tournamentID, "teams", team.id), {
+            preliminaryRank: rank,
+            finalRank: rank,
+            reachedStage: "preliminary"
         });
     });
     await batch.commit();
- 
+
     await generateKORound(
         tournamentID, 1, qualified.map(t => t.id), koRounds, false
     );

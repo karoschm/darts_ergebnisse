@@ -1,15 +1,18 @@
-import { Button, TableBody, TableCell, TableRow, TextField, useTheme, useMediaQuery } from "@mui/material";
+import { Button, MenuItem, Select, TableBody, TableCell, TableRow, TextField, useTheme, useMediaQuery } from "@mui/material";
 import { useEffect } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTournament } from "../../context/TournamentContext";
-import { getAllTeams, updateTeamNames, getTournamentData } from "../../services/firestoreService";
+import { getAllTeams, updateTeamNames, updateTeamGroups, getTournamentData, groupLabel } from "../../services/firestoreService";
 
 export default function TeamSetup() {
     const navigate = useNavigate();
     const { currentTournamentId } = useTournament();
     const [teams, setTeams] = useState({});
     const [teamNames, setTeamNames] = useState({});
+    const [teamGroups, setTeamGroups] = useState({});
+    const [groupCount, setGroupCount] = useState(1);
+    const [tournamentMode, setTournamentMode] = useState("roundrobin");
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -19,6 +22,9 @@ export default function TeamSetup() {
 
         async function fetchData() {
             const loadedTeams = await getAllTeams(currentTournamentId);
+            const realTeams = loadedTeams
+                .filter(t => !t.isBye)
+                .sort((a, b) => Number(a.id.slice(1)) - Number(b.id.slice(1)));
             setTeams(loadedTeams);
 
             const names = loadedTeams.reduce((acc, doc) => {
@@ -26,6 +32,18 @@ export default function TeamSetup() {
                 return acc;
             }, {});
             setTeamNames(names);
+
+            const tournamentData = await getTournamentData(currentTournamentId);
+            setTournamentMode(tournamentData?.mode ?? "roundrobin");
+            const loadedGroupCount = tournamentData?.groupCount ?? 1;
+            setGroupCount(loadedGroupCount);
+
+            // Default-Gruppenzuweisung: reihum verteilt, vom Nutzer unten überschreibbar
+            const groups = realTeams.reduce((acc, team, index) => {
+                acc[team.id] = team.group ?? (index % loadedGroupCount);
+                return acc;
+            }, {});
+            setTeamGroups(groups);
         }
         fetchData();
     }, [currentTournamentId]);
@@ -37,12 +55,12 @@ export default function TeamSetup() {
             Object.entries(teamNames).map(([key, value]) => [key, value.trim()])
         );
 
-        console.log(trimmedNames);
-
         await updateTeamNames(currentTournamentId, trimmedNames);
+        if (groupCount > 1) {
+            await updateTeamGroups(currentTournamentId, teamGroups);
+        }
 
-        const tournamentData = await getTournamentData(currentTournamentId);
-        if (tournamentData?.mode === "directko") {
+        if (tournamentMode === "directko") {
             navigate(`/tournament/${currentTournamentId}/seeding`);
         } else {
             navigate(`/tournament/${currentTournamentId}/edit/running/preliminary`);
@@ -51,6 +69,10 @@ export default function TeamSetup() {
 
     const handleInputChange = async (id, value) => {
         setTeamNames(prev => ({ ...prev, [id]: value }));
+    };
+
+    const handleGroupChange = (id, value) => {
+        setTeamGroups(prev => ({ ...prev, [id]: Number(value) }));
     };
 
     return (
@@ -87,6 +109,18 @@ export default function TeamSetup() {
                                         onChange={e => handleInputChange(team.id, e.target.value)}
                                     />
                                 </TableCell>
+                                {groupCount > 1 && (
+                                    <TableCell key={`cell_group_${team.id}`}>
+                                        <Select
+                                            value={teamGroups[team.id] ?? 0}
+                                            onChange={e => handleGroupChange(team.id, e.target.value)}
+                                        >
+                                            {Array.from({ length: groupCount }, (_, g) => (
+                                                <MenuItem key={g} value={g}>Gruppe {groupLabel(g)}</MenuItem>
+                                            ))}
+                                        </Select>
+                                    </TableCell>
+                                )}
                             </TableRow>
                         )}
                 </TableBody>
