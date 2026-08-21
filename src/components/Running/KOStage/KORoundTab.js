@@ -156,11 +156,11 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
 
     function winnerPlaceholderLabel(id) {
         if (roundIndex === 1) return 'VR Platz ' + id;
-        return `Sieger ${koRoundLabel(koRounds, roundIndex - 1)} M${id}`;
+        return `Sieger ${koRoundLabel(koRounds, roundIndex - 1)} ${id}`;
     }
 
     function loserPlaceholderLabel(id) {
-        return `Verlierer ${koRoundLabel(koRounds, roundIndex - 1)} M${id}`;
+        return `Verlierer ${koRoundLabel(koRounds, roundIndex - 1)} ${id}`;
     }
 
     function matchLabel(id) {

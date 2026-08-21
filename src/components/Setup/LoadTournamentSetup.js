@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { deleteTournament, getAllTournaments, getTournamentStatus } from "../../services/firestoreService";
+import { deleteTournament, getAllTournaments, getTournamentData, statusToStage } from "../../services/firestoreService";
 import { useTournamentAuth } from "../../hooks/useTournamentAuth";
 import PinDialog from "../PinDialog";
 
@@ -39,15 +39,6 @@ export default function LoadTournamentSetup() {
         finished: "Abgeschlossen"
     };
 
-    const statusToStage = {
-        setup:    "preliminary",
-        group:    "preliminary",
-        qf:       "quarterfinal",
-        sf:       "semifinal",
-        final:    "final",
-        finished: "standings"
-    };
-
     useEffect(() => {
         fetchTournaments();
     }, []);
@@ -58,8 +49,8 @@ export default function LoadTournamentSetup() {
     }
 
     const navigateToTournament = async (mode) => {
-        const status = await getTournamentStatus(selectedTournament);
-        const stage = statusToStage[status] ?? "preliminary";
+        const data = await getTournamentData(selectedTournament);
+        const stage = statusToStage(data?.status, data?.koRounds ?? 0);
         navigate(`/tournament/${selectedTournament}/${mode}/running/${stage}`);
     };
 
