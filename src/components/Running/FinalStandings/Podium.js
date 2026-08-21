@@ -4,23 +4,26 @@ import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 export default function Podium({ teams }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-    const ordered = isMobile ? [teams[0], teams[1], teams[2]] : [teams[1], teams[0], teams[2]];
-    const podiumConfig = isMobile ? [
+    const podiumConfig = (isMobile ? [
         { place: 1, color: "#FFD700", height: 160 },
         { place: 2, color: "#C0C0C0", height: 160 },
         { place: 3, color: "#CD7F32", height: 160 },
-    ] : [
-        { place: 2, color: "#C0C0C0", height: 140 },
-        { place: 1, color: "#FFD700", height: 180 },
-        { place: 3, color: "#CD7F32", height: 120 },
-    ];
-    
+    ] : (teams.length === 2 ?
+        [
+            { place: 1, color: "#FFD700", height: 180 },
+            { place: 2, color: "#C0C0C0", height: 140 },
+        ] : [
+            { place: 2, color: "#C0C0C0", height: 140 },
+            { place: 1, color: "#FFD700", height: 180 },
+            { place: 3, color: "#CD7F32", height: 120 },
+        ]
+    )).filter(cfg => teams[cfg.place - 1] !== undefined);
+
     return isMobile ? (
         <div>
-        {podiumConfig.map((cfg, index) => (
-                <div>
+            {podiumConfig.map((cfg) => (
+                <div key={cfg.place}>
                     <Card
-                        key={cfg.place}
                         sx={{
                             width: 250,
                             height: cfg.height,
@@ -36,13 +39,13 @@ export default function Podium({ teams }) {
                             <EmojiEventsIcon sx={{ fontSize: 40, mb: 1 }} />
                         )}
                         <Typography variant="h5">
-                            {cfg.place}. {ordered[index]}
+                            {cfg.place}. {teams[cfg.place - 1]}
                         </Typography>
                     </Card>
-                    <br/>
+                    <br />
                 </div>
             ))}
-            </div>
+        </div>
     ) : (
         <Box
             display="flex"
@@ -51,17 +54,17 @@ export default function Podium({ teams }) {
             gap={2}
             mb={4}
         >
-            {podiumConfig.map((cfg, index) => (
-                <div>
-                    <Typography variant="h5" align="center" sx={{ 
+            {podiumConfig.map((cfg) => (
+                <div key={cfg.place}>
+                    <Typography variant="h5" align="center" sx={{
                         width: 200,
-                            whiteSpace: "normal",
-                            overflowWrap: "break-word",
-                            wordBreak: "break-word",}}>
-                        {ordered[index]}
+                        whiteSpace: "normal",
+                        overflowWrap: "break-word",
+                        wordBreak: "break-word",
+                    }}>
+                        {teams[cfg.place - 1]}
                     </Typography>
                     <Card
-                        key={cfg.place}
                         sx={{
                             width: 200,
                             height: cfg.height,
