@@ -208,7 +208,7 @@ Rest von Phase 2.2 ✅ Umgesetzt (2026-08-21): `subscribeMatchday`/`subscribeKno
 
 **Verifikation:** Turnier im Legs-Modus durchspielen, Tabellensortierung prüfen.
 
-### Phase 3b – Direkt-KO-Modus ohne Vorrunde
+### Phase 3b – Direkt-KO-Modus ohne Vorrunde ✅ Umgesetzt (2026-08-21)
 
 - `tournaments/{id}`: `mode: "roundrobin" | "directko"`, bei `directko`: `seeding: "random" | "manual"`.
 - `nextStatus`/`statusToStage` erweitert um `mode`-Parameter, überspringen bei `directko` den `"group"`-Status.
@@ -216,6 +216,8 @@ Rest von Phase 2.2 ✅ Umgesetzt (2026-08-21): `subscribeMatchday`/`subscribeKno
 - Neue Funktion `generateFirstKORoundFromSeed(tournamentID, seededTeamIds, koRounds, hasThirdPlace)`, nutzt bestehendes `generateKORound`.
 - `Running.js`: kein "Vorrunde"-Tab bei `directko`.
 - v1-Eingrenzung: nur Teamanzahlen als exakte Zweierpotenzen (2/4/8/16/32/64); Freilose nicht im Scope.
+
+**Umsetzung:** `nextStatus`/`statusToStage` (`firestoreService.js`) nehmen jetzt einen optionalen `mode`-Parameter (Default `"roundrobin"`) entgegen; bei Status `"setup"` und `mode === "directko"` wird direkt auf `ko_1`/`round_1` gemappt, ohne über `"group"` zu laufen. `addTournament` speichert `mode` (und bei `directko` zusätzlich `seeding`) auf dem Turnier-Root-Dokument und setzt `matchdays: 0` für Direkt-KO-Turniere. Neue Funktion `generateFirstKORoundFromSeed` setzt `preliminaryRank`/`reachedStage` auf den Teams analog zu `generateFirstKORound`, sortiert aber nicht nach Vorrunden-Ergebnissen, sondern übernimmt die übergebene Setzreihenfolge direkt und ruft damit `generateKORound` auf. `NewTournamentSetup.js` bekommt einen Modus-Umschalter ("Vorrunde + KO-Runde" / "Direkt-KO ohne Vorrunde"); im Direkt-KO-Zweig wird die Teamanzahl über ein auf Zweierpotenzen begrenztes Dropdown gewählt (KO-Runden-Anzahl ergibt sich automatisch daraus, keine Vorrunden-/Wertungsmodus-Felder), zusätzlich eine Setzlisten-Auswahl (Zufällige Auslosung / Manuelle Setzliste). `TeamSetup.js` leitet nach dem Speichern der Teamnamen bei `mode === "directko"` auf eine neue Route `/tournament/{id}/seeding` (in `AppRoutes.js`, ohne `:mode`-Segment wie `/teams`, dadurch von `RequireTournament.js`s Stage-Prüfung ausgenommen) statt auf `/edit/running/preliminary`. Neue Komponente `DirectKOSeeding.js`: bei `"random"` wird beim Laden ein Fisher-Yates-Shuffle der Teams angezeigt (per Button erneut auslosbar), bei `"manual"` eine Liste mit Auf/Ab-Pfeilen zum manuellen Sortieren. "Turnier starten" ruft `generateFirstKORoundFromSeed` auf, setzt den Status per `nextStatus("setup", koRounds, "directko")` und navigiert zu `round_1`. `Running.js` blendet den "Vorrunde"-Tab aus, wenn das geladene Turnier `mode === "directko"` hat (KORoundTab ist bereits rundenagnostisch und benötigt keine Änderung). `RequireTournament.js`s `isValidStage` und `LoadTournamentSetup.js`s Stage-Ermittlung reichen den `mode` jetzt ebenfalls durch, damit Redirects bei Direkt-KO-Turnieren nicht auf `"preliminary"` zeigen.
 
 **Verifikation:** Turnier mit `directko`+`random` und `directko`+`manual` durchspielen.
 

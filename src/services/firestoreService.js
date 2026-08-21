@@ -59,7 +59,8 @@ export function koRoundLabel(koRounds, roundIndex) {
 }
 
 // Nächster Status nach dem aktuellen
-export function nextStatus(currentStatus, koRounds) {
+export function nextStatus(currentStatus, koRounds, mode = "roundrobin") {
+    if (currentStatus === "setup" && mode === "directko") return koRounds > 0 ? koStatusKey(1) : "finished";
     if (currentStatus === "group") return koRounds > 0 ? koStatusKey(1) : "finished";
     const match = currentStatus.match(/^ko_(\d+)$/);
     if (match) {
@@ -70,7 +71,8 @@ export function nextStatus(currentStatus, koRounds) {
 }
 
 // Stage-String für URL aus Status
-export function statusToStage(status, koRounds) {
+export function statusToStage(status, koRounds, mode = "roundrobin") {
+    if (status === "setup" && mode === "directko") return koStageKey(1);
     if (status === "setup" || status === "group") return "preliminary";
     if (status === "finished") return "standings";
     const match = status.match(/^ko_(\d+)$/);
@@ -80,7 +82,7 @@ export function statusToStage(status, koRounds) {
 
 // ─── Tournament ───────────────────────────────────────────────────────────────
 
-export async function addTournament(tournamentName, numberTeams, numberMatchdays, koRounds, hasThirdPlace, pin, preliminaryScoreMode = "points", winLegs = 3) {
+export async function addTournament(tournamentName, numberTeams, numberMatchdays, koRounds, hasThirdPlace, pin, preliminaryScoreMode = "points", winLegs = 3, mode = "roundrobin", seeding = "random") {
     const uid = auth.currentUser?.uid;
     if (!uid) return `${tournamentName}_ERROR`;
 
@@ -94,11 +96,13 @@ export async function addTournament(tournamentName, numberTeams, numberMatchdays
         await setDoc(tournamentRef, {
             status: "setup",
             teamCount: numberTeams,
-            matchdays: numberMatchdays,
+            matchdays: mode === "directko" ? 0 : numberMatchdays,
             koRounds,
             hasThirdPlace: koRounds > 0 ? hasThirdPlace : false,
             preliminaryScoreMode,
             winLegs,
+            mode,
+            ...(mode === "directko" ? { seeding } : {}),
             createdAt: new Date().toISOString()
         });
         await setDoc(doc(db, "tournaments", tournamentName, "private", "pin"), { hash: pinHash });
@@ -544,6 +548,24 @@ export async function generateFirstKORound(tournamentID, koRounds, scoreMode = "
     await generateKORound(
         tournamentID, 1, qualified.map(t => t.id), koRounds, false
     );
+}
+
+/**
+ * Erste KO-Runde direkt aus einer Setzliste generieren (Direkt-KO-Modus ohne Vorrunde).
+ * seededTeamIds: Team-IDs in Setzreihenfolge (Länge muss 2^koRounds sein).
+ */
+export async function generateFirstKORoundFromSeed(tournamentID, seededTeamIds, koRounds, hasThirdPlace) {
+    const batch = writeBatch(db);
+    seededTeamIds.forEach((teamId, index) => {
+        batch.update(doc(db, "tournaments", tournamentID, "teams", teamId), {
+            preliminaryRank: index + 1,
+            finalRank: -1,
+            reachedStage: koStageKey(1)
+        });
+    });
+    await batch.commit();
+
+    await generateKORound(tournamentID, 1, seededTeamIds, koRounds, hasThirdPlace);
 }
 
 /**

@@ -3,7 +3,7 @@ import { useEffect } from "react";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { useTournament } from "../../context/TournamentContext";
-import { getAllTeams, updateTeamNames } from "../../services/firestoreService";
+import { getAllTeams, updateTeamNames, getTournamentData } from "../../services/firestoreService";
 
 export default function TeamSetup() {
     const navigate = useNavigate();
@@ -41,7 +41,12 @@ export default function TeamSetup() {
 
         await updateTeamNames(currentTournamentId, trimmedNames);
 
-        navigate(`/tournament/${currentTournamentId}/edit/running/preliminary`);
+        const tournamentData = await getTournamentData(currentTournamentId);
+        if (tournamentData?.mode === "directko") {
+            navigate(`/tournament/${currentTournamentId}/seeding`);
+        } else {
+            navigate(`/tournament/${currentTournamentId}/edit/running/preliminary`);
+        }
     };
 
     const handleInputChange = async (id, value) => {

@@ -50,7 +50,7 @@ export default function LoadTournamentSetup() {
 
     const navigateToTournament = async (mode) => {
         const data = await getTournamentData(selectedTournament);
-        const stage = statusToStage(data?.status, data?.koRounds ?? 0);
+        const stage = statusToStage(data?.status, data?.koRounds ?? 0, data?.mode ?? "roundrobin");
         navigate(`/tournament/${selectedTournament}/${mode}/running/${stage}`);
     };
 

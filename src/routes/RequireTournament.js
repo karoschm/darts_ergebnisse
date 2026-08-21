@@ -5,10 +5,10 @@ import { useTournamentAuth } from "../hooks/useTournamentAuth";
 import PinDialog from "../components/PinDialog";
 
 // Alle gültigen Stage-Werte
-function isValidStage(stage, koRounds) {
+function isValidStage(stage, koRounds, mode) {
     if (!stage) return false;
     const validStages = [
-        "preliminary",
+        ...(mode === "directko" ? [] : ["preliminary"]),
         "standings",
         ...Array.from({ length: koRounds }, (_, i) => koStageKey(i + 1))
     ];
@@ -23,6 +23,7 @@ export default function RequireTournament() {
     const [tournamentExists, setTournamentExists] = useState(false);
     const [correctStage, setCorrectStage] = useState(null);
     const [koRounds, setKoRounds] = useState(0);
+    const [tournamentMode, setTournamentMode] = useState("roundrobin");
     const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
     const { isUnlocked, unlock } = useTournamentAuth(tournamentId);
@@ -39,8 +40,10 @@ export default function RequireTournament() {
             setTournamentExists(true);
             const data = await getTournamentData(tournamentId);
             const rounds = data?.koRounds ?? 0;
+            const dataMode = data?.mode ?? "roundrobin";
             setKoRounds(rounds);
-            setCorrectStage(statusToStage(data.status, rounds));
+            setTournamentMode(dataMode);
+            setCorrectStage(statusToStage(data.status, rounds, dataMode));
             setLoading(false);
         }
 
@@ -90,7 +93,7 @@ export default function RequireTournament() {
 
     // Stage fehlt oder ist kein gültiger Wert → auf aktuellen Stage umleiten
     // Gültiger aber "falscher" Stage (z.B. Tab-Wechsel) → NICHT umleiten
-    if (!isValidStage(stage, koRounds)) {
+    if (!isValidStage(stage, koRounds, tournamentMode)) {
         return (
             <Navigate
                 to={`/tournament/${tournamentId}/${mode}/running/${correctStage}`}

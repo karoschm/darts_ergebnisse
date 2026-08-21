@@ -2,7 +2,7 @@ import { Button, Checkbox, FormControlLabel, MenuItem, Select, TextField, FormCo
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import useFormStatus from "../../hooks/useFormStatus";
-import { addTournament } from "../../services/firestoreService";
+import { addTournament, koRoundLabel } from "../../services/firestoreService";
 import { useTournamentAuth } from "../../hooks/useTournamentAuth";
 
 const KO_ROUND_OPTIONS = [
@@ -14,6 +14,9 @@ const KO_ROUND_OPTIONS = [
     { label: "Last 32",        rounds: 5 },
     { label: "Last 64",        rounds: 6 },
 ];
+
+// Direkt-KO v1: nur Teamanzahlen als exakte Zweierpotenzen, Freilose nicht im Scope
+const DIRECT_KO_TEAM_COUNTS = [2, 4, 8, 16, 32, 64];
 
 export default function NewTournamentSetup() {
     const navigate = useNavigate();
@@ -28,6 +31,11 @@ export default function NewTournamentSetup() {
     const [winLegs, setWinLegs] = useState(3);
     const [pin, setPin] = useState("");
     const [pinConfirm, setPinConfirm] = useState("");
+    const [mode, setMode] = useState("roundrobin");
+    const [seeding, setSeeding] = useState("random");
+    const [directKoTeamCount, setDirectKoTeamCount] = useState(8);
+
+    const isDirectKO = mode === "directko";
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -65,9 +73,12 @@ export default function NewTournamentSetup() {
         if (pin.length !== 4) return showError("Der PIN muss genau 4 Ziffern haben.");
         if (pin !== pinConfirm) return showError("Die PINs stimmen nicht überein.");
 
+        const effectiveTeamCount = isDirectKO ? directKoTeamCount : numberTeams;
+        const effectiveKoRounds = isDirectKO ? Math.log2(directKoTeamCount) : koRounds;
+
         const tournamentID = await addTournament(
-            trimmedName, numberTeams, numberMatchdays, koRounds, hasThirdPlace, pin,
-            preliminaryScoreMode, winLegs
+            trimmedName, effectiveTeamCount, numberMatchdays, effectiveKoRounds, hasThirdPlace, pin,
+            preliminaryScoreMode, winLegs, mode, seeding
         );
 
         if (tournamentID === trimmedName) {
@@ -97,78 +108,133 @@ export default function NewTournamentSetup() {
         >
             <h1>Turnier konfigurieren</h1>
 
-            <label>Wie viele Teams nehmen teil?</label>
-            <TextField
-                type="number"
-                value={numberTeams}
-                onChange={handleTeamCountChange}
-                inputProps={{ min: 2 }}
-                label="Anzahl Teams"
-            />
-            <br /><br />
-
-            <label>Wie viele Spieltage soll die Vorrunde haben?</label>
-            <TextField
-                type="number"
-                value={numberMatchdays}
-                onChange={e => setNumberMatchdays(e.target.value)}
-                inputProps={{ min: 1, max: numberTeams - 1 }}
-                label="Anzahl Spieltage Vorrunde"
-            />
-            <br /><br />
-
-            <label>Wie soll die Vorrunde gewertet werden?</label>
+            <label>Turniermodus</label>
             <br />
-            <FormControl sx={{ minWidth: 220 }}>
-                <InputLabel>Wertungsmodus Vorrunde</InputLabel>
+            <FormControl sx={{ minWidth: 260 }}>
+                <InputLabel>Turniermodus</InputLabel>
                 <Select
-                    value={preliminaryScoreMode}
-                    label="Wertungsmodus Vorrunde"
-                    onChange={e => setPreliminaryScoreMode(e.target.value)}
+                    value={mode}
+                    label="Turniermodus"
+                    onChange={e => setMode(e.target.value)}
                 >
-                    <MenuItem value="points">Punkte</MenuItem>
-                    <MenuItem value="legs">Gewinnlegs</MenuItem>
+                    <MenuItem value="roundrobin">Vorrunde + KO-Runde</MenuItem>
+                    <MenuItem value="directko">Direkt-KO (ohne Vorrunde)</MenuItem>
                 </Select>
             </FormControl>
-            {preliminaryScoreMode === "legs" && (
+            <br /><br />
+
+            {isDirectKO ? (
                 <>
+                    <label>Wie viele Teams nehmen teil?</label>
+                    <br />
+                    <FormControl sx={{ minWidth: 220 }}>
+                        <InputLabel>Anzahl Teams</InputLabel>
+                        <Select
+                            value={directKoTeamCount}
+                            label="Anzahl Teams"
+                            onChange={e => setDirectKoTeamCount(Number(e.target.value))}
+                        >
+                            {DIRECT_KO_TEAM_COUNTS.map(count => (
+                                <MenuItem key={count} value={count}>{count}</MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: 0.7 }}>
+                        {koRoundLabel(Math.log2(directKoTeamCount), 1)} startet direkt
+                    </div>
                     <br /><br />
-                    <label>Gewinnlegs: First to</label>
+
+                    <label>Wie soll die Setzliste erstellt werden?</label>
+                    <br />
+                    <FormControl sx={{ minWidth: 260 }}>
+                        <InputLabel>Setzliste</InputLabel>
+                        <Select
+                            value={seeding}
+                            label="Setzliste"
+                            onChange={e => setSeeding(e.target.value)}
+                        >
+                            <MenuItem value="random">Zufällige Auslosung</MenuItem>
+                            <MenuItem value="manual">Manuelle Setzliste</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <br /><br />
+                </>
+            ) : (
+                <>
+                    <label>Wie viele Teams nehmen teil?</label>
                     <TextField
                         type="number"
-                        value={winLegs}
-                        onChange={e => setWinLegs(Number(e.target.value))}
-                        inputProps={{ min: 1 }}
-                        label="Gewinnlegs"
+                        value={numberTeams}
+                        onChange={handleTeamCountChange}
+                        inputProps={{ min: 2 }}
+                        label="Anzahl Teams"
                     />
+                    <br /><br />
+
+                    <label>Wie viele Spieltage soll die Vorrunde haben?</label>
+                    <TextField
+                        type="number"
+                        value={numberMatchdays}
+                        onChange={e => setNumberMatchdays(e.target.value)}
+                        inputProps={{ min: 1, max: numberTeams - 1 }}
+                        label="Anzahl Spieltage Vorrunde"
+                    />
+                    <br /><br />
+
+                    <label>Wie soll die Vorrunde gewertet werden?</label>
+                    <br />
+                    <FormControl sx={{ minWidth: 220 }}>
+                        <InputLabel>Wertungsmodus Vorrunde</InputLabel>
+                        <Select
+                            value={preliminaryScoreMode}
+                            label="Wertungsmodus Vorrunde"
+                            onChange={e => setPreliminaryScoreMode(e.target.value)}
+                        >
+                            <MenuItem value="points">Punkte</MenuItem>
+                            <MenuItem value="legs">Gewinnlegs</MenuItem>
+                        </Select>
+                    </FormControl>
+                    {preliminaryScoreMode === "legs" && (
+                        <>
+                            <br /><br />
+                            <label>Gewinnlegs: First to</label>
+                            <TextField
+                                type="number"
+                                value={winLegs}
+                                onChange={e => setWinLegs(Number(e.target.value))}
+                                inputProps={{ min: 1 }}
+                                label="Gewinnlegs"
+                            />
+                        </>
+                    )}
+                    <br /><br />
+
+                    <label>Bei welcher Stufe soll die KO-Runde beginnen?</label>
+                    <br />
+                    <FormControl sx={{ minWidth: 220 }}>
+                        <InputLabel>KO-Runde beginnen bei</InputLabel>
+                        <Select
+                            value={koRounds}
+                            label="KO-Runde beginnen bei"
+                            onChange={e => setKoRounds(Number(e.target.value))}
+                        >
+                            {availableKoOptions.map(opt => (
+                                <MenuItem key={opt.rounds} value={opt.rounds}>
+                                    {opt.label}
+                                </MenuItem>
+                            ))}
+                        </Select>
+                    </FormControl>
+                    {koRounds > 0 && (
+                        <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: 0.7 }}>
+                            {qualifiedTeams} Teams qualifizieren sich für die KO-Runde
+                        </div>
+                    )}
+                    <br />
                 </>
             )}
-            <br /><br />
 
-            <label>Bei welcher Stufe soll die KO-Runde beginnen?</label>
-            <br />
-            <FormControl sx={{ minWidth: 220 }}>
-                <InputLabel>KO-Runde beginnen bei</InputLabel>
-                <Select
-                    value={koRounds}
-                    label="KO-Runde beginnen bei"
-                    onChange={e => setKoRounds(Number(e.target.value))}
-                >
-                    {availableKoOptions.map(opt => (
-                        <MenuItem key={opt.rounds} value={opt.rounds}>
-                            {opt.label}
-                        </MenuItem>
-                    ))}
-                </Select>
-            </FormControl>
-            {koRounds > 0 && (
-                <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: 0.7 }}>
-                    {qualifiedTeams} Teams qualifizieren sich für die KO-Runde
-                </div>
-            )}
-            <br />
-
-            {koRounds > 0 && (
+            {(isDirectKO || koRounds > 0) && (
                 <>
                     <FormControlLabel
                         control={

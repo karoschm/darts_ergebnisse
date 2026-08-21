@@ -23,6 +23,7 @@ export default function Running() {
     const [status, setStatus] = useState("");
     const [koRounds, setKoRounds] = useState(0);
     const [hasThirdPlace, setHasThirdPlace] = useState(false);
+    const [tournamentMode, setTournamentMode] = useState("roundrobin");
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -51,7 +52,7 @@ export default function Running() {
     // Tabs dynamisch aufbauen
     // [ { label, stage } ]
     const tabs = [
-        { label: "Vorrunde", stage: "preliminary" },
+        ...(tournamentMode === "directko" ? [] : [{ label: "Vorrunde", stage: "preliminary" }]),
         ...Array.from({ length: koRounds }, (_, i) => ({
             label: koRoundLabel(koRounds, i + 1),
             stage: koStageKey(i + 1)
@@ -69,6 +70,7 @@ export default function Running() {
             if (!data) return;
             setKoRounds(data.koRounds ?? 0);
             setHasThirdPlace(data.hasThirdPlace ?? false);
+            setTournamentMode(data.mode ?? "roundrobin");
         });
 
         const unsubscribe = subscribeTournamentStatus(currentTournamentId, setStatus);
