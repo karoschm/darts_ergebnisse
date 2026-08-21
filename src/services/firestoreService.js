@@ -152,6 +152,7 @@ export async function updateTournamentStatus(tournamentID, newStatus) {
     await updateDoc(tournamentRef, { status: newStatus });
 }
 
+
 export async function deleteTournament(tournamentID) {
     const batch = writeBatch(db);
 
@@ -377,6 +378,11 @@ export async function saveKOScore(tournamentID, stage, matchKey, team, newScore,
     });
 }
 
+export async function updateKOStageWinLegs(tournamentID, stage, winLegs) {
+    const koStageRef = doc(db, "tournaments", tournamentID, "knockout", stage);
+    await updateDoc(koStageRef, { winLegs });
+}
+
 export async function updateAllKOsPlayed(tournamentID, stage, winLegs) {
     const koStageRef = doc(db, "tournaments", tournamentID, "knockout", stage);
     const koStageSnap = await getDoc(koStageRef);
@@ -440,7 +446,7 @@ export async function generateKORound(tournamentID, roundIndex, qualifiedTeams, 
     }
 
     const stageKey = koStageKey(roundIndex);
-    await setDoc(doc(db, "tournaments", tournamentID, "knockout", stageKey), { matches });
+    await setDoc(doc(db, "tournaments", tournamentID, "knockout", stageKey), { matches, winLegs: 3 });
 }
 
 /**
@@ -585,6 +591,7 @@ export function subscribeTournamentStatus(tournamentID, callback) {
         callback(snap.data().status);
     });
 }
+
 
 export function subscribeKnockoutRound(tournamentID, stage, callback) {
     const koStageRef = doc(db, "tournaments", tournamentID, "knockout", stage);

@@ -1,7 +1,8 @@
 import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography, useTheme, useMediaQuery, Card, Tooltip } from "@mui/material";
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useTournament } from "../../../context/TournamentContext";
 import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus } from "../../../services/firestoreService";
+import useDirtyField from "../../../hooks/useDirtyField";
 
 export default function MatchdayTabs({ md, isViewMode }) {
     const { currentTournamentId } = useTournament();
@@ -12,31 +13,7 @@ export default function MatchdayTabs({ md, isViewMode }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-    // Hält Felder fest, die lokal bearbeitet/gespeichert wurden, aber vom Server
-    // noch nicht bestätigt sind ("matchKey_feld" -> Wert). Ein eingehender Snapshot
-    // überschreibt so lange nicht diesen Wert, bis der Server denselben Wert liefert
-    // (verhindert, dass parallele Schreibvorgänge anderer Geräte laufende Eingaben
-    // oder frisch gespeicherte, aber noch nicht zurückgespiegelte Werte überschreiben).
-    const dirtyFieldsRef = useRef({});
-
-    function mergeSnapshot(incomingMatches) {
-        const dirty = dirtyFieldsRef.current;
-        const merged = {};
-        for (const [matchKey, incomingMatch] of Object.entries(incomingMatches)) {
-            merged[matchKey] = { ...incomingMatch };
-            for (const field of Object.keys(incomingMatch)) {
-                const dirtyKey = `${matchKey}_${field}`;
-                if (dirtyKey in dirty) {
-                    if (dirty[dirtyKey] === incomingMatch[field]) {
-                        delete dirty[dirtyKey];
-                    } else {
-                        merged[matchKey][field] = dirty[dirtyKey];
-                    }
-                }
-            }
-        }
-        return merged;
-    }
+    const { markDirty, mergeSnapshot } = useDirtyField();
 
     useEffect(() => {
         if (!currentTournamentId) return;
@@ -69,7 +46,7 @@ export default function MatchdayTabs({ md, isViewMode }) {
     // damit nicht bei jedem Tastendruck/Pfeiltasten-Klick eine eigene Transaktion feuert
     // (führte sonst zu überholenden Schreibvorgängen und sichtbarem Zurückspringen des Scores).
     function handleScoreChange(matchKey, team, newScore) {
-        dirtyFieldsRef.current[`${matchKey}_score_${team}`] = newScore;
+        markDirty(matchKey, `score_${team}`, newScore);
         setMatches(prev => ({
             ...prev,
             [matchKey]: { ...prev[matchKey], [`score_${team}`]: newScore }
@@ -77,12 +54,12 @@ export default function MatchdayTabs({ md, isViewMode }) {
     }
 
     function handleScoreBlur(matchKey, team, newScore, opponent) {
-        dirtyFieldsRef.current[`${matchKey}_score_${team}`] = newScore;
+        markDirty(matchKey, `score_${team}`, newScore);
         saveScore(currentTournamentId, md, matchKey, team, newScore, opponent);
     }
 
     function enterResult(matchKey) {
-        dirtyFieldsRef.current[`${matchKey}_played`] = true;
+        markDirty(matchKey, "played", true);
         setMatches(prev => ({
             ...prev,
             [matchKey]: { ...prev[matchKey], played: true }

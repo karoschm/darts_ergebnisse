@@ -2,13 +2,14 @@ import {
     Button, Table, TableBody, TableCell, TableHead, TableRow,
     TextField, Typography, useTheme, useMediaQuery, Card, Tooltip
 } from "@mui/material";
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useState } from "react";
 import { useTournament } from "../../../context/TournamentContext";
 import {
     getAllTeams,
     saveKOScore,
     subscribeKnockoutRound,
     subscribeTournamentStatus,
+    updateKOStageWinLegs,
     updateAllKOsPlayed,
     updateTournamentStatus,
     generateNextKORound,
@@ -18,6 +19,7 @@ import {
     koStageKey,
     koRoundLabel
 } from "../../../services/firestoreService";
+import useDirtyField from "../../../hooks/useDirtyField";
 
 /**
  * Generische KO-Runden-Komponente.
@@ -41,31 +43,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
-    // Hält Felder fest, die lokal bearbeitet/gespeichert wurden, aber vom Server
-    // noch nicht bestätigt sind ("matchKey_feld" -> Wert). Ein eingehender Snapshot
-    // überschreibt so lange nicht diesen Wert, bis der Server denselben Wert liefert
-    // (verhindert, dass parallele Schreibvorgänge anderer Geräte laufende Eingaben
-    // oder frisch gespeicherte, aber noch nicht zurückgespiegelte Werte überschreiben).
-    const dirtyFieldsRef = useRef({});
-
-    function mergeSnapshot(incomingMatches) {
-        const dirty = dirtyFieldsRef.current;
-        const merged = {};
-        for (const [matchKey, incomingMatch] of Object.entries(incomingMatches)) {
-            merged[matchKey] = { ...incomingMatch };
-            for (const field of Object.keys(incomingMatch)) {
-                const dirtyKey = `${matchKey}_${field}`;
-                if (dirtyKey in dirty) {
-                    if (dirty[dirtyKey] === incomingMatch[field]) {
-                        delete dirty[dirtyKey];
-                    } else {
-                        merged[matchKey][field] = dirty[dirtyKey];
-                    }
-                }
-            }
-        }
-        return merged;
-    }
+    const { markDirty, mergeSnapshot } = useDirtyField();
 
     const isFinal = roundIndex === koRounds;
     const statusKey = `ko_${roundIndex}`;
@@ -116,8 +94,13 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                 currentTournamentId,
                 stageKey,
                 (data) => {
-                    const mergedMatches = mergeSnapshot(data.matches || {});
+                    const merged = mergeSnapshot({
+                        ...(data.matches || {}),
+                        meta: { winLegs: data.winLegs ?? 3 }
+                    });
+                    const { meta, ...mergedMatches } = merged;
                     setRoundData({ ...data, matches: mergedMatches });
+                    setWinLegs(meta.winLegs);
                     const matches = Object.entries(mergedMatches)
                         .filter(([key]) => key !== "place3");
                     const place3 = mergedMatches.place3;
@@ -140,7 +123,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
     // Nur lokalen State aktualisieren — Speichern erfolgt erst bei onBlur (handleLegScoreBlur),
     // damit nicht bei jedem Tastendruck/Pfeiltasten-Klick eine eigene Transaktion feuert.
     function handleLegScoreChange(matchKey, team, newScore) {
-        dirtyFieldsRef.current[`${matchKey}_legs_${team}`] = newScore;
+        markDirty(matchKey, `legs_${team}`, newScore);
         setRoundData(prev => ({
             ...prev,
             matches: {
@@ -151,12 +134,14 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
     }
 
     function handleLegScoreBlur(matchKey, team, newScore, opponent) {
-        dirtyFieldsRef.current[`${matchKey}_legs_${team}`] = newScore;
+        markDirty(matchKey, `legs_${team}`, newScore);
         saveKOScore(currentTournamentId, stageKey, matchKey, team, newScore, opponent, winLegs);
     }
 
     function handleWinLegsChange(newWinLegs) {
+        markDirty("meta", "winLegs", newWinLegs);
         setWinLegs(newWinLegs);
+        updateKOStageWinLegs(currentTournamentId, stageKey, newWinLegs);
         updateAllKOsPlayed(currentTournamentId, stageKey, newWinLegs);
     }
 
