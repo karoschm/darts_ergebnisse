@@ -349,10 +349,14 @@ export async function saveScore(tournamentID, md, matchKey, team1, newScore, tea
         const team1Snap = await transaction.get(team1Ref);
         const team2Snap = await transaction.get(team2Ref);
 
-        const oppScore = matchdaySnap.data().matches[`${matchKey}`][`${fieldPrefix}_${team2}`];
-        const played = scoreMode === "legs"
+        const currentMatch = matchdaySnap.data().matches[`${matchKey}`];
+        const oppScore = currentMatch[`${fieldPrefix}_${team2}`];
+        // War das Match schon als "gespielt" markiert (z.B. über den "Ergebnis eintragen"-Button),
+        // bleibt es das auch bei einem (praktisch unmöglichen) Unentschieden im Legs-Modus —
+        // sonst verschwindet das Eingabefeld wieder und der Button taucht erneut auf.
+        const played = currentMatch.played || (scoreMode === "legs"
             ? (newScore === winLegs || oppScore === winLegs) && newScore !== oppScore
-            : newScore !== null && newScore !== "" && oppScore !== null && oppScore !== "";
+            : newScore !== null && newScore !== "" && oppScore !== null && oppScore !== "");
         transaction.update(matchdayRef, {
             [`matches.${matchKey}.${fieldPrefix}_${team1}`]: newScore,
             [`matches.${matchKey}.played`]: played
