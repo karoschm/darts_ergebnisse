@@ -49,6 +49,9 @@ export default function DirectKOSeeding() {
         fetchData();
     }, [currentTournamentId]);
 
+    const bracketSize = Math.pow(2, koRounds);
+    const byeCount = Math.max(0, bracketSize - seededTeams.length);
+
     const handleShuffle = () => setSeededTeams(prev => shuffle(prev));
 
     const moveTeam = (index, direction) => {
@@ -89,6 +92,7 @@ export default function DirectKOSeeding() {
                 {seedingMode === "manual"
                     ? "Reihenfolge per Pfeiltasten festlegen. Platz 1 spielt gegen den letzten Platz, usw."
                     : "Zufällige Auslosung. Über \"Neu auslosen\" kann die Ziehung wiederholt werden."}
+                {byeCount > 0 && ` Die besten ${byeCount} Teams bekommen ein Freilos in der ersten Runde.`}
             </Typography>
 
             {seedingMode === "random" && (
@@ -122,7 +126,10 @@ export default function DirectKOSeeding() {
                             )
                         }
                     >
-                        <ListItemText primary={`${index + 1}. ${team.name || team.id}`} />
+                        <ListItemText
+                            primary={`${index + 1}. ${team.name || team.id}`}
+                            secondary={index < byeCount ? "Freilos in Runde 1" : undefined}
+                        />
                     </ListItem>
                 ))}
             </List>

@@ -117,7 +117,12 @@ export async function addTournament(tournamentName, numberTeams, numberMatchdays
         if (err.code === "already-exists") return `${tournamentName}_EXISTS`;
         return `${tournamentName}_ERROR`;
     }
-    await createTeams(tournamentRef.id, numberTeams);
+    // Direkt-KO: braucht ein BYE-Team, wenn die Teamanzahl keine Zweierpotenz ist
+    // (die "übrigen" Plätze im Bracket bekommen ein Freilos in Runde 1).
+    const includeByeTeam = mode === "directko"
+        ? Math.pow(2, koRounds) > numberTeams
+        : numberTeams % 2 !== 0;
+    await createTeams(tournamentRef.id, numberTeams, includeByeTeam);
     return tournamentRef.id;
 }
 
@@ -176,10 +181,9 @@ export async function deleteTournament(tournamentID) {
 
 // ─── Teams ────────────────────────────────────────────────────────────────────
 
-async function createTeams(tournamentID, numberTeams) {
+async function createTeams(tournamentID, numberTeams, includeByeTeam) {
     const batch = writeBatch(db);
-    const totalTeams = numberTeams % 2 !== 0 ? numberTeams + 1 : numberTeams;
- 
+
     for (let i = 1; i <= numberTeams; i++) {
         const id = `A${i}`;
         const ref = doc(db, "tournaments", tournamentID, "teams", id);
@@ -196,8 +200,9 @@ async function createTeams(tournamentID, numberTeams) {
         });
     }
  
-    // BYE-Team bei ungerader Anzahl
-    if (numberTeams % 2 !== 0) {
+    // BYE-Team, falls benötigt (ungerade Teamanzahl in der Vorrunde, oder
+    // Direkt-KO-Bracket, das größer ist als die tatsächliche Teamanzahl)
+    if (includeByeTeam) {
         const byeRef = doc(db, "tournaments", tournamentID, "teams", "BYE");
         batch.set(byeRef, {
             name: "BYE",
@@ -452,6 +457,11 @@ export async function updateAllKOsPlayed(tournamentID, stage, winLegs) {
 
     const updates = {};
     Object.entries(koStageMatches).forEach(([matchKey, m]) => {
+        // Freilos-Spiele bleiben unabhängig vom (nachträglich geänderten) winLegs immer gewertet
+        if (m.isByeMatch) {
+            updates[`matches.${matchKey}.played`] = true;
+            return;
+        }
         const team1_score = m[`legs_${m.team1}`];
         const team2_score = m[`legs_${m.team2}`];
         updates[`matches.${matchKey}.played`] =
@@ -492,7 +502,8 @@ export async function generateKORound(tournamentID, roundIndex, qualifiedTeams, 
             team2,
             [`legs_${team1}`]: 0,
             [`legs_${team2}`]: 0,
-            played: false
+            played: false,
+            isByeMatch: false
         };
     }
 
@@ -550,11 +561,42 @@ export async function generateFirstKORound(tournamentID, koRounds, scoreMode = "
     );
 }
 
+// Setzt Freilos-Spiele (team1/team2 === "BYE") einer KO-Runde auf "gespielt" mit
+// automatischem Sieg des echten Teams — unabhängig vom aktuell eingestellten winLegs.
+async function resolveByeMatches(tournamentID, stageKey) {
+    const stageRef = doc(db, "tournaments", tournamentID, "knockout", stageKey);
+    const stageSnap = await getDoc(stageRef);
+    const matches = stageSnap.data().matches;
+
+    const updates = {};
+    Object.entries(matches).forEach(([matchKey, m]) => {
+        if (m.team1 !== "BYE" && m.team2 !== "BYE") return;
+        const realTeam = m.team1 === "BYE" ? m.team2 : m.team1;
+        const byeTeam = m.team1 === "BYE" ? m.team1 : m.team2;
+        updates[`matches.${matchKey}.legs_${realTeam}`] = 1;
+        updates[`matches.${matchKey}.legs_${byeTeam}`] = 0;
+        updates[`matches.${matchKey}.played`] = true;
+        updates[`matches.${matchKey}.isByeMatch`] = true;
+    });
+
+    if (Object.keys(updates).length > 0) {
+        await updateDoc(stageRef, updates);
+    }
+}
+
 /**
  * Erste KO-Runde direkt aus einer Setzliste generieren (Direkt-KO-Modus ohne Vorrunde).
- * seededTeamIds: Team-IDs in Setzreihenfolge (Länge muss 2^koRounds sein).
+ * seededTeamIds: Team-IDs in Setzreihenfolge. Ist die Teamanzahl keine Zweierpotenz,
+ * bekommen die bestplatzierten Teams ein Freilos gegen das "BYE"-Pseudo-Team,
+ * damit die Bracketgröße (2^koRounds) aufgeht.
  */
 export async function generateFirstKORoundFromSeed(tournamentID, seededTeamIds, koRounds, hasThirdPlace) {
+    const bracketSize = Math.pow(2, koRounds);
+    const byeCount = bracketSize - seededTeamIds.length;
+    const paddedTeams = byeCount > 0
+        ? [...seededTeamIds, ...Array(byeCount).fill("BYE")]
+        : seededTeamIds;
+
     const batch = writeBatch(db);
     seededTeamIds.forEach((teamId, index) => {
         batch.update(doc(db, "tournaments", tournamentID, "teams", teamId), {
@@ -565,7 +607,11 @@ export async function generateFirstKORoundFromSeed(tournamentID, seededTeamIds, 
     });
     await batch.commit();
 
-    await generateKORound(tournamentID, 1, seededTeamIds, koRounds, hasThirdPlace);
+    await generateKORound(tournamentID, 1, paddedTeams, koRounds, hasThirdPlace);
+
+    if (byeCount > 0) {
+        await resolveByeMatches(tournamentID, koStageKey(1));
+    }
 }
 
 /**

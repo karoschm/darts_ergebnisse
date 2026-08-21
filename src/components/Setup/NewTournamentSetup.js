@@ -15,8 +15,6 @@ const KO_ROUND_OPTIONS = [
     { label: "Last 64",        rounds: 6 },
 ];
 
-// Direkt-KO v1: nur Teamanzahlen als exakte Zweierpotenzen, Freilose nicht im Scope
-const DIRECT_KO_TEAM_COUNTS = [2, 4, 8, 16, 32, 64];
 
 export default function NewTournamentSetup() {
     const navigate = useNavigate();
@@ -36,6 +34,9 @@ export default function NewTournamentSetup() {
     const [directKoTeamCount, setDirectKoTeamCount] = useState(8);
 
     const isDirectKO = mode === "directko";
+    const directKoRounds = Math.ceil(Math.log2(Math.max(2, directKoTeamCount)));
+    const directKoBracketSize = Math.pow(2, directKoRounds);
+    const directKoByeCount = directKoBracketSize - directKoTeamCount;
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -74,7 +75,7 @@ export default function NewTournamentSetup() {
         if (pin !== pinConfirm) return showError("Die PINs stimmen nicht überein.");
 
         const effectiveTeamCount = isDirectKO ? directKoTeamCount : numberTeams;
-        const effectiveKoRounds = isDirectKO ? Math.log2(directKoTeamCount) : koRounds;
+        const effectiveKoRounds = isDirectKO ? directKoRounds : koRounds;
 
         const tournamentID = await addTournament(
             trimmedName, effectiveTeamCount, numberMatchdays, effectiveKoRounds, hasThirdPlace, pin,
@@ -126,21 +127,16 @@ export default function NewTournamentSetup() {
             {isDirectKO ? (
                 <>
                     <label>Wie viele Teams nehmen teil?</label>
-                    <br />
-                    <FormControl sx={{ minWidth: 220 }}>
-                        <InputLabel>Anzahl Teams</InputLabel>
-                        <Select
-                            value={directKoTeamCount}
-                            label="Anzahl Teams"
-                            onChange={e => setDirectKoTeamCount(Number(e.target.value))}
-                        >
-                            {DIRECT_KO_TEAM_COUNTS.map(count => (
-                                <MenuItem key={count} value={count}>{count}</MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
+                    <TextField
+                        type="number"
+                        value={directKoTeamCount}
+                        onChange={e => setDirectKoTeamCount(Math.max(2, Number(e.target.value)))}
+                        inputProps={{ min: 2 }}
+                        label="Anzahl Teams"
+                    />
                     <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: 0.7 }}>
-                        {koRoundLabel(Math.log2(directKoTeamCount), 1)} startet direkt
+                        {koRoundLabel(directKoRounds, 1)} startet direkt mit {directKoBracketSize} Plätzen
+                        {directKoByeCount > 0 && ` (${directKoByeCount} Freilos${directKoByeCount > 1 ? "e" : ""} für die bestplatzierten Teams)`}
                     </div>
                     <br /><br />
 

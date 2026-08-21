@@ -187,6 +187,12 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
         const winners = [];
         const losers = [];
         mainMatches.forEach(([, m]) => {
+            if (m.isByeMatch) {
+                // Kein echter Verlierer bei einem Freilos — "BYE" darf nicht in die
+                // Verlierer-/Rangfolge der nächsten Runde einfließen.
+                winners.push(m.team1 === "BYE" ? m.team2 : m.team1);
+                return;
+            }
             if (m[`legs_${m.team1}`] > m[`legs_${m.team2}`]) {
                 winners.push(m.team1); losers.push(m.team2);
             } else {
@@ -220,6 +226,33 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
 
     function matchLabel(id) {
         return `${label} ${id}`;
+    }
+
+    // Freilos-Spiel (isByeMatch): nur "[Teamname] spielfrei" anzeigen, kein Score-Eingabefeld
+    function renderByeMatchMobile(matchId, match, showId) {
+        const realTeam = match.team1 === "BYE" ? match.team2 : match.team1;
+        return (
+            <Card key={matchId} sx={{ width: "90vw", mx: "auto", mb: 2, p: 1 }}>
+                {showId && <div style={{ textAlign: "center", margin: "2px" }}>{matchLabel(Number(matchId.replace("M", "")))}</div>}
+                <Typography fontStyle="italic" color="text.secondary">
+                    {teamNames[realTeam] || realTeam} spielfrei
+                </Typography>
+            </Card>
+        );
+    }
+
+    function renderByeMatchDesktop(matchId, match, showId) {
+        const realTeam = match.team1 === "BYE" ? match.team2 : match.team1;
+        return (
+            <TableRow key={matchId}>
+                {showId && <TableCell align="center">{matchLabel(Number(matchId.replace("M", "")))}</TableCell>}
+                <TableCell colSpan={5} align="center">
+                    <Typography fontStyle="italic" color="text.secondary">
+                        {teamNames[realTeam] || realTeam} spielfrei
+                    </Typography>
+                </TableCell>
+            </TableRow>
+        );
     }
 
     // Platzhalter-Zeilen wenn Runde noch nicht generiert wurde
@@ -278,20 +311,24 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                         {mainMatches
                             .sort(([i1, t1], [i2, t2]) => Number(i1.replace("M", "")) - Number(i2.replace("M", "")))
                             .map(([matchId, match]) => (
-                                <MobileMatchCard
-                                    key={matchId}
-                                    matchId={matchId}
-                                    matchLabel={matchLabel(Number(matchId.replace("M", "")))}
-                                    match={match}
-                                    teamNames={teamNames}
-                                    winLegs={winLegs}
-                                    disabled={status !== statusKey || isViewMode}
-                                    onScoreChange={handleLegScoreChange}
-                                    onScoreFocus={handleLegScoreFocus}
-                                    onScoreBlur={handleLegScoreBlur}
-                                    showMatchId={!isFinal}
-                                    beingEditedByOther={isBeingEditedByOther(match)}
-                                />
+                                match.isByeMatch
+                                    ? renderByeMatchMobile(matchId, match, !isFinal)
+                                    : (
+                                        <MobileMatchCard
+                                            key={matchId}
+                                            matchId={matchId}
+                                            matchLabel={matchLabel(Number(matchId.replace("M", "")))}
+                                            match={match}
+                                            teamNames={teamNames}
+                                            winLegs={winLegs}
+                                            disabled={status !== statusKey || isViewMode}
+                                            onScoreChange={handleLegScoreChange}
+                                            onScoreFocus={handleLegScoreFocus}
+                                            onScoreBlur={handleLegScoreBlur}
+                                            showMatchId={!isFinal}
+                                            beingEditedByOther={isBeingEditedByOther(match)}
+                                        />
+                                    )
                             ))}
                         {isFinal && hasThirdPlace && place3Match && (
                             <>
@@ -389,21 +426,25 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                         {mainMatches
                             .sort(([i1, t1], [i2, t2]) => Number(i1.replace("M", "")) - Number(i2.replace("M", "")))
                             .map(([matchId, match]) => (
-                                <DesktopMatchRow
-                                    key={matchId}
-                                    matchId={matchId}
-                                    matchLabel={matchLabel(Number(matchId.replace("M", "")))}
-                                    match={match}
-                                    teamNames={teamNames}
-                                    winLegs={winLegs}
-                                    editTooltip={editTooltip}
-                                    disabled={status !== statusKey || isViewMode}
-                                    onScoreChange={handleLegScoreChange}
-                                    onScoreFocus={handleLegScoreFocus}
-                                    onScoreBlur={handleLegScoreBlur}
-                                    showMatchId={!isFinal}
-                                    beingEditedByOther={isBeingEditedByOther(match)}
-                                />
+                                match.isByeMatch
+                                    ? renderByeMatchDesktop(matchId, match, !isFinal)
+                                    : (
+                                        <DesktopMatchRow
+                                            key={matchId}
+                                            matchId={matchId}
+                                            matchLabel={matchLabel(Number(matchId.replace("M", "")))}
+                                            match={match}
+                                            teamNames={teamNames}
+                                            winLegs={winLegs}
+                                            editTooltip={editTooltip}
+                                            disabled={status !== statusKey || isViewMode}
+                                            onScoreChange={handleLegScoreChange}
+                                            onScoreFocus={handleLegScoreFocus}
+                                            onScoreBlur={handleLegScoreBlur}
+                                            showMatchId={!isFinal}
+                                            beingEditedByOther={isBeingEditedByOther(match)}
+                                        />
+                                    )
                             ))}
                     </TableBody>
                 ) : (
