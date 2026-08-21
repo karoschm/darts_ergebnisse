@@ -2,8 +2,9 @@ import {
     Button, Table, TableBody, TableCell, TableHead, TableRow,
     TextField, Typography, useTheme, useMediaQuery, Card, Tooltip
 } from "@mui/material";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useTournament } from "../../../context/TournamentContext";
+import { getClientId } from "../../../hooks/useClientId";
 import {
     getAllTeams,
     saveKOScore,
@@ -17,9 +18,14 @@ import {
     getTournamentData,
     nextStatus,
     koStageKey,
-    koRoundLabel
+    koRoundLabel,
+    setKOEditing,
+    clearKOEditing
 } from "../../../services/firestoreService";
 import useDirtyField from "../../../hooks/useDirtyField";
+
+// Nach dieser Zeit gilt ein "editingAt"-Zeitstempel als veraltet (z.B. Tab ohne Blur geschlossen)
+const EDITING_STALE_MS = 12000;
 
 /**
  * Generische KO-Runden-Komponente.
@@ -44,6 +50,8 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
     const { markDirty, mergeSnapshot } = useDirtyField();
+    const focusedMatchRef = useRef(null);
+    const clientIdRef = useRef(getClientId());
 
     const isFinal = roundIndex === koRounds;
     const statusKey = `ko_${roundIndex}`;
@@ -117,6 +125,10 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
         return () => {
             if (unsubscribeKnockout) unsubscribeKnockout();
             if (unsubscribeStatus) unsubscribeStatus();
+            if (focusedMatchRef.current) {
+                clearKOEditing(currentTournamentId, stageKey, focusedMatchRef.current);
+                focusedMatchRef.current = null;
+            }
         };
     }, [currentTournamentId, stageKey]);
 
@@ -133,9 +145,24 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
         }));
     }
 
+    function handleLegScoreFocus(matchKey) {
+        focusedMatchRef.current = matchKey;
+        setKOEditing(currentTournamentId, stageKey, matchKey, clientIdRef.current);
+    }
+
     function handleLegScoreBlur(matchKey, team, newScore, opponent) {
         markDirty(matchKey, `legs_${team}`, newScore);
         saveKOScore(currentTournamentId, stageKey, matchKey, team, newScore, opponent, winLegs);
+        clearKOEditing(currentTournamentId, stageKey, matchKey);
+        if (focusedMatchRef.current === matchKey) focusedMatchRef.current = null;
+    }
+
+    // Zeigt an, ob ein *anderes* Gerät gerade dieses Match bearbeitet (best-effort, kein Lock)
+    function isBeingEditedByOther(match) {
+        if (!match.editingBy || match.editingBy === clientIdRef.current) return false;
+        const editingAt = match.editingAt?.toDate?.();
+        if (!editingAt) return false;
+        return Date.now() - editingAt.getTime() < EDITING_STALE_MS;
     }
 
     function handleWinLegsChange(newWinLegs) {
@@ -247,8 +274,10 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     winLegs={winLegs}
                                     disabled={status !== statusKey || isViewMode}
                                     onScoreChange={handleLegScoreChange}
+                                    onScoreFocus={handleLegScoreFocus}
                                     onScoreBlur={handleLegScoreBlur}
                                     showMatchId={!isFinal}
+                                    beingEditedByOther={isBeingEditedByOther(match)}
                                 />
                             ))}
                         {isFinal && hasThirdPlace && place3Match && (
@@ -262,8 +291,10 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     winLegs={winLegs}
                                     disabled={status !== statusKey || isViewMode}
                                     onScoreChange={handleLegScoreChange}
+                                    onScoreFocus={handleLegScoreFocus}
                                     onScoreBlur={handleLegScoreBlur}
                                     showMatchId={false}
+                                    beingEditedByOther={isBeingEditedByOther(place3Match)}
                                 />
                             </>
                         )}
@@ -355,8 +386,10 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     editTooltip={editTooltip}
                                     disabled={status !== statusKey || isViewMode}
                                     onScoreChange={handleLegScoreChange}
+                                    onScoreFocus={handleLegScoreFocus}
                                     onScoreBlur={handleLegScoreBlur}
                                     showMatchId={!isFinal}
+                                    beingEditedByOther={isBeingEditedByOther(match)}
                                 />
                             ))}
                     </TableBody>
@@ -402,8 +435,10 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     editTooltip={editTooltip}
                                     disabled={status !== statusKey || isViewMode}
                                     onScoreChange={handleLegScoreChange}
+                                    onScoreFocus={handleLegScoreFocus}
                                     onScoreBlur={handleLegScoreBlur}
                                     showMatchId={false}
+                                    beingEditedByOther={isBeingEditedByOther(place3Match)}
                                 />
                             ) : (
                                 renderPlaceholders().map(({ id1, id2 }) => (
@@ -432,7 +467,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
 
 // ─── Hilfkomponenten ──────────────────────────────────────────────────────────
 
-function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disabled, onScoreChange, onScoreBlur, showMatchId = true }) {
+function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disabled, onScoreChange, onScoreFocus, onScoreBlur, showMatchId = true, beingEditedByOther = false }) {
     const team1 = match.team1;
     const team2 = match.team2;
 
@@ -453,6 +488,7 @@ function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disab
                     value={match[`legs_${team1}`]}
                     disabled={disabled}
                     onChange={e => onScoreChange(matchId, team1, Number(e.target.value))}
+                    onFocus={() => onScoreFocus(matchId)}
                     onBlur={e => onScoreBlur(matchId, team1, Number(e.target.value), team2)}
                     fullWidth
                     inputProps={{ min: 0, max: winLegs }}
@@ -473,16 +509,22 @@ function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disab
                     value={match[`legs_${team2}`]}
                     disabled={disabled}
                     onChange={e => onScoreChange(matchId, team2, Number(e.target.value))}
+                    onFocus={() => onScoreFocus(matchId)}
                     onBlur={e => onScoreBlur(matchId, team2, Number(e.target.value), team1)}
                     fullWidth
                     inputProps={{ min: 0, max: winLegs }}
                 />
             </div>
+            {beingEditedByOther && (
+                <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center" }}>
+                    Wird gerade auf einem anderen Gerät bearbeitet…
+                </Typography>
+            )}
         </Card>
     );
 }
 
-function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs, editTooltip, disabled, onScoreChange, onScoreBlur, showMatchId = true }) {
+function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs, editTooltip, disabled, onScoreChange, onScoreFocus, onScoreBlur, showMatchId = true, beingEditedByOther = false }) {
     const team1 = match.team1;
     const team2 = match.team2;
 
@@ -497,6 +539,7 @@ function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs, editT
                             value={match[`legs_${team1}`]}
                             disabled={disabled}
                             onChange={e => onScoreChange(matchId, team1, Number(e.target.value))}
+                            onFocus={() => onScoreFocus(matchId)}
                             onBlur={e => onScoreBlur(matchId, team1, Number(e.target.value), team2)}
                             inputProps={{ min: 0, max: winLegs }}
                         />
@@ -514,7 +557,16 @@ function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs, editT
                     <span>{teamNames[team1]}</span>
                 </Tooltip>
             </TableCell>
-            <TableCell align="center">vs</TableCell>
+            <TableCell align="center">
+                vs
+                {beingEditedByOther && (
+                    <Tooltip title="Wird gerade auf einem anderen Gerät bearbeitet">
+                        <Typography variant="caption" color="text.secondary" sx={{ display: "block" }}>
+                            ✎
+                        </Typography>
+                    </Tooltip>
+                )}
+            </TableCell>
             <TableCell
                 align="left" width="25%"
                 sx={{
@@ -534,6 +586,7 @@ function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs, editT
                             value={match[`legs_${team2}`]}
                             disabled={disabled}
                             onChange={e => onScoreChange(matchId, team2, Number(e.target.value))}
+                            onFocus={() => onScoreFocus(matchId)}
                             onBlur={e => onScoreBlur(matchId, team2, Number(e.target.value), team1)}
                             inputProps={{ min: 0, max: winLegs }}
                         />

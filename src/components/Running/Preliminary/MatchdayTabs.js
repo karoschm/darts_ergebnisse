@@ -1,8 +1,12 @@
 import { Button, Table, TableBody, TableCell, TableHead, TableRow, TextField, Typography, useTheme, useMediaQuery, Card, Tooltip } from "@mui/material";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useTournament } from "../../../context/TournamentContext";
-import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus } from "../../../services/firestoreService";
+import { getAllTeams, saveScore, setMatchPlayed, subscribeMatchday, subscribeTournamentStatus, setMatchdayEditing, clearMatchdayEditing } from "../../../services/firestoreService";
 import useDirtyField from "../../../hooks/useDirtyField";
+import { getClientId } from "../../../hooks/useClientId";
+
+// Nach dieser Zeit gilt ein "editingAt"-Zeitstempel als veraltet (z.B. Tab ohne Blur geschlossen)
+const EDITING_STALE_MS = 12000;
 
 export default function MatchdayTabs({ md, isViewMode }) {
     const { currentTournamentId } = useTournament();
@@ -14,6 +18,8 @@ export default function MatchdayTabs({ md, isViewMode }) {
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
     const { markDirty, mergeSnapshot } = useDirtyField();
+    const focusedMatchRef = useRef(null);
+    const clientIdRef = useRef(getClientId());
 
     useEffect(() => {
         if (!currentTournamentId) return;
@@ -39,6 +45,10 @@ export default function MatchdayTabs({ md, isViewMode }) {
         return () => {
             if (unsubscribeMatchday) unsubscribeMatchday();
             if (unsubscribeStatus) unsubscribeStatus();
+            if (focusedMatchRef.current) {
+                clearMatchdayEditing(currentTournamentId, md, focusedMatchRef.current);
+                focusedMatchRef.current = null;
+            }
         };
     }, [currentTournamentId, md]);
 
@@ -53,9 +63,24 @@ export default function MatchdayTabs({ md, isViewMode }) {
         }));
     }
 
+    function handleScoreFocus(matchKey) {
+        focusedMatchRef.current = matchKey;
+        setMatchdayEditing(currentTournamentId, md, matchKey, clientIdRef.current);
+    }
+
     function handleScoreBlur(matchKey, team, newScore, opponent) {
         markDirty(matchKey, `score_${team}`, newScore);
         saveScore(currentTournamentId, md, matchKey, team, newScore, opponent);
+        clearMatchdayEditing(currentTournamentId, md, matchKey);
+        if (focusedMatchRef.current === matchKey) focusedMatchRef.current = null;
+    }
+
+    // Zeigt an, ob ein *anderes* Gerät gerade dieses Match bearbeitet (best-effort, kein Lock)
+    function isBeingEditedByOther(match) {
+        if (!match.editingBy || match.editingBy === clientIdRef.current) return false;
+        const editingAt = match.editingAt?.toDate?.();
+        if (!editingAt) return false;
+        return Date.now() - editingAt.getTime() < EDITING_STALE_MS;
     }
 
     function enterResult(matchKey) {
@@ -124,6 +149,7 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                     value={match[`score_${team1}`]}
                                     disabled={status !== "group" || isViewMode}
                                     onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value))}
+                                    onFocus={() => handleScoreFocus(mNumber)}
                                     onBlur={e => handleScoreBlur(mNumber, team1, Number(e.target.value), team2)}
                                     fullWidth
                                     inputProps={{ min: 0, max: 501 }}
@@ -146,11 +172,17 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                     value={match[`score_${team2}`]}
                                     disabled={status !== "group" || isViewMode}
                                     onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value))}
+                                    onFocus={() => handleScoreFocus(mNumber)}
                                     onBlur={e => handleScoreBlur(mNumber, team2, Number(e.target.value), team1)}
                                     fullWidth
                                     inputProps={{ min: 0, max: 501 }}
                                 />
                             </div>
+                            {isBeingEditedByOther(match) && (
+                                <Typography variant="caption" color="text.secondary" sx={{ display: "block", textAlign: "center" }}>
+                                    Wird gerade auf einem anderen Gerät bearbeitet…
+                                </Typography>
+                            )}
                         </Card>
                     );
                 })}
@@ -188,6 +220,7 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                             disabled={status !== "group" || isViewMode}
                                             value={scoreTeam1}
                                             onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value))}
+                                            onFocus={() => handleScoreFocus(mNumber)}
                                             onBlur={e => handleScoreBlur(mNumber, team1, Number(e.target.value), team2)}
                                             inputProps={{ min: 0, max: 501 }}
                                         />
@@ -214,13 +247,20 @@ export default function MatchdayTabs({ md, isViewMode }) {
                                             disabled={status !== "group" || isViewMode}
                                             value={scoreTeam2}
                                             onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value))}
+                                            onFocus={() => handleScoreFocus(mNumber)}
                                             onBlur={e => handleScoreBlur(mNumber, team2, Number(e.target.value), team1)}
                                             inputProps={{ min: 0, max: 501 }}
                                         />
                                     </span>
                                 </Tooltip>
                             </TableCell>
-                            <TableCell width="20%" />
+                            <TableCell width="20%">
+                                {isBeingEditedByOther(match) && (
+                                    <Typography variant="caption" color="text.secondary">
+                                        Wird gerade auf einem anderen Gerät bearbeitet…
+                                    </Typography>
+                                )}
+                            </TableCell>
                         </TableRow>
                     ) : (
                         <TableRow key={mNumber}>

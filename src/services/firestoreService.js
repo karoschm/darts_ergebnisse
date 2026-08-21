@@ -1,4 +1,4 @@
-import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, runTransaction, onSnapshot } from "firebase/firestore";
+import { collection, doc, setDoc, getDoc, getDocs, deleteDoc, updateDoc, writeBatch, runTransaction, onSnapshot, serverTimestamp } from "firebase/firestore";
 import { db, auth } from "../firebase";
 
 // ─── PIN Utilities ────────────────────────────────────────────────────────────
@@ -355,6 +355,24 @@ export async function setMatchPlayed(tournamentID, md, matchKey) {
     await updateDoc(matchdayRef, { [`matches.${matchKey}.played`]: true });
 }
 
+// Best-effort "wird gerade bearbeitet"-Signal, kein Fehlerabbruch bei Race Conditions
+// (z.B. Matchday-Dokument existiert kurzzeitig noch nicht) — rein informativ, nicht blockierend.
+export async function setMatchdayEditing(tournamentID, md, matchKey, uid) {
+    const matchdayRef = doc(db, "tournaments", tournamentID, "matchdays", md.toString());
+    await updateDoc(matchdayRef, {
+        [`matches.${matchKey}.editingBy`]: uid,
+        [`matches.${matchKey}.editingAt`]: serverTimestamp()
+    }).catch(() => {});
+}
+
+export async function clearMatchdayEditing(tournamentID, md, matchKey) {
+    const matchdayRef = doc(db, "tournaments", tournamentID, "matchdays", md.toString());
+    await updateDoc(matchdayRef, {
+        [`matches.${matchKey}.editingBy`]: null,
+        [`matches.${matchKey}.editingAt`]: null
+    }).catch(() => {});
+}
+
 // ─── Knockout ─────────────────────────────────────────────────────────────────
 
 export async function getKnockout(tournamentID, stage) {
@@ -381,6 +399,24 @@ export async function saveKOScore(tournamentID, stage, matchKey, team, newScore,
 export async function updateKOStageWinLegs(tournamentID, stage, winLegs) {
     const koStageRef = doc(db, "tournaments", tournamentID, "knockout", stage);
     await updateDoc(koStageRef, { winLegs });
+}
+
+// Best-effort "wird gerade bearbeitet"-Signal, kein Fehlerabbruch bei Race Conditions
+// (z.B. KO-Runden-Dokument existiert kurzzeitig noch nicht) — rein informativ, nicht blockierend.
+export async function setKOEditing(tournamentID, stage, matchKey, uid) {
+    const koStageRef = doc(db, "tournaments", tournamentID, "knockout", stage);
+    await updateDoc(koStageRef, {
+        [`matches.${matchKey}.editingBy`]: uid,
+        [`matches.${matchKey}.editingAt`]: serverTimestamp()
+    }).catch(() => {});
+}
+
+export async function clearKOEditing(tournamentID, stage, matchKey) {
+    const koStageRef = doc(db, "tournaments", tournamentID, "knockout", stage);
+    await updateDoc(koStageRef, {
+        [`matches.${matchKey}.editingBy`]: null,
+        [`matches.${matchKey}.editingAt`]: null
+    }).catch(() => {});
 }
 
 export async function updateAllKOsPlayed(tournamentID, stage, winLegs) {
