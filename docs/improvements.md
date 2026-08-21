@@ -80,10 +80,12 @@ Phase 2  Transaktionen + Konflikt-UX (baut auf den neuen Rules aus Phase 1 auf)
 Phase 3a Leg-Modus für die Vorrunde
 Phase 3b Direkt-KO-Modus ohne Vorrunde
 Phase 3c Mehrere Gruppen in der Vorrunde
+Phase 3d Bugfix + Rangfolge ohne Spiel um Platz 3
+Phase 3e Doppel-KO / Loser-Bracket für Direkt-KO
 Phase 4  PDF/Print-Export + Excel-Export-Bugfix/Erweiterung
 ```
 
-Phase 1 und 2 fassen dieselben Schreibpfade an (`saveScore`, `saveKOScore`, `deleteTournament`) — die transaktionale Umsetzung in Phase 2 muss gegen die *neuen* Rules aus Phase 1 entwickelt werden, sonst doppelte Testarbeit. Phase 3 verändert das Datenmodell (Gruppen, Leg-Felder in der Vorrunde, KO ohne Vorrunde) und steht vor Phase 4, damit der Export nur einmal gegen den finalen Zustand gebaut wird. Innerhalb Phase 3: 3a zuerst (isolierteste Änderung), 3b danach (in sich geschlossene State-Machine-Erweiterung), 3c zuletzt (größter Eingriff ins Datenmodell).
+Phase 1 und 2 fassen dieselben Schreibpfade an (`saveScore`, `saveKOScore`, `deleteTournament`) — die transaktionale Umsetzung in Phase 2 muss gegen die *neuen* Rules aus Phase 1 entwickelt werden, sonst doppelte Testarbeit. Phase 3 verändert das Datenmodell (Gruppen, Leg-Felder in der Vorrunde, KO ohne Vorrunde) und steht vor Phase 4, damit der Export nur einmal gegen den finalen Zustand gebaut wird. Innerhalb Phase 3: 3a zuerst (isolierteste Änderung), 3b danach (in sich geschlossene State-Machine-Erweiterung), 3c zuletzt (größter Eingriff ins Datenmodell). 3d (Bugfix, seit dem Freilos-Nachtrag zu 3b bekannt) und 3e (Doppel-KO, baut auf dem Direkt-KO-Datenmodell aus 3b/3d auf) kamen nachträglich hinzu und stehen bewusst nach 3a–3c, aber weiterhin vor Phase 4, damit Export/Print gegen den finalen KO-Datenstand gebaut werden.
 
 ### Phase 0 – Aufräumen ✅ Umgesetzt (2026-08-21)
 
@@ -238,6 +240,48 @@ Größter Eingriff, bewusst zuletzt.
 **Nicht im Scope:** ungleich große Gruppen, zusätzliche Tiebreak-Regeln, ausgefeiltes Cross-Gruppen-Seeding.
 
 **Verifikation:** 8 Teams / 2 Gruppen à 4 / `qualifiersPerGroup=2` durchspielen.
+
+### Phase 3d – Bugfix + Rangfolge ohne Spiel um Platz 3
+
+**Gemeldeter Bug (2026-08-21):** In einem Direkt-KO-Turnier mit Freilosen (siehe Nachtrag zu Phase 3b) und **ohne** Spiel um Platz 3 zeigt die Abschlusstabelle „BYE“ auf Platz 3 an.
+
+**Root Cause (zwei zusammenhängende Defekte):**
+1. `generateNextKORound` (`firestoreService.js`): Beim Übergang von der vorletzten Runde (Halbfinale) zur letzten Runde (Finale) ist `isFinal === true`, daher greift der bestehende `if (!isFinal) { … finalRank … }`-Zweig nicht. Ohne Spiel um Platz 3 (dessen Ergebnis sonst von `updateRankingFinals` ausgewertet wird) bekommen die beiden Halbfinal-Verlierer dadurch **nie** ein `finalRank` zugewiesen — bleibt beim Default `-1`.
+2. `FinalStandings.js` sortiert alle Teams aus `getAllTeams(...)` nach `finalRank`, filtert dabei aber (anders als `StandingsTable.js`, die `.filter(t => !t.isBye)` nutzt) keine `isBye`-Teams heraus. Das „BYE“-Pseudo-Team hat ebenfalls dauerhaft `finalRank: -1` (wird seit dem Freilos-Fix aus Runde 1 nie mehr angefasst, da explizit aus Gewinner-/Verlierer-Listen ausgeschlossen) und landet deshalb ungefiltert zusammen mit den unbewerteten Halbfinal-Verlierern ganz oben in der aufsteigend sortierten Liste.
+
+**Gewünschte Erweiterung (Projektinhaber):** Gibt es kein Spiel um Platz 3, sollen beide Halbfinal-Verlierer gemeinsam auf Platz 3 geführt werden (geteilter 3. Platz), statt gar keinen Rang zu bekommen.
+
+**Geplante Umsetzung:**
+- `generateNextKORound`: neuer `else if`-Zweig neben dem bestehenden `if (!isFinal)` — wenn `isFinal && !hasThirdPlace && losers.length > 0`, allen Teams in `losers` `finalRank: 3` zuweisen. Funktioniert auch bei `losers.length === 1` (Halbfinale mit Freilos, bei dem nur ein echter Verlierer existiert).
+- `FinalStandings.js`: `getAllTeams(...)`-Ergebnis vor der Sortierung um `.filter(t => !t.isBye)` ergänzen (analog `StandingsTable.js`).
+- Betrifft **nicht nur** Direkt-KO: Der fehlende `finalRank` für Halbfinal-Verlierer ohne Platz-3-Spiel besteht unabhängig vom Turniermodus, sobald `koRounds >= 2` und `hasThirdPlace === false` — der Freilos-Fall hat ihn nur sichtbar gemacht, weil zusätzlich das „BYE“-Team betroffen war.
+
+**Nicht im Scope:** weitere Tiebreak-Kriterien zwischen den beiden geteilten Dritten (z.B. anhand Legdifferenz).
+
+**Verifikation:** Turnier (Direkt-KO und regulär mit Vorrunde) mit `koRounds >= 2` und `hasThirdPlace = false` bis zum Ende durchspielen — Abschlusstabelle muss beide Halbfinal-Verlierer auf Platz 3 zeigen, kein „BYE“ in der Liste. Zusätzlich ein Direkt-KO-Turnier mit Freilosen und `hasThirdPlace = true` gegenprüfen (Regressionstest für das reguläre Spiel um Platz 3).
+
+### Phase 3e – Doppel-KO / Loser-Bracket für Direkt-KO
+
+**Ziel:** In Direkt-KO-Turnieren (`mode === "directko"`) optional ein Verlierer-Bracket anbieten, sodass ein Team nach einer Erstrunden-Niederlage nicht sofort ausscheidet, sondern über den Umweg des Loser-Brackets noch das Grand Final erreichen kann.
+
+**Entwurf (zur Bestätigung vor Umsetzung, siehe offene Fragen unten):**
+- `tournaments/{id}`: neues Feld `koFormat: "single" | "double"` — nur wählbar bei `mode === "directko"`, Default `"single"` (bisheriges Verhalten unverändert).
+- v1-Eingrenzung: `koFormat: "double"` zunächst nur für Teamanzahlen, die exakte Zweierpotenzen sind. Freilose (Phase-3b-Nachtrag) + Loser-Bracket gemeinsam sind ungleich komplexer in der Bracket-Mathematik (ein Freilos-„Sieg“ darf im Loser-Bracket nicht wie eine echte Niederlage behandelt werden) — bewusst nicht in v1.
+- Struktur: Gewinner-Bracket (WB) bleibt exakt wie bisher (`knockout/round_N`). Neues Verlierer-Bracket (LB) wird in derselben `knockout`-Subcollection unter eigenen Stage-Keys (z.B. `l_round_N`) abgelegt — spart eine neue Subcollection/neue Subscribe-Funktionen, da `getKnockout`/`subscribeKnockoutRound`/`saveKOScore`/`updateAllKOsPlayed` bereits generisch über den `stage`-String parametrisiert sind.
+- Progression: Verlierer aus WB-Runde *i* fallen an der jeweils passenden Stelle ins LB (Standard-Doppel-KO-Bracket-Schema). Braucht eine neue Generierungsfunktion `generateLoserBracketRound(...)`; die genaue Rundenanzahl/Zuordnung im LB folgt der etablierten Doppel-KO-Bracket-Formel und muss beim Implementieren anhand von Referenzschemata (4-/8-/16er-Bracket) verifiziert werden.
+- Grand Final: WB-Sieger trifft LB-Sieger in einem einzigen entscheidenden Spiel. **Bewusste v1-Vereinfachung:** kein „Bracket Reset“ (kein zweites Grand-Final-Spiel, falls der LB-Sieger gewinnt) — für ein Freizeit-Dart-Turnier-Tool ausreichend und spart zusätzliche Zustandslogik; kann bei Bedarf später nachgerüstet werden.
+- `Running.js`: zweiter Tab-Block für die LB-Runden (z.B. „Loser-Runde 1“, „Loser-Runde 2“, …), analog zum bestehenden WB-Tab-Aufbau.
+- `KORoundTab.js`: bereits rundenagnostisch für WB — prüfen, ob 1:1 für LB-Runden wiederverwendbar oder eine Variante nötig ist (andere Statuswerte/Labels wie „Loser-Achtelfinale“).
+- Statusmaschine: `nextStatus`/`statusToStage` müssen um WB-/LB-Übergänge und das Grand Final erweitert werden (neue Statuswerte, z.B. `lko_N` analog zu `ko_N`).
+
+**Offene Fragen vor Umsetzung:**
+1. Soll Doppel-KO künftig auch für den regulären Modus (Vorrunde + KO) verfügbar sein, oder dauerhaft nur für Direkt-KO?
+2. Ist die Vereinfachung „kein Bracket Reset im Grand Final“ akzeptabel, oder wird echter Doppel-KO (WB-Sieger muss zweimal verlieren) gewünscht?
+3. Sollen Freilose langfristig auch im Loser-Bracket unterstützt werden, oder bleibt Doppel-KO dauerhaft auf Zweierpotenzen beschränkt?
+
+**Nicht im Scope (v1):** Bracket Reset, Freilose im Loser-Bracket, Doppel-KO für den regulären Vorrunde+KO-Modus.
+
+**Verifikation:** Direkt-KO-Turnier mit 4 und mit 8 Teams im Doppel-KO-Modus komplett durchspielen — insbesondere den Fall, dass ein Team erst im Loser-Bracket ausscheidet, sowie das Grand Final.
 
 ### Phase 4 – PDF/Print-Export + Excel-Fix
 
