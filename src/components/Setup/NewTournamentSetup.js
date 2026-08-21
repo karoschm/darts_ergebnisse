@@ -29,6 +29,7 @@ export default function NewTournamentSetup() {
     const [winLegs, setWinLegs] = useState(3);
     const [groupCount, setGroupCount] = useState(1);
     const [qualifiersPerGroup, setQualifiersPerGroup] = useState(1);
+    const [hasKnockoutAfterGroups, setHasKnockoutAfterGroups] = useState(true);
     const [pin, setPin] = useState("");
     const [pinConfirm, setPinConfirm] = useState("");
     const [mode, setMode] = useState("roundrobin");
@@ -61,24 +62,8 @@ export default function NewTournamentSetup() {
         }
     };
 
-    // Vorschlag für Qualifikanten/Gruppe passend nachziehen, wenn möglich (bleibt sonst
-    // wie vom Nutzer gesetzt, Validierung erfolgt final erst beim Absenden)
     const handleGroupCountChange = (e) => {
-        const newGroupCount = Math.max(1, Number(e.target.value));
-        setGroupCount(newGroupCount);
-        const qualified = Math.pow(2, koRounds);
-        if (koRounds > 0 && qualified % newGroupCount === 0) {
-            setQualifiersPerGroup(qualified / newGroupCount);
-        }
-    };
-
-    const handleKoRoundsChange = (e) => {
-        const newKoRounds = Number(e.target.value);
-        setKoRounds(newKoRounds);
-        const qualified = Math.pow(2, newKoRounds);
-        if (newKoRounds > 0 && qualified % groupCount === 0) {
-            setQualifiersPerGroup(qualified / groupCount);
-        }
+        setGroupCount(Math.max(1, Number(e.target.value)));
     };
 
     const handlePinChange = (e) => {
@@ -89,6 +74,20 @@ export default function NewTournamentSetup() {
         setPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 4));
     };
 
+    // Bei Gruppen ergibt sich die KO-Rundenanzahl aus Gruppenanzahl × Qualifikanten/Gruppe,
+    // statt sie (redundant und potenziell widersprüchlich) separat abzufragen.
+    const useGroups = !isDirectKO && groupCount > 1;
+    const teamsPerGroup = groupCount > 0 ? numberTeams / groupCount : 0;
+    const groupsQualifiedTotal = groupCount * qualifiersPerGroup;
+    const groupsKoRoundsValid = groupsQualifiedTotal > 0 && Number.isInteger(Math.log2(groupsQualifiedTotal));
+    const groupsKoRounds = groupsKoRoundsValid ? Math.log2(groupsQualifiedTotal) : 0;
+
+    const effectiveKoRounds = isDirectKO
+        ? directKoRounds
+        : useGroups
+            ? (hasKnockoutAfterGroups ? groupsKoRounds : 0)
+            : koRounds;
+
     const handleSubmit = async (e) => {
         e.preventDefault();
 
@@ -96,20 +95,24 @@ export default function NewTournamentSetup() {
         if (pin.length !== 4) return showError("Der PIN muss genau 4 Ziffern haben.");
         if (pin !== pinConfirm) return showError("Die PINs stimmen nicht überein.");
 
-        if (!isDirectKO && groupCount > 1) {
+        if (useGroups) {
             if (numberTeams % groupCount !== 0) {
                 return showError("Die Teamanzahl muss durch die Gruppenanzahl teilbar sein (gleich große Gruppen).");
             }
-            if ((numberTeams / groupCount) % 2 !== 0) {
+            if (teamsPerGroup % 2 !== 0) {
                 return showError("Jede Gruppe muss eine gerade Anzahl Teams haben.");
             }
-            if (koRounds > 0 && groupCount * qualifiersPerGroup !== Math.pow(2, koRounds)) {
-                return showError("Gruppenanzahl × Qualifikanten pro Gruppe muss der Anzahl KO-Teilnehmer entsprechen.");
+            if (hasKnockoutAfterGroups) {
+                if (qualifiersPerGroup > teamsPerGroup) {
+                    return showError("Qualifikanten pro Gruppe darf nicht größer als die Gruppengröße sein.");
+                }
+                if (!groupsKoRoundsValid) {
+                    return showError("Gruppenanzahl × Qualifikanten pro Gruppe muss eine Zweierpotenz ergeben (z.B. 2, 4, 8, 16).");
+                }
             }
         }
 
         const effectiveTeamCount = isDirectKO ? directKoTeamCount : numberTeams;
-        const effectiveKoRounds = isDirectKO ? directKoRounds : koRounds;
         const effectiveGroupCount = isDirectKO ? 1 : groupCount;
 
         const tournamentID = await addTournament(
@@ -257,42 +260,58 @@ export default function NewTournamentSetup() {
                     )}
                     <br /><br />
 
-                    <label>Bei welcher Stufe soll die KO-Runde beginnen?</label>
-                    <br />
-                    <FormControl sx={{ minWidth: 220 }}>
-                        <InputLabel>KO-Runde beginnen bei</InputLabel>
-                        <Select
-                            value={koRounds}
-                            label="KO-Runde beginnen bei"
-                            onChange={handleKoRoundsChange}
-                        >
-                            {availableKoOptions.map(opt => (
-                                <MenuItem key={opt.rounds} value={opt.rounds}>
-                                    {opt.label}
-                                </MenuItem>
-                            ))}
-                        </Select>
-                    </FormControl>
-                    {koRounds > 0 && (
-                        <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: 0.7 }}>
-                            {qualifiedTeams} Teams qualifizieren sich für die KO-Runde
-                        </div>
-                    )}
-                    {groupCount > 1 && koRounds > 0 && (
+                    {useGroups ? (
                         <>
-                            <br /><br />
-                            <label>Wie viele Teams pro Gruppe qualifizieren sich für die KO-Runde?</label>
-                            <TextField
-                                type="number"
-                                value={qualifiersPerGroup}
-                                onChange={e => setQualifiersPerGroup(Number(e.target.value))}
-                                inputProps={{ min: 1 }}
-                                label="Qualifikanten pro Gruppe"
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={hasKnockoutAfterGroups}
+                                        onChange={e => setHasKnockoutAfterGroups(e.target.checked)}
+                                    />
+                                }
+                                label="Anschließende KO-Runde"
                             />
-                            {groupCount * qualifiersPerGroup !== qualifiedTeams && (
-                                <div style={{ marginTop: 8, fontSize: "0.85rem", color: "orange" }}>
-                                    {groupCount} Gruppen × {qualifiersPerGroup} Qualifikanten = {groupCount * qualifiersPerGroup},
-                                    muss aber {qualifiedTeams} ergeben
+                            {hasKnockoutAfterGroups && (
+                                <>
+                                    <br /><br />
+                                    <label>Wie viele Teams pro Gruppe qualifizieren sich für die KO-Runde?</label>
+                                    <TextField
+                                        type="number"
+                                        value={qualifiersPerGroup}
+                                        onChange={e => setQualifiersPerGroup(Number(e.target.value))}
+                                        inputProps={{ min: 1 }}
+                                        label="Qualifikanten pro Gruppe"
+                                    />
+                                    <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: groupsKoRoundsValid ? 0.7 : 1, color: groupsKoRoundsValid ? "inherit" : "orange" }}>
+                                        {groupCount} Gruppen × {qualifiersPerGroup} Qualifikanten = {groupsQualifiedTotal} Teams
+                                        {groupsKoRoundsValid
+                                            ? ` → ${koRoundLabel(groupsKoRounds, 1)}`
+                                            : " (muss eine Zweierpotenz ergeben, z.B. 2, 4, 8, 16)"}
+                                    </div>
+                                </>
+                            )}
+                        </>
+                    ) : (
+                        <>
+                            <label>Bei welcher Stufe soll die KO-Runde beginnen?</label>
+                            <br />
+                            <FormControl sx={{ minWidth: 220 }}>
+                                <InputLabel>KO-Runde beginnen bei</InputLabel>
+                                <Select
+                                    value={koRounds}
+                                    label="KO-Runde beginnen bei"
+                                    onChange={e => setKoRounds(Number(e.target.value))}
+                                >
+                                    {availableKoOptions.map(opt => (
+                                        <MenuItem key={opt.rounds} value={opt.rounds}>
+                                            {opt.label}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                            {koRounds > 0 && (
+                                <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: 0.7 }}>
+                                    {qualifiedTeams} Teams qualifizieren sich für die KO-Runde
                                 </div>
                             )}
                         </>
@@ -301,7 +320,7 @@ export default function NewTournamentSetup() {
                 </>
             )}
 
-            {(isDirectKO || koRounds > 0) && (
+            {(isDirectKO || effectiveKoRounds > 0) && (
                 <>
                     <FormControlLabel
                         control={
