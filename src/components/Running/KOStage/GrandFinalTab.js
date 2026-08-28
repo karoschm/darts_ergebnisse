@@ -1,5 +1,5 @@
 import {
-    Button, Table, TableBody, TableCell, TableHead, TableRow,
+    Button, Card, Table, TableBody, TableCell, TableHead, TableRow,
     TextField, Typography, useTheme, useMediaQuery, CircularProgress
 } from "@mui/material";
 import { useEffect, useState, useRef } from "react";
@@ -177,11 +177,42 @@ export default function GrandFinalTab({ stageKey, bracketReset, isViewMode }) {
         return (
             <div style={{
                 flex: 1, minWidth: 0, display: "flex", flexDirection: "column",
-                alignItems: "center", textAlign: "center", padding: "60px 20px"
+                alignItems: "center", textAlign: "center", padding: "40px 20px"
             }}>
-                <Typography color="text.secondary" fontStyle="italic">
-                    Teilnehmer stehen erst fest, sobald Gewinner- und Loser-Bracket abgeschlossen sind.
-                </Typography>
+                <Typography variant="h2" align="center" sx={{ my: 1, fontWeight: "bold" }}>{label}</Typography>
+                {isReset ? (
+                    <Typography color="text.secondary" fontStyle="italic" sx={{ mt: 2 }}>
+                        Findet nur statt, falls der Verlierer-Bracket-Sieger das erste Grand-Final-Spiel gewinnt.
+                    </Typography>
+                ) : isMobile ? (
+                    <Card sx={{ width: "90vw", mx: "auto", mb: 2 }}>
+                        <div>Sieger Gewinner-Bracket</div>
+                        <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                        <div>Sieger Verlierer-Bracket</div>
+                    </Card>
+                ) : (
+                    <Table sx={{ width: "80vw", mx: "auto", mb: 2, maxWidth: 800 }}
+                        style={{ borderCollapse: "collapse", alignContent: "center" }}>
+                        <TableHead>
+                            <TableRow>
+                                <TableCell align="right" width="10%">Legs</TableCell>
+                                <TableCell align="right" width="25%">Team 1</TableCell>
+                                <TableCell align="center" width="10%"></TableCell>
+                                <TableCell align="left" width="25%">Team 2</TableCell>
+                                <TableCell align="left" width="10%">Legs</TableCell>
+                            </TableRow>
+                        </TableHead>
+                        <TableBody>
+                            <TableRow>
+                                <TableCell />
+                                <TableCell align="right">Sieger Gewinner-Bracket</TableCell>
+                                <TableCell align="center">vs</TableCell>
+                                <TableCell>Sieger Verlierer-Bracket</TableCell>
+                                <TableCell />
+                            </TableRow>
+                        </TableBody>
+                    </Table>
+                )}
             </div>
         );
     }

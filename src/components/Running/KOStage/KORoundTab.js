@@ -71,10 +71,14 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
     const matchCount = Math.pow(2, koRounds - roundIndex); // z.B. koRounds=3, round=1 → 4 Matches
     const label = bracket === "winner" ? koRoundLabel(koRounds, roundIndex) : loserRoundLabel(koRounds, roundIndex);
 
-    // Hauptmatches ohne Platz-3
+    // Hauptmatches ohne Platz-3. Numerische statt alphabetischer Sortierung nötig,
+    // da sonst z.B. "M10" alphabetisch vor "M2" einsortiert würde (ab 10 Matches
+    // pro Runde, z.B. Achtelfinale bei 64 Teams) — diese Reihenfolge bestimmt nicht
+    // nur die Anzeige, sondern auch die winners-/losers-Arrays in handleFinishRound
+    // und damit die tatsächliche Zuordnung im nächsten Runde/Loser-Bracket.
     const mainMatches = Object.entries(roundData.matches || {})
         .filter(([key]) => key !== "place3")
-        .sort(([a], [b]) => a.localeCompare(b));
+        .sort(([a], [b]) => Number(a.replace("M", "")) - Number(b.replace("M", "")));
     const place3Match = roundData.matches?.place3;
 
     const roundReady = mainMatches.length > 0 && mainMatches[0][1]?.team1;
