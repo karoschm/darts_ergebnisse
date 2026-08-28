@@ -22,6 +22,7 @@ import {
     koRoundLabel,
     loserStatusKey,
     loserRoundLabel,
+    getLbSchedule,
     finishDoubleElimWbRound,
     finishLoserBracketRound,
     groupLabel,
@@ -279,6 +280,18 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
         return `Verlierer ${koRoundLabel(koRounds, roundIndex - 1)} ${id}`;
     }
 
+    // Herkunft der Teilnehmer einer noch nicht generierten LB-Runde: LB-Runde 1
+    // bekommt ausschließlich die Verlierer aus WB-Runde 1, spätere "reduce"-Runden
+    // ausschließlich die Sieger der vorherigen LB-Runde, "drop"-Runden zusätzlich die
+    // frischen Verlierer der jeweiligen WB-Runde (siehe getLbSchedule).
+    function lbOriginLabel() {
+        const round = getLbSchedule(koRounds)[roundIndex - 1];
+        if (!round) return "";
+        if (roundIndex === 1) return `Verlierer ${koRoundLabel(koRounds, 1)}`;
+        if (round.type === "reduce") return `Sieger ${loserRoundLabel(koRounds, roundIndex - 1)}`;
+        return `Sieger ${loserRoundLabel(koRounds, roundIndex - 1)} und Verlierer ${koRoundLabel(koRounds, round.sourceWb)}`;
+    }
+
     function matchLabel(id) {
         return `${label} ${id}`;
     }
@@ -408,8 +421,11 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                     <div>
                         {bracket === "loser" ? (
                             <Card sx={{ width: "90vw", mx: "auto", mb: 2, p: 2 }}>
-                                <Typography color="text.secondary" fontStyle="italic">
+                                <Typography color="text.secondary" fontStyle="italic" variant="body2">
                                     Teilnehmer stehen erst nach Abschluss der vorherigen Runde(n) fest
+                                </Typography>
+                                <Typography color="text.secondary">
+                                    {lbOriginLabel()}
                                 </Typography>
                             </Card>
                         ) : renderPlaceholders().map(({ id1, id2, key }) => (
@@ -513,8 +529,11 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                         {bracket === "loser" ? (
                             <TableRow>
                                 <TableCell colSpan={5} align="center">
-                                    <Typography color="text.secondary" fontStyle="italic">
+                                    <Typography color="text.secondary" fontStyle="italic" variant="body2">
                                         Teilnehmer stehen erst nach Abschluss der vorherigen Runde(n) fest
+                                    </Typography>
+                                    <Typography color="text.secondary">
+                                        {lbOriginLabel()}
                                     </Typography>
                                 </TableCell>
                             </TableRow>
