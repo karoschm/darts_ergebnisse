@@ -706,7 +706,7 @@ export async function generateNextKORound(tournamentID, currentRoundIndex, winne
                 return { id, preliminaryRank: snap.data().preliminaryRank };
             })
         );
-        const baseRank = winners.length * 2 + 1; // z.B. bei 4 Gewinnern → Rang 5
+        const baseRank = winners.length + 1; // z.B. bei 4 Gewinnern → Rang 5
         loserDocs
             .sort((a, b) => a.preliminaryRank - b.preliminaryRank)
             .forEach((team, i) => {
@@ -714,6 +714,13 @@ export async function generateNextKORound(tournamentID, currentRoundIndex, winne
                     finalRank: baseRank + i
                 });
             });
+    } else if (!hasThirdPlace && losers.length > 0) {
+        // Ohne Spiel um Platz 3: beide Halbfinal-Verlierer teilen sich Platz 3
+        losers.forEach(id => {
+            batch.update(doc(db, "tournaments", tournamentID, "teams", id), {
+                finalRank: 3
+            });
+        });
     }
 
     await batch.commit();

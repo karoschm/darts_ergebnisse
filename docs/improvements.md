@@ -295,7 +295,7 @@ Diese `groupOrder` wird nicht mehr erst bei der KO-Rundengenerierung zufällig b
 
 **Verifikation:** 8 Teams / 2 Gruppen à 4 / `qualifiersPerGroup=2` durchspielen — insbesondere prüfen, dass beide Gruppen-Tabellen korrekt getrennt sind, die Spieltage die Spiele beider Gruppen mit klarer Gruppenkennzeichnung zeigen, und die generierte erste KO-Runde die erwartete interleavte Paarung (A1 vs. B2, B1 vs. A2 bei 2 Qualifikanten/Gruppe) enthält.
 
-### Phase 3d – Bugfix + Rangfolge ohne Spiel um Platz 3
+### Phase 3d – Bugfix + Rangfolge ohne Spiel um Platz 3 ✅ Umgesetzt (2026-08-28)
 
 **Gemeldeter Bug (2026-08-21):** In einem Direkt-KO-Turnier mit Freilosen (siehe Nachtrag zu Phase 3b) und **ohne** Spiel um Platz 3 zeigt die Abschlusstabelle „BYE“ auf Platz 3 an.
 
@@ -309,6 +309,12 @@ Diese `groupOrder` wird nicht mehr erst bei der KO-Rundengenerierung zufällig b
 - `generateNextKORound`: neuer `else if`-Zweig neben dem bestehenden `if (!isFinal)` — wenn `isFinal && !hasThirdPlace && losers.length > 0`, allen Teams in `losers` `finalRank: 3` zuweisen. Funktioniert auch bei `losers.length === 1` (Halbfinale mit Freilos, bei dem nur ein echter Verlierer existiert).
 - `FinalStandings.js`: `getAllTeams(...)`-Ergebnis vor der Sortierung um `.filter(t => !t.isBye)` ergänzen (analog `StandingsTable.js`).
 - Betrifft **nicht nur** Direkt-KO: Der fehlende `finalRank` für Halbfinal-Verlierer ohne Platz-3-Spiel besteht unabhängig vom Turniermodus, sobald `koRounds >= 2` und `hasThirdPlace === false` — der Freilos-Fall hat ihn nur sichtbar gemacht, weil zusätzlich das „BYE“-Team betroffen war.
+
+**Umsetzung:** `generateNextKORound` (`firestoreService.js`) bekommt neben dem bestehenden `if (!isFinal)`-Zweig einen `else if (!hasThirdPlace && losers.length > 0)`-Zweig, der allen Teams in `losers` `finalRank: 3` zuweist — funktioniert auch mit nur einem Eintrag in `losers` (Halbfinale mit Freilos). `FinalStandings.js` filtert `isBye`-Teams jetzt vor der Sortierung heraus (analog `StandingsTable.js`).
+
+**Zusatzfund beim Testen — Anzeige eines geteilten Ranges war trotz korrektem `finalRank` falsch:** Die bisherige Aufteilung in `FinalStandings.js` (`sortedTeams.slice(0, 3)`/`slice(3)`, feste Array-Indizes) und die Rang-Beschriftung in `FinalRankList.js` (`startRank + index`, rein sequenziell) gingen implizit davon aus, dass genau ein Team pro Rang existiert. Bei geteiltem 3. Platz (zwei Teams mit `finalRank: 3`) wäre eines der beiden Teams durch `slice(0, 3)` in die "Restliste" gerutscht und dort fälschlich als "4." angezeigt worden — der eigentliche Zweck der Erweiterung ("beide gemeinsam auf Platz 3") wäre in der UI nicht sichtbar gewesen. Fix: `FinalStandings.js` liefert jetzt `{rank, name}`-Objekte und teilt anhand von `rank <= 3` statt eines festen Array-Index auf; `Podium.js` gruppiert die Teams pro Rang (`namesByPlace`) und zeigt bei einem geteilten Platz beide Namen (`" / "`-getrennt) auf demselben Podestplatz; `FinalRankList.js` zeigt den tatsächlichen `team.rank` statt eines aus der Position hochgezählten Rangs.
+
+**Bugfix (2026-08-28) — Verlierer-Rang für Runden vor dem Halbfinale falsch berechnet (vom Projektinhaber beim Testen gefunden):** Bei einem Turnier mit `koRounds >= 3` zeigte die Abschlusstabelle nach dem geteilten 3. Platz die nächsten Ränge als "9./10." statt "5./6.". Root Cause, unabhängig von der eigentlichen Phase-3d-Änderung und schon vorher im Code vorhanden: `baseRank = winners.length * 2 + 1` in `generateNextKORound`s `!isFinal`-Zweig widersprach dem eigenen Kommentar direkt daneben ("z.B. bei 4 Gewinnern → Rang 5") — bei 4 Gewinnern ergibt die Formel 9, nicht 5. Betraf bislang nur Turniere mit `koRounds >= 3` (Achtelfinale oder größer), da der `!isFinal`-Zweig erst ab der vorletzten Nicht-Endrunde greift; bei `koRounds === 2` (nur Halbfinale+Finale) lief immer der `isFinal`-Zweig, weshalb der Fehler bislang unbemerkt blieb. Fix: `baseRank = winners.length + 1`.
 
 **Nicht im Scope:** weitere Tiebreak-Kriterien zwischen den beiden geteilten Dritten (z.B. anhand Legdifferenz).
 

@@ -34,11 +34,15 @@ export default function FinalStandings() {
             // setTeams(loadedTeams);
 
             const sortedTeams = Object.entries(loadedTeams)
-                .sort(([i1, t1], [i2, t2]) => t1.finalRank - t2.finalRank)
-                .map(([teamID, team]) => team?.name || teamID);
+                .filter(([, team]) => !team?.isBye)
+                .map(([teamID, team]) => ({ rank: team.finalRank, name: team?.name || teamID }))
+                .sort((t1, t2) => t1.rank - t2.rank);
 
-            setTop3Teams(sortedTeams.slice(0, 3));
-            setRemainingTeams(sortedTeams.slice(3));
+            // Bei geteiltem 3. Platz (kein Spiel um Platz 3) können mehr als 3 Teams
+            // einen finalRank <= 3 haben — Aufteilung erfolgt daher über den Rang,
+            // nicht über einen festen Array-Index.
+            setTop3Teams(sortedTeams.filter(t => t.rank <= 3));
+            setRemainingTeams(sortedTeams.filter(t => t.rank > 3));
         }
         getTeams();
     }, [status, currentTournamentId]);

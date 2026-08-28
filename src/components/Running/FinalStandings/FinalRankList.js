@@ -1,6 +1,6 @@
 import { List, ListItem, ListItemText, Paper, useTheme, useMediaQuery } from "@mui/material";
 
-export default function FinalRankList({ teams, startRank = 4 }) {
+export default function FinalRankList({ teams }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
 
@@ -11,14 +11,14 @@ export default function FinalRankList({ teams, startRank = 4 }) {
             <List>
                 {teams.map((team, index) => (
                     <ListItem
-                        key={team}
+                        key={team.name}
                         divider
                         sx={{
                             backgroundColor: index % 2 ? "primary.main" : "secondary.main"
                         }}
                     >
                         <ListItemText
-                            primary={`${startRank + index}. ${team}`}
+                            primary={`${team.rank}. ${team.name}`}
                         />
                     </ListItem>
                 ))}

@@ -4,11 +4,20 @@ import EmojiEventsIcon from "@mui/icons-material/EmojiEvents";
 export default function Podium({ teams }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
+
+    // Mehrere Teams können sich denselben Rang teilen (z.B. geteilter 3. Platz
+    // ohne Spiel um Platz 3) — pro Rang werden daher alle Namen gesammelt.
+    const namesByPlace = {};
+    teams.forEach(t => {
+        (namesByPlace[t.rank] ??= []).push(t.name);
+    });
+    const hasPlace3 = namesByPlace[3] !== undefined;
+
     const podiumConfig = (isMobile ? [
         { place: 1, color: "#FFD700", height: 160 },
         { place: 2, color: "#C0C0C0", height: 160 },
         { place: 3, color: "#CD7F32", height: 160 },
-    ] : (teams.length === 2 ?
+    ] : (!hasPlace3 ?
         [
             { place: 1, color: "#FFD700", height: 180 },
             { place: 2, color: "#C0C0C0", height: 140 },
@@ -17,7 +26,7 @@ export default function Podium({ teams }) {
             { place: 1, color: "#FFD700", height: 180 },
             { place: 3, color: "#CD7F32", height: 120 },
         ]
-    )).filter(cfg => teams[cfg.place - 1] !== undefined);
+    )).filter(cfg => namesByPlace[cfg.place] !== undefined);
 
     return isMobile ? (
         <div>
@@ -39,7 +48,7 @@ export default function Podium({ teams }) {
                             <EmojiEventsIcon sx={{ fontSize: 40, mb: 1 }} />
                         )}
                         <Typography variant="h5">
-                            {cfg.place}. {teams[cfg.place - 1]}
+                            {cfg.place}. {namesByPlace[cfg.place].join(" / ")}
                         </Typography>
                     </Card>
                     <br />
@@ -62,7 +71,7 @@ export default function Podium({ teams }) {
                         overflowWrap: "break-word",
                         wordBreak: "break-word",
                     }}>
-                        {teams[cfg.place - 1]}
+                        {namesByPlace[cfg.place].join(" / ")}
                     </Typography>
                     <Card
                         sx={{
