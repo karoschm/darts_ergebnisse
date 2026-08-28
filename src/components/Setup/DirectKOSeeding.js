@@ -30,6 +30,7 @@ export default function DirectKOSeeding() {
     const [koRounds, setKoRounds] = useState(0);
     const [hasThirdPlace, setHasThirdPlace] = useState(false);
     const [seedingMode, setSeedingMode] = useState("random");
+    const [koFormat, setKoFormat] = useState("single");
 
     useEffect(() => {
         if (!currentTournamentId) return;
@@ -39,6 +40,7 @@ export default function DirectKOSeeding() {
             setKoRounds(data?.koRounds ?? 0);
             setHasThirdPlace(data?.hasThirdPlace ?? false);
             setSeedingMode(data?.seeding ?? "random");
+            setKoFormat(data?.koFormat ?? "single");
 
             const teams = (await getAllTeams(currentTournamentId))
                 .filter(t => !t.isBye)
@@ -71,7 +73,7 @@ export default function DirectKOSeeding() {
             koRounds,
             hasThirdPlace
         );
-        await updateTournamentStatus(currentTournamentId, nextStatus("setup", koRounds, "directko"));
+        await updateTournamentStatus(currentTournamentId, nextStatus("setup", koRounds, "directko", koFormat));
         navigate(`/tournament/${currentTournamentId}/edit/running/${koStageKey(1)}`);
     };
 

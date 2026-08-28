@@ -43,11 +43,16 @@ export default function NewTournamentSetup() {
     const [roundRobinHasKO, setRoundRobinHasKO] = useState(true);
     const [seeding, setSeeding] = useState("random");
     const [directKoTeamCount, setDirectKoTeamCount] = useState(8);
+    const [koFormat, setKoFormat] = useState("single");
+    const [bracketReset, setBracketReset] = useState(false);
 
     const isDirectKO = mode === "directko";
     const directKoRounds = Math.ceil(Math.log2(Math.max(2, directKoTeamCount)));
     const directKoBracketSize = Math.pow(2, directKoRounds);
     const directKoByeCount = directKoBracketSize - directKoTeamCount;
+    // Doppel-KO braucht ein "richtiges" Loser-Bracket (koRounds >= 2) und schließt
+    // Freilose aus — daher nur bei exakter Zweierpotenz-Teamanzahl ab 4 wählbar.
+    const directKoIsPowerOfTwo = directKoTeamCount >= 4 && directKoByeCount === 0;
 
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
@@ -91,6 +96,17 @@ export default function NewTournamentSetup() {
         }
         clampMatchdays(newCount, groupCount);
         clampQualifiersPerGroup(newCount, groupCount);
+    };
+
+    // Doppel-KO-Auswahl zurücksetzen, falls die neue Teamanzahl keine gültige
+    // Zweierpotenz mehr ist (analog zum bestehenden KO-Runden-Reset-Muster).
+    const handleDirectKoTeamCountChange = (e) => {
+        const newCount = Math.max(2, Number(e.target.value));
+        setDirectKoTeamCount(newCount);
+        const bracketSize = Math.pow(2, Math.ceil(Math.log2(Math.max(2, newCount))));
+        if (koFormat === "double" && !(newCount >= 4 && bracketSize === newCount)) {
+            setKoFormat("single");
+        }
     };
 
     const handleGroupCountChange = (e) => {
@@ -177,12 +193,19 @@ export default function NewTournamentSetup() {
             }
         }
 
+        if (isDirectKO && koFormat === "double" && !directKoIsPowerOfTwo) {
+            return showError("Doppel-KO erfordert eine Teamanzahl, die eine Zweierpotenz ist (mindestens 4).");
+        }
+
         const effectiveTeamCount = isDirectKO ? directKoTeamCount : numberTeams;
         const effectiveGroupCount = isDirectKO ? 1 : groupCount;
+        const effectiveHasThirdPlace = isDirectKO && koFormat === "double" ? false : hasThirdPlace;
+        const effectiveKoFormat = isDirectKO ? koFormat : "single";
 
         const tournamentID = await addTournament(
-            trimmedName, effectiveTeamCount, effectiveNumberMatchdays, effectiveKoRounds, hasThirdPlace, pin,
-            preliminaryScoreMode, winLegs, mode, seeding, effectiveGroupCount, qualifiersPerGroup
+            trimmedName, effectiveTeamCount, effectiveNumberMatchdays, effectiveKoRounds, effectiveHasThirdPlace, pin,
+            preliminaryScoreMode, winLegs, mode, seeding, effectiveGroupCount, qualifiersPerGroup,
+            effectiveKoFormat, bracketReset
         );
 
         if (tournamentID === trimmedName) {
@@ -234,7 +257,7 @@ export default function NewTournamentSetup() {
                     <TextField
                         type="number"
                         value={directKoTeamCount}
-                        onChange={e => setDirectKoTeamCount(Math.max(2, Number(e.target.value)))}
+                        onChange={handleDirectKoTeamCountChange}
                         inputProps={{ min: 2 }}
                         label="Anzahl Teams"
                     />
@@ -257,6 +280,37 @@ export default function NewTournamentSetup() {
                             <MenuItem value="manual">Manuelle Setzliste</MenuItem>
                         </Select>
                     </FormControl>
+                    <br /><br />
+
+                    <FormControlLabel
+                        control={
+                            <Checkbox
+                                checked={koFormat === "double"}
+                                disabled={!directKoIsPowerOfTwo}
+                                onChange={e => setKoFormat(e.target.checked ? "double" : "single")}
+                            />
+                        }
+                        label="Doppel-KO (Loser-Bracket)"
+                    />
+                    {!directKoIsPowerOfTwo && (
+                        <div style={{ fontSize: "0.85rem", opacity: 0.7, maxWidth: 320 }}>
+                            Doppel-KO ist nur bei einer Teamanzahl verfügbar, die eine Zweierpotenz ist (4, 8, 16, ...).
+                        </div>
+                    )}
+                    {koFormat === "double" && (
+                        <>
+                            <br />
+                            <FormControlLabel
+                                control={
+                                    <Checkbox
+                                        checked={bracketReset}
+                                        onChange={e => setBracketReset(e.target.checked)}
+                                    />
+                                }
+                                label="Bracket Reset im Grand Final (Sieger Loser-Bracket muss WB-Sieger zweimal schlagen)"
+                            />
+                        </>
+                    )}
                     <br /><br />
                 </>
             ) : (
@@ -404,7 +458,7 @@ export default function NewTournamentSetup() {
                 </>
             )}
 
-            {(isDirectKO || effectiveKoRounds > 0) && (
+            {(isDirectKO || effectiveKoRounds > 0) && !(isDirectKO && koFormat === "double") && (
                 <>
                     <FormControlLabel
                         control={

@@ -63,9 +63,90 @@ export function groupLabel(groupIndex) {
     return String.fromCharCode(65 + groupIndex);
 }
 
+// ─── Doppel-KO / Loser-Bracket Helpers ─────────────────────────────────────────
+
+// stage-/status-String für Loser-Bracket-Runde i (1 = erste LB-Runde)
+export function loserStageKey(lbRoundIndex) {
+    return `l_round_${lbRoundIndex}`;
+}
+
+export function loserStatusKey(lbRoundIndex) {
+    return `lko_${lbRoundIndex}`;
+}
+
+export const GRAND_FINAL_STAGE = "grandfinal";
+export const GRAND_FINAL_RESET_STAGE = "grandfinal2";
+export const GRAND_FINAL_STATUS = "gf";
+export const GRAND_FINAL_RESET_STATUS = "gf2";
+
+/**
+ * Liefert die Loser-Bracket-Rundenstruktur für ein Doppel-KO-Turnier mit `koRounds`
+ * Winner-Bracket-Runden (Teamanzahl = 2^koRounds). Reine Funktion, einzige Quelle
+ * der Wahrheit für LB-Rundenanzahl/-größe (genutzt von Running.js, KORoundTab.js
+ * und advanceLoserBracket).
+ *
+ * Jede WB-Runde i (1..koRounds) hat 2^(koRounds-i) Verlierer. Ab WB-Runde 2 wechseln
+ * sich "reduce"-Runden (bisherige LB-Survivor spielen nur gegeneinander) und
+ * "drop"-Runden (Sieger der reduce-Runde + frische Verlierer aus WB-Runde `sourceWb`
+ * spielen gegeneinander) ab. Bei koRounds < 2 gibt es kein Loser-Bracket (das
+ * WB-Finale ist bereits das Grand Final).
+ */
+export function getLbSchedule(koRounds) {
+    if (koRounds < 2) return [];
+    const rounds = [];
+    let survivorCount = Math.pow(2, koRounds - 1); // Größe von L_1
+    for (let wbRound = 2; wbRound <= koRounds; wbRound++) {
+        const loserCount = Math.pow(2, koRounds - wbRound);
+        rounds.push({ type: "reduce", teamsIn: survivorCount, sourceWb: null });
+        survivorCount = survivorCount / 2;
+        rounds.push({ type: "drop", teamsIn: survivorCount + loserCount, sourceWb: wbRound });
+        survivorCount = (survivorCount + loserCount) / 2;
+    }
+    return rounds;
+}
+
+// Bezeichnung einer Loser-Bracket-Runde. Die letzte LB-Runde (LB-Champion) heißt
+// immer "Loser-Finale", alle anderen orientieren sich an der Anzahl teilnehmender
+// Teams (analog KO_ROUND_NAMES), mit "(Loser-Bracket)"-Zusatz.
+export function loserRoundLabel(koRounds, lbRoundIndex) {
+    const schedule = getLbSchedule(koRounds);
+    const round = schedule[lbRoundIndex - 1];
+    if (!round) return `Loser-Runde ${lbRoundIndex}`;
+    if (lbRoundIndex === schedule.length) return "Loser-Finale";
+    const roundsFromFinal = Math.ceil(Math.log2(round.teamsIn));
+    return `${KO_ROUND_NAMES[roundsFromFinal] ?? `Loser-Runde ${lbRoundIndex}`} (Loser-Bracket)`;
+}
+
+/**
+ * Rang, ab dem die Verlierer der LB-Runde `lbRoundIndex` eingeordnet werden
+ * (mehrere gleichzeitige Verlierer bekommen fortlaufende Ränge ab hier, analog zur
+ * bestehenden WB-Verlierer-Formel). Herleitung: von den insgesamt 2^koRounds Teams
+ * sind vor Runde `lbRoundIndex` bereits alle Verlierer der vorherigen LB-Runden
+ * endgültig ausgeschieden (WB-Runden-Verlierer, die noch nicht im LB gespielt haben,
+ * gelten nicht als ausgeschieden) — die verbleibenden Plätze werden von hinten nach
+ * vorn aufgefüllt.
+ */
+export function lbEliminationBaseRank(koRounds, lbRoundIndex) {
+    const schedule = getLbSchedule(koRounds);
+    const totalTeams = Math.pow(2, koRounds);
+    let eliminatedBefore = 0;
+    for (let i = 0; i < lbRoundIndex - 1; i++) {
+        eliminatedBefore += schedule[i].teamsIn / 2;
+    }
+    const thisLoserCount = schedule[lbRoundIndex - 1].teamsIn / 2;
+    return totalTeams - eliminatedBefore - thisLoserCount + 1;
+}
+
 // Nächster Status nach dem aktuellen
-export function nextStatus(currentStatus, koRounds, mode = "roundrobin") {
+export function nextStatus(currentStatus, koRounds, mode = "roundrobin", koFormat = "single") {
     if (currentStatus === "setup" && mode === "directko") return koRounds > 0 ? koStatusKey(1) : "finished";
+    if (mode === "directko" && koFormat === "double") {
+        // Im Doppel-KO ist `status` nur ein "zuletzt erreichte Runde"-Marker (WB- und
+        // LB-Runden laufen parallel, es gibt keine lineare Abfolge) — wird von den
+        // Aufrufern (KORoundTab/GrandFinalTab) direkt mit dem Zielstatus gesetzt,
+        // diese Funktion muss dafür nur total bleiben.
+        return currentStatus;
+    }
     if (currentStatus === "group") return koRounds > 0 ? koStatusKey(1) : "finished";
     const match = currentStatus.match(/^ko_(\d+)$/);
     if (match) {
@@ -76,8 +157,18 @@ export function nextStatus(currentStatus, koRounds, mode = "roundrobin") {
 }
 
 // Stage-String für URL aus Status
-export function statusToStage(status, koRounds, mode = "roundrobin") {
+export function statusToStage(status, koRounds, mode = "roundrobin", koFormat = "single") {
     if (status === "setup" && mode === "directko") return koStageKey(1);
+    if (mode === "directko" && koFormat === "double") {
+        if (status === "finished") return "standings";
+        if (status === GRAND_FINAL_STATUS) return GRAND_FINAL_STAGE;
+        if (status === GRAND_FINAL_RESET_STATUS) return GRAND_FINAL_RESET_STAGE;
+        const lbMatch = status.match(/^lko_(\d+)$/);
+        if (lbMatch) return loserStageKey(Number(lbMatch[1]));
+        const wbMatch = status.match(/^ko_(\d+)$/);
+        if (wbMatch) return koStageKey(Number(wbMatch[1]));
+        return koStageKey(1);
+    }
     if (status === "setup" || status === "group") return "preliminary";
     if (status === "finished") return "standings";
     const match = status.match(/^ko_(\d+)$/);
@@ -87,7 +178,7 @@ export function statusToStage(status, koRounds, mode = "roundrobin") {
 
 // ─── Tournament ───────────────────────────────────────────────────────────────
 
-export async function addTournament(tournamentName, numberTeams, numberMatchdays, koRounds, hasThirdPlace, pin, preliminaryScoreMode = "points", winLegs = 3, mode = "roundrobin", seeding = "random", groupCount = 1, qualifiersPerGroup = null) {
+export async function addTournament(tournamentName, numberTeams, numberMatchdays, koRounds, hasThirdPlace, pin, preliminaryScoreMode = "points", winLegs = 3, mode = "roundrobin", seeding = "random", groupCount = 1, qualifiersPerGroup = null, koFormat = "single", bracketReset = false) {
     const uid = auth.currentUser?.uid;
     if (!uid) return `${tournamentName}_ERROR`;
 
@@ -111,7 +202,17 @@ export async function addTournament(tournamentName, numberTeams, numberMatchdays
             mode,
             groupCount: effectiveGroupCount,
             ...(effectiveGroupCount > 1 ? { qualifiersPerGroup: qualifiersPerGroup ?? Math.pow(2, koRounds) } : {}),
-            ...(mode === "directko" ? { seeding } : {}),
+            ...(mode === "directko" ? {
+                seeding,
+                koFormat,
+                ...(koFormat === "double" ? {
+                    bracketReset,
+                    wbRoundLosers: {},
+                    lbRoundWinners: {},
+                    wbChampion: null,
+                    lbChampion: null
+                } : {})
+            } : {}),
             createdAt: new Date().toISOString()
         });
         await setDoc(doc(db, "tournaments", tournamentName, "private", "pin"), { hash: pinHash });
@@ -435,6 +536,13 @@ export async function updateKOStageWinLegs(tournamentID, stage, winLegs) {
     await updateDoc(koStageRef, { winLegs });
 }
 
+// Markiert eine WB-/LB-/Grand-Final-Runde als abgeschlossen (nur im Doppel-KO für die
+// Editierbarkeits-Gate relevant, siehe KORoundTab/GrandFinalTab).
+export async function markRoundFinished(tournamentID, stage) {
+    const koStageRef = doc(db, "tournaments", tournamentID, "knockout", stage);
+    await updateDoc(koStageRef, { roundFinished: true });
+}
+
 // Best-effort "wird gerade bearbeitet"-Signal, kein Fehlerabbruch bei Race Conditions
 // (z.B. KO-Runden-Dokument existiert kurzzeitig noch nicht) — rein informativ, nicht blockierend.
 export async function setKOEditing(tournamentID, stage, matchKey, uid) {
@@ -489,8 +597,10 @@ export async function updateAllKOsPlayed(tournamentID, stage, winLegs) {
  * hasThirdPlace: ob Platz-3-Spiel gespielt wird
  * losers: Array von Team-IDs der Verlierer (nur für letzte Runde relevant)
  */
-export async function generateKORound(tournamentID, roundIndex, qualifiedTeams, koRounds, hasThirdPlace, losers = []) {
-    const isFinal = roundIndex === koRounds;
+// Kern-Generierung, generisch über einen expliziten Stage-Key (statt ihn intern aus
+// einem Runden-Index abzuleiten) — so kann dieselbe Paarungslogik sowohl fürs
+// Winner- als auch fürs Loser-Bracket verwendet werden.
+async function generateBracketRound(tournamentID, stageKey, qualifiedTeams, { isFinal = false, hasThirdPlace = false, losers = [] } = {}) {
     const matchCount = qualifiedTeams.length / 2;
 
     const matches = {};
@@ -521,8 +631,154 @@ export async function generateKORound(tournamentID, roundIndex, qualifiedTeams, 
         };
     }
 
-    const stageKey = koStageKey(roundIndex);
-    await setDoc(doc(db, "tournaments", tournamentID, "knockout", stageKey), { matches, winLegs: 3 });
+    await setDoc(doc(db, "tournaments", tournamentID, "knockout", stageKey), { matches, winLegs: 3, roundFinished: false });
+}
+
+export async function generateKORound(tournamentID, roundIndex, qualifiedTeams, koRounds, hasThirdPlace, losers = []) {
+    const isFinal = roundIndex === koRounds;
+    await generateBracketRound(tournamentID, koStageKey(roundIndex), qualifiedTeams, { isFinal, hasThirdPlace, losers });
+}
+
+// Erzeugt eine Loser-Bracket-Runde (nie mit Platz-3-Spiel — 3./4. Platz ergibt sich
+// im Doppel-KO automatisch aus der LB-Struktur, siehe assignSharedFinalRanks).
+export async function generateLoserBracketRound(tournamentID, lbRoundIndex, orderedTeams) {
+    await generateBracketRound(tournamentID, loserStageKey(lbRoundIndex), orderedTeams);
+}
+
+/**
+ * Orchestriert das Loser-Bracket: liest getLbSchedule(koRounds) sowie die auf dem
+ * Turnierdokument gesammelten wbRoundLosers/lbRoundWinners, und generiert genau die
+ * nächste LB-Runde, deren Voraussetzungen jetzt vollständig vorliegen. Idempotent
+ * (prüft per getKnockout, ob die Zielrunde schon existiert) — sicher aus sowohl dem
+ * WB- als auch dem LB-Rundenabschluss-Handler aufrufbar.
+ */
+export async function advanceLoserBracket(tournamentID, koRounds) {
+    const schedule = getLbSchedule(koRounds);
+    if (schedule.length === 0) return;
+    const data = await getTournamentData(tournamentID);
+    let survivors = data.wbRoundLosers?.["1"] ?? null;
+
+    for (let r = 1; r <= schedule.length; r++) {
+        const stageKey = loserStageKey(r);
+        const existing = await getKnockout(tournamentID, stageKey);
+        if (existing.matches) {
+            const winners = data.lbRoundWinners?.[String(r)];
+            if (!winners) return; // Runde r erzeugt, aber noch nicht abgeschlossen
+            survivors = winners;
+            continue;
+        }
+        if (survivors === null) return; // wartet noch auf L_1 (WB-Runde 1 nicht fertig)
+        const round = schedule[r - 1];
+        let teams = survivors;
+        if (round.type === "drop") {
+            const newLosers = data.wbRoundLosers?.[String(round.sourceWb)];
+            if (!newLosers) return; // wartet noch auf diese WB-Runde
+            teams = [...survivors, ...newLosers];
+        }
+        await generateLoserBracketRound(tournamentID, r, teams);
+        return;
+    }
+}
+
+/**
+ * Erzeugt das Grand Final, sobald sowohl WB- als auch LB-Champion feststehen.
+ * Idempotent.
+ */
+export async function generateGrandFinal(tournamentID) {
+    const data = await getTournamentData(tournamentID);
+    if (!data.wbChampion || !data.lbChampion) return;
+    const existing = await getKnockout(tournamentID, GRAND_FINAL_STAGE);
+    if (existing.matches) return;
+    await generateBracketRound(tournamentID, GRAND_FINAL_STAGE, [data.wbChampion, data.lbChampion]);
+    await updateTournamentStatus(tournamentID, GRAND_FINAL_STATUS);
+}
+
+// Nur aufgerufen, wenn bracketReset aktiv ist und der LB-Champion das erste Grand-
+// Final-Spiel gewinnt (WB-Champion muss dann zum Sieg ein zweites Mal gewinnen).
+export async function generateGrandFinalReset(tournamentID, gf1Winner, gf1Loser) {
+    await generateBracketRound(tournamentID, GRAND_FINAL_RESET_STAGE, [gf1Winner, gf1Loser]);
+    await updateTournamentStatus(tournamentID, GRAND_FINAL_RESET_STATUS);
+}
+
+// Vergibt allen `teamIds` gemeinsam einen (nach preliminaryRank gestaffelten) Rang
+// ab `baseRank`, geschrieben in `batch` (nicht committet). Geteilte Ausgangslogik
+// für Single-Elim-WB-Verlierer und Doppel-Elim-LB-Verlierer.
+async function assignSharedFinalRanks(tournamentID, batch, teamIds, baseRank) {
+    const teamDocs = await Promise.all(
+        teamIds.map(async id => {
+            const snap = await getDoc(doc(db, "tournaments", tournamentID, "teams", id));
+            return { id, preliminaryRank: snap.data().preliminaryRank };
+        })
+    );
+    teamDocs
+        .sort((a, b) => a.preliminaryRank - b.preliminaryRank)
+        .forEach((team, i) => {
+            batch.update(doc(db, "tournaments", tournamentID, "teams", team.id), {
+                finalRank: baseRank + i
+            });
+        });
+}
+
+/**
+ * Schließt eine Winner-Bracket-Runde im Doppel-KO-Modus ab. Bei einer normalen
+ * Zwischenrunde: wie Single-Elim (nächste WB-Runde generieren), zusätzlich werden
+ * die Verlierer als L_roundIndex vermerkt und das Loser-Bracket ggf. weitergeschoben.
+ * Beim WB-Finale gibt es keine nächste WB-Runde mehr — der Sieger wird wbChampion,
+ * der Verlierer droppt ins Loser-Bracket, und sobald auch der LB-Champion feststeht,
+ * wird das Grand Final generiert.
+ */
+export async function finishDoubleElimWbRound(tournamentID, roundIndex, winners, losers, koRounds) {
+    const tournamentRef = doc(db, "tournaments", tournamentID);
+
+    if (roundIndex === koRounds) {
+        await updateDoc(tournamentRef, {
+            wbChampion: winners[0],
+            [`wbRoundLosers.${roundIndex}`]: losers
+        });
+        await markRoundFinished(tournamentID, koStageKey(roundIndex));
+        await advanceLoserBracket(tournamentID, koRounds);
+        await generateGrandFinal(tournamentID);
+        return;
+    }
+
+    await updateDoc(tournamentRef, { [`wbRoundLosers.${roundIndex}`]: losers });
+    await markRoundFinished(tournamentID, koStageKey(roundIndex));
+    await generateNextKORound(tournamentID, roundIndex, winners, losers, koRounds, false, "double");
+    await advanceLoserBracket(tournamentID, koRounds);
+}
+
+/**
+ * Schließt eine Loser-Bracket-Runde ab: Sieger advancen, Verlierer scheiden endgültig
+ * aus und bekommen sofort ihren finalRank (siehe lbEliminationBaseRank). Ist dies die
+ * letzte LB-Runde, wird zusätzlich lbChampion gesetzt und das Grand Final generiert
+ * (falls der WB-Champion bereits feststeht); andernfalls wird die nächste LB-Runde
+ * angestoßen, falls ihre Voraussetzungen bereits vorliegen.
+ */
+export async function finishLoserBracketRound(tournamentID, roundIndex, winners, losers, koRounds) {
+    const schedule = getLbSchedule(koRounds);
+    const isLastRound = roundIndex === schedule.length;
+    const baseRank = lbEliminationBaseRank(koRounds, roundIndex);
+
+    const batch = writeBatch(db);
+    await assignSharedFinalRanks(tournamentID, batch, losers, baseRank);
+    winners.forEach(teamId => {
+        batch.update(doc(db, "tournaments", tournamentID, "teams", teamId), {
+            reachedStage: loserStageKey(roundIndex)
+        });
+    });
+    await batch.commit();
+    await markRoundFinished(tournamentID, loserStageKey(roundIndex));
+
+    const tournamentRef = doc(db, "tournaments", tournamentID);
+    const updates = { [`lbRoundWinners.${roundIndex}`]: winners };
+    if (isLastRound) updates.lbChampion = winners[0];
+    await updateDoc(tournamentRef, updates);
+
+    if (isLastRound) {
+        await generateGrandFinal(tournamentID);
+    } else {
+        await advanceLoserBracket(tournamentID, koRounds);
+    }
 }
 
 export function shuffleArray(arr) {
@@ -686,9 +942,16 @@ export async function generateFirstKORoundFromSeed(tournamentID, seededTeamIds, 
  * Nächste KO-Runde aus Gewinnern der aktuellen Runde generieren.
  * winners und losers: Arrays von Team-IDs
  */
-export async function generateNextKORound(tournamentID, currentRoundIndex, winners, losers, koRounds, hasThirdPlace) {
+export async function generateNextKORound(tournamentID, currentRoundIndex, winners, losers, koRounds, hasThirdPlace, koFormat = "single") {
     const nextRoundIndex = currentRoundIndex + 1;
     const isFinal = nextRoundIndex === koRounds;
+
+    if (koFormat === "double" && currentRoundIndex === koRounds) {
+        // WB-Finale im Doppel-KO: es gibt keine "nächste WB-Runde" mehr — wird
+        // komplett vom Aufrufer (KORoundTab) über wbChampion/advanceLoserBracket/
+        // generateGrandFinal behandelt, diese Funktion wird dafür nicht genutzt.
+        return;
+    }
 
     // reachedStage der Gewinner aktualisieren
     const batch = writeBatch(db);
@@ -698,29 +961,20 @@ export async function generateNextKORound(tournamentID, currentRoundIndex, winne
         });
     });
 
-    // finalRank der Verlierer setzen (nach Vorrunden-Rang sortiert)
-    if (!isFinal) {
-        const loserDocs = await Promise.all(
-            losers.map(async id => {
-                const snap = await getDoc(doc(db, "tournaments", tournamentID, "teams", id));
-                return { id, preliminaryRank: snap.data().preliminaryRank };
-            })
-        );
-        const baseRank = winners.length + 1; // z.B. bei 4 Gewinnern → Rang 5
-        loserDocs
-            .sort((a, b) => a.preliminaryRank - b.preliminaryRank)
-            .forEach((team, i) => {
-                batch.update(doc(db, "tournaments", tournamentID, "teams", team.id), {
-                    finalRank: baseRank + i
+    // finalRank der Verlierer setzen (nach Vorrunden-Rang sortiert) — im Doppel-KO
+    // ist ein WB-Rundenverlierer noch nicht ausgeschieden (spielt im Loser-Bracket
+    // weiter), daher wird hier gar kein finalRank vergeben.
+    if (koFormat !== "double") {
+        if (!isFinal) {
+            await assignSharedFinalRanks(tournamentID, batch, losers, winners.length + 1);
+        } else if (!hasThirdPlace && losers.length > 0) {
+            // Ohne Spiel um Platz 3: beide Halbfinal-Verlierer teilen sich Platz 3
+            losers.forEach(id => {
+                batch.update(doc(db, "tournaments", tournamentID, "teams", id), {
+                    finalRank: 3
                 });
             });
-    } else if (!hasThirdPlace && losers.length > 0) {
-        // Ohne Spiel um Platz 3: beide Halbfinal-Verlierer teilen sich Platz 3
-        losers.forEach(id => {
-            batch.update(doc(db, "tournaments", tournamentID, "teams", id), {
-                finalRank: 3
-            });
-        });
+        }
     }
 
     await batch.commit();
@@ -762,6 +1016,29 @@ export async function updateRankingFinals(tournamentID, hasThirdPlace) {
         batch.update(doc(db, "tournaments", tournamentID, "teams", p3Loser),  { finalRank: 4, reachedStage: "final" });
     }
 
+    await batch.commit();
+}
+
+/**
+ * Abschluss-Ranking für Doppel-KO-Turniere: Rang 1/2 kommen aus dem entscheidenden
+ * Grand-Final-Spiel (grandfinal2 statt grandfinal, falls ein Bracket Reset
+ * stattgefunden hat — auch wenn der WB-Champion Spiel 1 gewonnen hatte, ist dann
+ * Spiel 2 entscheidend). Alle anderen Ränge (inkl. Rang 3, geteilt oder nicht)
+ * wurden bereits beim jeweiligen Loser-Bracket-Rundenabschluss per
+ * assignSharedFinalRanks vergeben.
+ */
+export async function updateRankingDoubleElim(tournamentID) {
+    const resetSnap = await getKnockout(tournamentID, GRAND_FINAL_RESET_STAGE);
+    const decisiveStage = resetSnap.matches ? GRAND_FINAL_RESET_STAGE : GRAND_FINAL_STAGE;
+    const decisiveSnap = await getKnockout(tournamentID, decisiveStage);
+    const final = decisiveSnap.matches["M1"];
+
+    const finalWinner = final[`legs_${final.team1}`] > final[`legs_${final.team2}`] ? final.team1 : final.team2;
+    const finalLoser  = final[`legs_${final.team1}`] < final[`legs_${final.team2}`] ? final.team1 : final.team2;
+
+    const batch = writeBatch(db);
+    batch.update(doc(db, "tournaments", tournamentID, "teams", finalWinner), { finalRank: 1, reachedStage: "final" });
+    batch.update(doc(db, "tournaments", tournamentID, "teams", finalLoser),  { finalRank: 2, reachedStage: "final" });
     await batch.commit();
 }
 

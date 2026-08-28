@@ -18,7 +18,12 @@ import {
     getTournamentData,
     nextStatus,
     koStageKey,
+    koStatusKey,
     koRoundLabel,
+    loserStatusKey,
+    loserRoundLabel,
+    finishDoubleElimWbRound,
+    finishLoserBracketRound,
     groupLabel,
     setKOEditing,
     clearKOEditing
@@ -33,13 +38,15 @@ const EDITING_STALE_MS = 12000;
  * Ersetzt QuarterfinalTab, SemifinalTab und FinalTab.
  *
  * Props:
- *   roundIndex    — 1-basierter Index (1 = erste KO-Runde)
- *   koRounds      — Gesamtzahl KO-Runden
- *   hasThirdPlace — ob Platz-3-Spiel existiert (nur letzte Runde)
- *   stageKey      — z.B. "round_1"
+ *   roundIndex    — 1-basierter Index (1 = erste KO-Runde, innerhalb des jeweiligen Brackets)
+ *   koRounds      — Gesamtzahl Winner-Bracket-Runden
+ *   hasThirdPlace — ob Platz-3-Spiel existiert (nur letzte WB-Runde, Single-Elim)
+ *   stageKey      — z.B. "round_1" (WB) oder "l_round_1" (LB)
+ *   bracket       — "winner" | "loser" — bestimmt Status-/Label-Herleitung und Rundenabschluss-Logik
+ *   koFormat      — "single" | "double"
  *   isViewMode    — Bearbeitungsfunktionen gesperrt
  */
-export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageKey, isViewMode }) {
+export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageKey, bracket = "winner", koFormat = "single", isViewMode }) {
     const { currentTournamentId } = useTournament();
     const [teamNames, setTeamNames] = useState({});
     const [status, setStatus] = useState("");
@@ -57,10 +64,17 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
     const focusedMatchRef = useRef(null);
     const clientIdRef = useRef(getClientId());
 
-    const isFinal = roundIndex === koRounds;
-    const statusKey = `ko_${roundIndex}`;
+    // Im Doppel-KO ist die WB-"letzte Runde" nicht das Turnierende (geht ins Loser-
+    // Bracket/Grand Final über) — isFinal bleibt daher auf echten Single-Elim-Abschluss beschränkt.
+    const isFinal = bracket === "winner" && roundIndex === koRounds && koFormat !== "double";
+    const statusKey = bracket === "winner" ? koStatusKey(roundIndex) : loserStatusKey(roundIndex);
     const matchCount = Math.pow(2, koRounds - roundIndex); // z.B. koRounds=3, round=1 → 4 Matches
-    const label = koRoundLabel(koRounds, roundIndex);
+    const label = bracket === "winner" ? koRoundLabel(koRounds, roundIndex) : loserRoundLabel(koRounds, roundIndex);
+    // Im Doppel-KO wird die Editierbarkeit pro Runde über roundFinished gesteuert
+    // (WB/LB laufen parallel, der globale Turnier-Status ist dafür nicht linear genug) —
+    // im Single-Elim bleibt der bestehende status===statusKey-Vergleich maßgeblich.
+    const roundGateBlocked = koFormat === "double" ? !!roundData.roundFinished : status !== statusKey;
+    const editingDisabled = roundGateBlocked || isViewMode;
 
     // Hauptmatches ohne Platz-3
     const mainMatches = Object.entries(roundData.matches || {})
@@ -187,13 +201,6 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
     const handleFinishRound = async () => {
         await updateAllKOsPlayed(currentTournamentId, stageKey, winLegs);
 
-        if (isFinal) {
-            const data = await getTournamentData(currentTournamentId);
-            await updateRankingFinals(currentTournamentId, data.hasThirdPlace);
-            await updateTournamentStatus(currentTournamentId, "finished");
-            return;
-        }
-
         const winners = [];
         const losers = [];
         mainMatches.forEach(([, m]) => {
@@ -211,6 +218,23 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
         });
 
         const data = await getTournamentData(currentTournamentId);
+
+        if (bracket === "loser") {
+            await finishLoserBracketRound(currentTournamentId, roundIndex, winners, losers, data.koRounds);
+            return;
+        }
+
+        if (koFormat === "double") {
+            await finishDoubleElimWbRound(currentTournamentId, roundIndex, winners, losers, data.koRounds);
+            return;
+        }
+
+        if (isFinal) {
+            await updateRankingFinals(currentTournamentId, data.hasThirdPlace);
+            await updateTournamentStatus(currentTournamentId, "finished");
+            return;
+        }
+
         await generateNextKORound(
             currentTournamentId, roundIndex, winners, losers, data.koRounds, data.hasThirdPlace
         );
@@ -219,8 +243,8 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
 
     const editTooltip = isViewMode
         ? "Keine Bearbeitung möglich (Beobachtungsmodus)"
-        : status !== statusKey
-            ? "Das Turnier befindet sich in einer anderen Stufe"
+        : roundGateBlocked
+            ? (koFormat === "double" ? "Diese Runde ist bereits abgeschlossen" : "Das Turnier befindet sich in einer anderen Stufe")
             : "";
 
     const finishLabel = isFinal ? "Turnier abschließen" : `${label} abschließen`;
@@ -319,7 +343,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                     style={{ width: "60px", paddingTop: "10px" }}
                     type="number"
                     value={winLegs}
-                    disabled={status !== statusKey || isViewMode}
+                    disabled={editingDisabled}
                     onChange={e => handleWinLegsChange(Number(e.target.value))}
                     inputProps={{ min: 0 }}
                 />
@@ -344,7 +368,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                             match={match}
                                             teamNames={teamNames}
                                             winLegs={winLegs}
-                                            disabled={status !== statusKey || isViewMode}
+                                            disabled={editingDisabled}
                                             onScoreChange={handleLegScoreChange}
                                             onScoreFocus={handleLegScoreFocus}
                                             onScoreBlur={handleLegScoreBlur}
@@ -362,7 +386,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     match={place3Match}
                                     teamNames={teamNames}
                                     winLegs={winLegs}
-                                    disabled={status !== statusKey || isViewMode}
+                                    disabled={editingDisabled}
                                     onScoreChange={handleLegScoreChange}
                                     onScoreFocus={handleLegScoreFocus}
                                     onScoreBlur={handleLegScoreBlur}
@@ -374,7 +398,13 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                     </div>
                 ) : (
                     <div>
-                        {renderPlaceholders().map(({ id1, id2, key }) => (
+                        {bracket === "loser" ? (
+                            <Card sx={{ width: "90vw", mx: "auto", mb: 2, p: 2 }}>
+                                <Typography color="text.secondary" fontStyle="italic">
+                                    Teilnehmer stehen erst nach Abschluss der vorherigen Runde(n) fest
+                                </Typography>
+                            </Card>
+                        ) : renderPlaceholders().map(({ id1, id2, key }) => (
                             <Card key={key} sx={{ width: "90vw", mx: "auto", mb: 2 }}>
                                 {!isFinal && <div style={{ textAlign: "left", margin: "2px" }}>{matchLabel(id1)}</div>}
                                 <div>{winnerPlaceholderLabel(id1)}</div>
@@ -399,7 +429,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                 )}
 
                 {!isViewMode && (
-                    <Button onClick={handleFinishRound} disabled={!allMatchesPlayed || status !== statusKey}>
+                    <Button onClick={handleFinishRound} disabled={!allMatchesPlayed || roundGateBlocked}>
                         {finishLabel}
                     </Button>
                 )}
@@ -419,7 +449,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                         style={{ width: "60px", paddingTop: "10px" }}
                         type="number"
                         value={winLegs}
-                        disabled={status !== statusKey || isViewMode}
+                        disabled={editingDisabled}
                         onChange={e => handleWinLegsChange(Number(e.target.value))}
                         inputProps={{ min: 0 }}
                     />
@@ -460,7 +490,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                             teamNames={teamNames}
                                             winLegs={winLegs}
                                             editTooltip={editTooltip}
-                                            disabled={status !== statusKey || isViewMode}
+                                            disabled={editingDisabled}
                                             onScoreChange={handleLegScoreChange}
                                             onScoreFocus={handleLegScoreFocus}
                                             onScoreBlur={handleLegScoreBlur}
@@ -472,7 +502,15 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                     </TableBody>
                 ) : (
                     <TableBody>
-                        {renderPlaceholders().map(({ id1, id2, key }) => (
+                        {bracket === "loser" ? (
+                            <TableRow>
+                                <TableCell colSpan={5} align="center">
+                                    <Typography color="text.secondary" fontStyle="italic">
+                                        Teilnehmer stehen erst nach Abschluss der vorherigen Runde(n) fest
+                                    </Typography>
+                                </TableCell>
+                            </TableRow>
+                        ) : renderPlaceholders().map(({ id1, id2, key }) => (
                             <TableRow key={key}>
                                 {!isFinal && (<TableCell align="center">{matchLabel(id1)}</TableCell>)}
                                 <TableCell />
@@ -510,7 +548,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                                     teamNames={teamNames}
                                     winLegs={winLegs}
                                     editTooltip={editTooltip}
-                                    disabled={status !== statusKey || isViewMode}
+                                    disabled={editingDisabled}
                                     onScoreChange={handleLegScoreChange}
                                     onScoreFocus={handleLegScoreFocus}
                                     onScoreBlur={handleLegScoreBlur}
@@ -534,7 +572,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
             )}
             <br />
             {!isViewMode && (
-                <Button onClick={handleFinishRound} disabled={!allMatchesPlayed || status !== statusKey}>
+                <Button onClick={handleFinishRound} disabled={!allMatchesPlayed || roundGateBlocked}>
                     {finishLabel}
                 </Button>
             )}
@@ -544,7 +582,7 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
 
 // ─── Hilfkomponenten ──────────────────────────────────────────────────────────
 
-function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disabled, onScoreChange, onScoreFocus, onScoreBlur, showMatchId = true, beingEditedByOther = false }) {
+export function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disabled, onScoreChange, onScoreFocus, onScoreBlur, showMatchId = true, beingEditedByOther = false }) {
     const team1 = match.team1;
     const team2 = match.team2;
 
@@ -601,7 +639,7 @@ function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disab
     );
 }
 
-function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs, editTooltip, disabled, onScoreChange, onScoreFocus, onScoreBlur, showMatchId = true, beingEditedByOther = false }) {
+export function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs, editTooltip, disabled, onScoreChange, onScoreFocus, onScoreBlur, showMatchId = true, beingEditedByOther = false }) {
     const team1 = match.team1;
     const team2 = match.team2;
 

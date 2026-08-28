@@ -1,12 +1,26 @@
 import { useEffect, useState } from "react";
 import { Navigate, Outlet, useNavigate, useParams } from "react-router-dom";
-import { checkIfTournamentExists, getTournamentData, statusToStage, koStageKey } from "../services/firestoreService";
+import {
+    checkIfTournamentExists, getTournamentData, statusToStage, koStageKey,
+    loserStageKey, getLbSchedule, GRAND_FINAL_STAGE, GRAND_FINAL_RESET_STAGE
+} from "../services/firestoreService";
 import { useTournamentAuth } from "../hooks/useTournamentAuth";
 import PinDialog from "../components/PinDialog";
 
 // Alle gültigen Stage-Werte
-function isValidStage(stage, koRounds, mode) {
+function isValidStage(stage, koRounds, mode, koFormat, bracketReset) {
     if (!stage) return false;
+    if (mode === "directko" && koFormat === "double") {
+        const lbRounds = getLbSchedule(koRounds).length;
+        const validStages = [
+            "standings",
+            ...Array.from({ length: koRounds }, (_, i) => koStageKey(i + 1)),
+            ...Array.from({ length: lbRounds }, (_, i) => loserStageKey(i + 1)),
+            GRAND_FINAL_STAGE,
+            ...(bracketReset ? [GRAND_FINAL_RESET_STAGE] : [])
+        ];
+        return validStages.includes(stage);
+    }
     const validStages = [
         ...(mode === "directko" ? [] : ["preliminary"]),
         "standings",
@@ -24,6 +38,8 @@ export default function RequireTournament() {
     const [correctStage, setCorrectStage] = useState(null);
     const [koRounds, setKoRounds] = useState(0);
     const [tournamentMode, setTournamentMode] = useState("roundrobin");
+    const [koFormat, setKoFormat] = useState("single");
+    const [bracketReset, setBracketReset] = useState(false);
     const [pinDialogOpen, setPinDialogOpen] = useState(false);
 
     const { isUnlocked, unlock } = useTournamentAuth(tournamentId);
@@ -41,9 +57,13 @@ export default function RequireTournament() {
             const data = await getTournamentData(tournamentId);
             const rounds = data?.koRounds ?? 0;
             const dataMode = data?.mode ?? "roundrobin";
+            const dataKoFormat = data?.koFormat ?? "single";
+            const dataBracketReset = data?.bracketReset ?? false;
             setKoRounds(rounds);
             setTournamentMode(dataMode);
-            setCorrectStage(statusToStage(data.status, rounds, dataMode));
+            setKoFormat(dataKoFormat);
+            setBracketReset(dataBracketReset);
+            setCorrectStage(statusToStage(data.status, rounds, dataMode, dataKoFormat));
             setLoading(false);
         }
 
@@ -93,7 +113,7 @@ export default function RequireTournament() {
 
     // Stage fehlt oder ist kein gültiger Wert → auf aktuellen Stage umleiten
     // Gültiger aber "falscher" Stage (z.B. Tab-Wechsel) → NICHT umleiten
-    if (!isValidStage(stage, koRounds, tournamentMode)) {
+    if (!isValidStage(stage, koRounds, tournamentMode, koFormat, bracketReset)) {
         return (
             <Navigate
                 to={`/tournament/${tournamentId}/${mode}/running/${correctStage}`}
