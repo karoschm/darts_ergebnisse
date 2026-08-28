@@ -157,6 +157,28 @@ export function nextStatus(currentStatus, koRounds, mode = "roundrobin", koForma
     return "finished";
 }
 
+// Menschenlesbare Bezeichnung der aktuellen Stufe für einen Status (z.B. für
+// Turnierlisten). Deckt dieselben Fälle wie statusToStage ab.
+export function statusToStageLabel(status, koRounds, mode = "roundrobin", koFormat = "single") {
+    if (status === "setup" && mode !== "directko") return "Nicht gestartet";
+    if (status === "setup" && mode === "directko") return koRoundLabel(koRounds, 1);
+    if (mode === "directko" && koFormat === "double") {
+        if (status === "finished") return "Abgeschlossen";
+        if (status === GRAND_FINAL_STATUS) return "Grand Final";
+        if (status === GRAND_FINAL_RESET_STATUS) return "Grand Final (Reset)";
+        const lbMatch = status.match(/^lko_(\d+)$/);
+        if (lbMatch) return loserRoundLabel(koRounds, Number(lbMatch[1]));
+        const wbMatch = status.match(/^ko_(\d+)$/);
+        if (wbMatch) return koRoundLabel(koRounds, Number(wbMatch[1]));
+        return koRoundLabel(koRounds, 1);
+    }
+    if (status === "group") return "Gruppenphase";
+    if (status === "finished") return "Abgeschlossen";
+    const match = status?.match(/^ko_(\d+)$/);
+    if (match) return koRoundLabel(koRounds, Number(match[1]));
+    return "Nicht gestartet";
+}
+
 // Stage-String für URL aus Status
 export function statusToStage(status, koRounds, mode = "roundrobin", koFormat = "single") {
     if (status === "setup" && mode === "directko") return koStageKey(1);

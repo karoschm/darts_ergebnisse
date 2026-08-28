@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { deleteTournament, getAllTournaments, getTournamentData, statusToStage } from "../../services/firestoreService";
+import { deleteTournament, getAllTournaments, getTournamentData, statusToStage, statusToStageLabel } from "../../services/firestoreService";
 import { useTournamentAuth } from "../../hooks/useTournamentAuth";
 import PinDialog from "../PinDialog";
 
@@ -29,15 +29,6 @@ export default function LoadTournamentSetup() {
     const [deleteLoading, setDeleteLoading] = useState(false);
 
     const { unlock } = useTournamentAuth(selectedTournament);
-
-    const stateMapping = {
-        setup:    "Nicht gestartet",
-        group:    "Gruppenphase",
-        qf:       "Viertelfinale",
-        sf:       "Halbfinale",
-        final:    "Finale",
-        finished: "Abgeschlossen"
-    };
 
     useEffect(() => {
         fetchTournaments();
@@ -137,7 +128,7 @@ export default function LoadTournamentSetup() {
                     >
                         {tournaments.map((tournament) => (
                             <MenuItem key={tournament.id} value={tournament.id}>
-                                {tournament.id} ({stateMapping[tournament.status]})
+                                {tournament.id} ({statusToStageLabel(tournament.status, tournament.koRounds ?? 0, tournament.mode ?? "roundrobin", tournament.koFormat ?? "single")})
                             </MenuItem>
                         ))}
                     </Select>

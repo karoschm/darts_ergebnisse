@@ -99,6 +99,8 @@ Phase 1 und 2 fassen dieselben Schreibpfade an (`saveScore`, `saveKOScore`, `del
 
 **Verifikation:** `npm run build`, manuelles Laden eines Turniers mit `koRounds >= 4`.
 
+**Nachtrag (2026-08-28):** Der Navigations-Aufruf (`navigateToTournament`) nutzte bereits korrekt `statusToStage`, aber die separate Anzeige-Map `stateMapping` (nur für das Label in der Turnier-Dropdown-Liste) war beim ursprünglichen Fix übersehen worden und deckte `ko_n`/`lko_n`/`gf` nicht ab — dadurch zeigte die Liste für Turniere in einer KO-Runde keine Stufe an. Jetzt entfernt, ersetzt durch neue Funktion `statusToStageLabel` in `firestoreService.js`.
+
 ### Phase 1 – Security-Fix (Anonymous Auth + blinder PIN-Check) ✅ Umgesetzt (2026-08-21)
 
 **Kernidee:** `pinHash` verschwindet aus dem öffentlich lesbaren `tournaments/{id}`-Dokument. Firebase Anonymous Auth (kostenlos, Spark-kompatibel) liefert eine stabile `request.auth.uid` pro Browser-Session.
