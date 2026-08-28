@@ -5,10 +5,13 @@ import DarkModeIcon from "@mui/icons-material/DarkMode";
 import LightModeIcon from "@mui/icons-material/LightMode";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import EditIcon from "@mui/icons-material/Edit"
+import HomeIcon from "@mui/icons-material/Home";
+import { useNavigate } from "react-router-dom";
 import { useThemeMode } from "../context/ThemeContext";
 
 export default function HeaderBar({ tournamentId, status, statusLabelMap, statusColorMap, isViewMode }) {
     const { darkMode, toggleDarkMode } = useThemeMode();
+    const navigate = useNavigate();
 
     return (
         <Box
@@ -26,6 +29,12 @@ export default function HeaderBar({ tournamentId, status, statusLabelMap, status
                 gap: 2,
             }}
         >
+            <Tooltip title="Zur Startseite">
+                <IconButton onClick={() => navigate("/")}>
+                    <HomeIcon />
+                </IconButton>
+            </Tooltip>
+
             <Typography variant="h5">
                 {tournamentId}
             </Typography>
