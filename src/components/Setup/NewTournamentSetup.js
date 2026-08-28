@@ -1,4 +1,5 @@
-import { Button, Checkbox, FormControlLabel, MenuItem, Select, TextField, FormControl, InputLabel, useTheme, useMediaQuery } from "@mui/material";
+import { Button, TextField, LinearProgress, IconButton, Stack, Paper } from "@mui/material";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import useFormStatus from "../../hooks/useFormStatus";
@@ -14,6 +15,28 @@ const KO_ROUND_OPTIONS = [
     { label: "Last 64",        rounds: 6 },
 ];
 
+// Antwortmöglichkeit einer Auswahl-/Ja-Nein-Frage: löst beim Klick sofort die
+// zugehörige State-Änderung aus und blättert automatisch zur nächsten Frage
+// (Quiz-Charakter statt klassischer Formularfelder).
+function ChoiceButton({ label, hint, selected, onClick, disabled }) {
+    return (
+        <Button
+            variant={selected ? "contained" : "outlined"}
+            onClick={onClick}
+            disabled={disabled}
+            sx={{ justifyContent: "flex-start", textAlign: "left", py: 1.2, px: 2 }}
+        >
+            <span>
+                {label}
+                {hint && (
+                    <div style={{ fontSize: "0.75rem", opacity: 0.7, fontWeight: 400 }}>
+                        {hint}
+                    </div>
+                )}
+            </span>
+        </Button>
+    );
+}
 
 export default function NewTournamentSetup() {
     const navigate = useNavigate();
@@ -36,15 +59,13 @@ export default function NewTournamentSetup() {
     const [pinConfirm, setPinConfirm] = useState("");
     const [mode, setMode] = useState("roundrobin");
     // Nur relevant bei mode==="roundrobin": ob nach der Vorrunde eine KO-Runde folgt.
-    // "Keine KO-Runde" ist bewusst Teil der obersten Turniermodus-Auswahl (statt einer
-    // Option im KO-Runden-Anzahl-Wähler), da Gruppen zwingend eine KO-Runde brauchen
-    // (siehe useGroups) und diese Entscheidung damit auf derselben Ebene wie "Direkt-KO"
-    // getroffen werden muss, bevor Gruppen überhaupt zur Wahl stehen.
     const [roundRobinHasKO, setRoundRobinHasKO] = useState(true);
     const [seeding, setSeeding] = useState("random");
     const [directKoTeamCount, setDirectKoTeamCount] = useState(8);
     const [koFormat, setKoFormat] = useState("single");
     const [bracketReset, setBracketReset] = useState(false);
+
+    const [stepIndex, setStepIndex] = useState(0);
 
     const isDirectKO = mode === "directko";
     const directKoRounds = Math.ceil(Math.log2(Math.max(2, directKoTeamCount)));
@@ -54,90 +75,12 @@ export default function NewTournamentSetup() {
     // Freilose aus — daher nur bei exakter Zweierpotenz-Teamanzahl ab 4 wählbar.
     const directKoIsPowerOfTwo = directKoTeamCount >= 4 && directKoByeCount === 0;
 
-    const theme = useTheme();
-    const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
-
     const { unlock } = useTournamentAuth(tournamentName.trim());
 
     // Nur Optionen anzeigen bei denen 2^rounds <= teamCount
     const availableKoOptions = useMemo(() => {
         return KO_ROUND_OPTIONS.filter(opt => Math.pow(2, opt.rounds) <= numberTeams);
     }, [numberTeams]);
-
-    // Maximal sinnvolle Spieltagsanzahl: vollständiger Rundenplan innerhalb einer Gruppe (n-1),
-    // nicht bezogen auf die Gesamtteamzahl — Gruppen spielen unabhängig voneinander.
-    const clampMatchdays = (teamCount, newGroupCount) => {
-        const perGroup = newGroupCount > 0 ? teamCount / newGroupCount : teamCount;
-        const maxMatchdays = Math.max(1, perGroup - 1);
-        setNumberMatchdays(prev => Math.min(Number(prev) || 1, maxMatchdays));
-    };
-
-    // Höchstens so viele Qualifikanten pro Gruppe, wie eine ganze KO-Runde füllen können —
-    // da die Gruppenanzahl (wegen der Zweierpotenz-Validierung) selbst immer eine Zweierpotenz
-    // ist, muss auch die Qualifikantenzahl pro Gruppe eine sein: die größte Zweierpotenz, die
-    // nicht größer als die Gruppengröße ist (Bsp. 14 Teams/2 Gruppen → 7 Teams/Gruppe → max. 4).
-    const maxQualifiersPerGroup = (teamsInGroup) =>
-        teamsInGroup > 0 ? Math.pow(2, Math.floor(Math.log2(teamsInGroup))) : 1;
-
-    const clampQualifiersPerGroup = (teamCount, newGroupCount) => {
-        const perGroup = newGroupCount > 0 ? teamCount / newGroupCount : teamCount;
-        const max = maxQualifiersPerGroup(perGroup);
-        setQualifiersPerGroup(prev => Math.min(Number(prev) || 1, max));
-    };
-
-    // Falls aktuell gewählte Option durch Teamanzahl-Änderung ungültig wird → zurücksetzen
-    const handleTeamCountChange = (e) => {
-        const newCount = Number(e.target.value);
-        setNumberTeams(newCount);
-        if (Math.pow(2, koRounds) > newCount) {
-            // Auf größte noch mögliche Option zurücksetzen
-            const maxValid = Math.floor(Math.log2(newCount));
-            setKoRounds(maxValid);
-        }
-        clampMatchdays(newCount, groupCount);
-        clampQualifiersPerGroup(newCount, groupCount);
-    };
-
-    // Doppel-KO-Auswahl zurücksetzen, falls die neue Teamanzahl keine gültige
-    // Zweierpotenz mehr ist (analog zum bestehenden KO-Runden-Reset-Muster).
-    const handleDirectKoTeamCountChange = (e) => {
-        const newCount = Math.max(2, Number(e.target.value));
-        setDirectKoTeamCount(newCount);
-        const bracketSize = Math.pow(2, Math.ceil(Math.log2(Math.max(2, newCount))));
-        if (koFormat === "double" && !(newCount >= 4 && bracketSize === newCount)) {
-            setKoFormat("single");
-        }
-    };
-
-    const handleGroupCountChange = (e) => {
-        const newGroupCount = Math.max(1, Number(e.target.value));
-        setGroupCount(newGroupCount);
-        clampMatchdays(numberTeams, newGroupCount);
-        clampQualifiersPerGroup(numberTeams, newGroupCount);
-    };
-
-    // Turniermodus-Auswahl bildet drei Optionen auf die zwei intern gespeicherten Werte
-    // (mode: "roundrobin"/"directko") plus das separate roundRobinHasKO-Flag ab.
-    const handleFormatChange = (e) => {
-        const value = e.target.value;
-        if (value === "directko") {
-            setMode("directko");
-            return;
-        }
-        setMode("roundrobin");
-        setRoundRobinHasKO(value === "roundrobin_ko");
-        if (value === "roundrobin_only") {
-            setGroupCount(1); // Gruppen erfordern zwingend eine anschließende KO-Runde
-        }
-    };
-
-    const handlePinChange = (e) => {
-        setPin(e.target.value.replace(/\D/g, "").slice(0, 4));
-    };
-
-    const handlePinConfirmChange = (e) => {
-        setPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 4));
-    };
 
     // "Nur Vorrunde" (keine KO-Runde) ist eine eigene Turniermodus-Option; Gruppen sind dort
     // nicht wählbar, da sie zwingend eine anschließende KO-Runde voraussetzen (siehe useGroups).
@@ -170,6 +113,310 @@ export default function NewTournamentSetup() {
             : useGroups
                 ? groupsKoRounds
                 : koRounds;
+
+    // Falls aktuell gewählte Option durch Teamanzahl-Änderung ungültig wird → zurücksetzen
+    const handleTeamCountChange = (newCount) => {
+        setNumberTeams(newCount);
+        if (Math.pow(2, koRounds) > newCount) {
+            const maxValid = Math.floor(Math.log2(newCount));
+            setKoRounds(maxValid);
+        }
+        const perGroup = groupCount > 0 ? newCount / groupCount : newCount;
+        const maxMatchdays = Math.max(1, perGroup - 1);
+        setNumberMatchdays(prev => Math.min(Number(prev) || 1, maxMatchdays));
+        const maxQualifiers = perGroup > 0 ? Math.pow(2, Math.floor(Math.log2(perGroup))) : 1;
+        setQualifiersPerGroup(prev => Math.min(Number(prev) || 1, maxQualifiers));
+    };
+
+    const handleGroupCountChange = (newGroupCount) => {
+        setGroupCount(newGroupCount);
+        const perGroup = newGroupCount > 0 ? numberTeams / newGroupCount : numberTeams;
+        const maxMatchdays = Math.max(1, perGroup - 1);
+        setNumberMatchdays(prev => Math.min(Number(prev) || 1, maxMatchdays));
+        const maxQualifiers = perGroup > 0 ? Math.pow(2, Math.floor(Math.log2(perGroup))) : 1;
+        setQualifiersPerGroup(prev => Math.min(Number(prev) || 1, maxQualifiers));
+    };
+
+    // Doppel-KO-Auswahl zurücksetzen, falls die neue Teamanzahl keine gültige
+    // Zweierpotenz mehr ist (analog zum bestehenden KO-Runden-Reset-Muster).
+    const handleDirectKoTeamCountChange = (newCount) => {
+        const clamped = Math.max(2, newCount);
+        setDirectKoTeamCount(clamped);
+        const bracketSize = Math.pow(2, Math.ceil(Math.log2(Math.max(2, clamped))));
+        if (koFormat === "double" && !(clamped >= 4 && bracketSize === clamped)) {
+            setKoFormat("single");
+        }
+    };
+
+    const handlePinChange = (e) => setPin(e.target.value.replace(/\D/g, "").slice(0, 4));
+    const handlePinConfirmChange = (e) => setPinConfirm(e.target.value.replace(/\D/g, "").slice(0, 4));
+
+    const goNext = () => setStepIndex(i => i + 1);
+    const goBack = () => setStepIndex(i => Math.max(0, i - 1));
+
+    // Die vollständige, fest geordnete Liste möglicher Fragen. Jede Frage entscheidet über
+    // `visible`, ob sie im aktuellen Zustand überhaupt gestellt wird — dadurch ergibt sich
+    // exakt derselbe bedingte Ablauf wie im vorherigen klassischen Formular, nur als
+    // Schritt-für-Schritt Frage-Antwort-Dialog statt als einmal komplett sichtbares Formular.
+    const allSteps = [
+        {
+            id: "mode",
+            visible: true,
+            question: "Wie soll das Turnier ablaufen?",
+            render: () => (
+                <Stack spacing={1.5} sx={{ width: "100%", maxWidth: 420 }}>
+                    <ChoiceButton
+                        label="Vorrunde + KO-Runde"
+                        selected={!isDirectKO && roundRobinHasKO}
+                        onClick={() => { setMode("roundrobin"); setRoundRobinHasKO(true); goNext(); }}
+                    />
+                    <ChoiceButton
+                        label="Nur Vorrunde (keine KO-Runde)"
+                        selected={!isDirectKO && !roundRobinHasKO}
+                        onClick={() => { setMode("roundrobin"); setRoundRobinHasKO(false); setGroupCount(1); goNext(); }}
+                    />
+                    <ChoiceButton
+                        label="Direkt-KO (ohne Vorrunde)"
+                        selected={isDirectKO}
+                        onClick={() => { setMode("directko"); goNext(); }}
+                    />
+                </Stack>
+            ),
+        },
+        // --- Direkt-KO Zweig ---
+        {
+            id: "directKoTeamCount",
+            visible: isDirectKO,
+            question: "Wie viele Teams nehmen teil?",
+            render: () => (
+                <NumberQuestion
+                    value={directKoTeamCount}
+                    min={2}
+                    onChange={handleDirectKoTeamCountChange}
+                    onConfirm={goNext}
+                    label="Anzahl Teams"
+                    hint={`${koRoundLabel(directKoRounds, 1)} startet direkt mit ${directKoBracketSize} Plätzen${directKoByeCount > 0 ? ` (${directKoByeCount} Freilos${directKoByeCount > 1 ? "e" : ""} für die bestplatzierten Teams)` : ""}`}
+                />
+            ),
+        },
+        {
+            id: "seeding",
+            visible: isDirectKO,
+            question: "Wie soll die Setzliste erstellt werden?",
+            render: () => (
+                <Stack spacing={1.5} sx={{ width: "100%", maxWidth: 420 }}>
+                    <ChoiceButton label="Zufällige Auslosung" selected={seeding === "random"} onClick={() => { setSeeding("random"); goNext(); }} />
+                    <ChoiceButton label="Manuelle Setzliste" selected={seeding === "manual"} onClick={() => { setSeeding("manual"); goNext(); }} />
+                </Stack>
+            ),
+        },
+        {
+            id: "koFormatDouble",
+            visible: isDirectKO && directKoIsPowerOfTwo,
+            question: "Soll ein Doppel-KO (Loser-Bracket) gespielt werden?",
+            render: () => (
+                <Stack spacing={1.5} sx={{ width: "100%", maxWidth: 420 }}>
+                    <ChoiceButton label="Ja, Doppel-KO" selected={koFormat === "double"} onClick={() => { setKoFormat("double"); goNext(); }} />
+                    <ChoiceButton label="Nein, einfaches KO" selected={koFormat === "single"} onClick={() => { setKoFormat("single"); goNext(); }} />
+                </Stack>
+            ),
+        },
+        {
+            id: "bracketReset",
+            visible: isDirectKO && koFormat === "double",
+            question: "Soll es einen Bracket Reset im Grand Final geben?",
+            render: () => (
+                <Stack spacing={1.5} sx={{ width: "100%", maxWidth: 420 }}>
+                    <ChoiceButton
+                        label="Ja"
+                        hint="Sieger Loser-Bracket muss WB-Sieger zweimal schlagen"
+                        selected={bracketReset === true}
+                        onClick={() => { setBracketReset(true); goNext(); }}
+                    />
+                    <ChoiceButton label="Nein" selected={bracketReset === false} onClick={() => { setBracketReset(false); goNext(); }} />
+                </Stack>
+            ),
+        },
+        // --- Vorrunde-Zweig ---
+        {
+            id: "numberTeams",
+            visible: !isDirectKO,
+            question: "Wie viele Teams nehmen teil?",
+            render: () => (
+                <NumberQuestion
+                    value={numberTeams}
+                    min={2}
+                    onChange={handleTeamCountChange}
+                    onConfirm={goNext}
+                    label="Anzahl Teams"
+                />
+            ),
+        },
+        {
+            id: "groupCount",
+            visible: !isDirectKO && !isPreliminaryOnly,
+            question: "In wie viele Gruppen soll die Vorrunde aufgeteilt werden?",
+            render: () => (
+                <NumberQuestion
+                    value={groupCount}
+                    min={1}
+                    onChange={handleGroupCountChange}
+                    onConfirm={goNext}
+                    label="Anzahl Gruppen"
+                    hint={groupCount > 1
+                        ? (numberTeams % groupCount === 0
+                            ? `${numberTeams / groupCount} Teams pro Gruppe`
+                            : "Die Teamanzahl muss durch die Gruppenanzahl teilbar sein")
+                        : undefined}
+                />
+            ),
+        },
+        {
+            id: "preliminaryFormat",
+            visible: !isDirectKO && !isPreliminaryOnly && groupCount > 1,
+            question: "Wie sollen die Spieltage der Vorrunde bestimmt werden?",
+            render: () => (
+                <Stack spacing={1.5} sx={{ width: "100%", maxWidth: 420 }}>
+                    <ChoiceButton label="Jeder gegen Jeden" selected={preliminaryFormat === "full"} onClick={() => { setPreliminaryFormat("full"); goNext(); }} />
+                    <ChoiceButton
+                        label="Weniger Spieltage"
+                        hint="Gruppengröße muss gerade sein"
+                        selected={preliminaryFormat === "fixed"}
+                        onClick={() => { setPreliminaryFormat("fixed"); goNext(); }}
+                    />
+                </Stack>
+            ),
+        },
+        {
+            id: "numberMatchdays",
+            visible: !isDirectKO && !useFullRoundRobin,
+            question: "Wie viele Spieltage soll die Vorrunde haben?",
+            render: () => (
+                <NumberQuestion
+                    value={numberMatchdays}
+                    min={1}
+                    max={Math.max(1, teamsPerGroup - 1)}
+                    onChange={setNumberMatchdays}
+                    onConfirm={goNext}
+                    label="Anzahl Spieltage Vorrunde"
+                />
+            ),
+        },
+        {
+            id: "preliminaryScoreMode",
+            visible: !isDirectKO,
+            question: "Wie soll die Vorrunde gewertet werden?",
+            render: () => (
+                <Stack spacing={1.5} sx={{ width: "100%", maxWidth: 420 }}>
+                    <ChoiceButton label="Punkte" selected={preliminaryScoreMode === "points"} onClick={() => { setPreliminaryScoreMode("points"); goNext(); }} />
+                    <ChoiceButton label="Gewinnlegs" selected={preliminaryScoreMode === "legs"} onClick={() => { setPreliminaryScoreMode("legs"); goNext(); }} />
+                </Stack>
+            ),
+        },
+        {
+            id: "winLegs",
+            visible: !isDirectKO && preliminaryScoreMode === "legs",
+            question: "Gewinnlegs: First to wie vielen?",
+            render: () => (
+                <NumberQuestion
+                    value={winLegs}
+                    min={1}
+                    onChange={setWinLegs}
+                    onConfirm={goNext}
+                    label="Gewinnlegs"
+                />
+            ),
+        },
+        {
+            id: "qualifiersPerGroup",
+            visible: !isDirectKO && !isPreliminaryOnly && useGroups,
+            question: "Wie viele Teams pro Gruppe qualifizieren sich für die KO-Runde?",
+            render: () => {
+                const max = teamsPerGroup > 0 ? Math.pow(2, Math.floor(Math.log2(teamsPerGroup))) : 1;
+                return (
+                    <NumberQuestion
+                        value={qualifiersPerGroup}
+                        min={1}
+                        max={max}
+                        onChange={setQualifiersPerGroup}
+                        onConfirm={goNext}
+                        label="Qualifikanten pro Gruppe"
+                        hint={`${groupCount} Gruppen × ${qualifiersPerGroup} Qualifikanten = ${groupsQualifiedTotal} Teams` +
+                            (groupsKoRoundsValid ? ` → ${koRoundLabel(groupsKoRounds, 1)}` : " (muss eine Zweierpotenz ergeben, z.B. 2, 4, 8, 16)")}
+                    />
+                );
+            },
+        },
+        {
+            id: "koRounds",
+            visible: !isDirectKO && !isPreliminaryOnly && !useGroups,
+            question: "Bei welcher Stufe soll die KO-Runde beginnen?",
+            render: () => (
+                <Stack spacing={1.5} sx={{ width: "100%", maxWidth: 420 }}>
+                    {availableKoOptions.map(opt => (
+                        <ChoiceButton
+                            key={opt.rounds}
+                            label={opt.label}
+                            hint={`${Math.pow(2, opt.rounds)} Teams qualifizieren sich`}
+                            selected={koRounds === opt.rounds}
+                            onClick={() => { setKoRounds(opt.rounds); goNext(); }}
+                        />
+                    ))}
+                </Stack>
+            ),
+        },
+        // --- gemeinsam ---
+        {
+            id: "hasThirdPlace",
+            visible: (isDirectKO || effectiveKoRounds > 0) && !(isDirectKO && koFormat === "double"),
+            question: "Soll es ein Spiel um Platz 3 geben?",
+            render: () => (
+                <Stack spacing={1.5} sx={{ width: "100%", maxWidth: 420 }}>
+                    <ChoiceButton label="Ja" selected={hasThirdPlace === true} onClick={() => { setHasThirdPlace(true); goNext(); }} />
+                    <ChoiceButton label="Nein" selected={hasThirdPlace === false} onClick={() => { setHasThirdPlace(false); goNext(); }} />
+                </Stack>
+            ),
+        },
+        {
+            id: "summary",
+            visible: true,
+            question: "Fast fertig – wie soll das Turnier heißen?",
+            render: () => (
+                <Stack spacing={2} sx={{ width: "100%", maxWidth: 320, alignItems: "center" }}>
+                    <TextField
+                        autoFocus
+                        value={tournamentName}
+                        onChange={e => setTournamentName(e.target.value)}
+                        label="Turniername"
+                        fullWidth
+                    />
+                    <TextField
+                        type="password"
+                        value={pin}
+                        onChange={handlePinChange}
+                        label="PIN für die Bearbeitung"
+                        inputProps={{ inputMode: "numeric", maxLength: 4 }}
+                        helperText="Nur Ziffern, genau 4 Stellen"
+                        fullWidth
+                    />
+                    <TextField
+                        type="password"
+                        value={pinConfirm}
+                        onChange={handlePinConfirmChange}
+                        label="PIN bestätigen"
+                        inputProps={{ inputMode: "numeric", maxLength: 4 }}
+                        fullWidth
+                    />
+                    <Button type="submit" variant="contained">Turnier erstellen</Button>
+                </Stack>
+            ),
+        },
+    ];
+
+    const steps = allSteps.filter(s => s.visible);
+    const clampedIndex = Math.min(stepIndex, steps.length - 1);
+    const currentStep = steps[clampedIndex];
+    const progress = steps.length > 0 ? ((clampedIndex + 1) / steps.length) * 100 : 0;
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -218,8 +465,6 @@ export default function NewTournamentSetup() {
         }
     };
 
-    const qualifiedTeams = Math.pow(2, koRounds);
-
     return (
         <form
             onSubmit={handleSubmit}
@@ -235,277 +480,51 @@ export default function NewTournamentSetup() {
         >
             <h1>Turnier konfigurieren</h1>
 
-            <label>Turniermodus</label>
-            <br />
-            <FormControl sx={{ minWidth: 260 }}>
-                <InputLabel>Turniermodus</InputLabel>
-                <Select
-                    value={isDirectKO ? "directko" : (roundRobinHasKO ? "roundrobin_ko" : "roundrobin_only")}
-                    label="Turniermodus"
-                    onChange={handleFormatChange}
-                >
-                    <MenuItem value="roundrobin_ko">Vorrunde + KO-Runde</MenuItem>
-                    <MenuItem value="roundrobin_only">Nur Vorrunde (keine KO-Runde)</MenuItem>
-                    <MenuItem value="directko">Direkt-KO (ohne Vorrunde)</MenuItem>
-                </Select>
-            </FormControl>
-            <br /><br />
-
-            {isDirectKO ? (
-                <>
-                    <label>Wie viele Teams nehmen teil?</label>
-                    <TextField
-                        type="number"
-                        value={directKoTeamCount}
-                        onChange={handleDirectKoTeamCountChange}
-                        inputProps={{ min: 2 }}
-                        label="Anzahl Teams"
-                    />
-                    <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: 0.7 }}>
-                        {koRoundLabel(directKoRounds, 1)} startet direkt mit {directKoBracketSize} Plätzen
-                        {directKoByeCount > 0 && ` (${directKoByeCount} Freilos${directKoByeCount > 1 ? "e" : ""} für die bestplatzierten Teams)`}
+            <div style={{ width: "100%", maxWidth: 420, marginBottom: 24 }}>
+                <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+                    <IconButton onClick={goBack} disabled={stepIndex === 0} aria-label="Zurück">
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <div style={{ flex: 1, fontSize: "0.8rem", opacity: 0.7 }}>
+                        Frage {clampedIndex + 1} von {steps.length}
                     </div>
-                    <br /><br />
+                </Stack>
+                <LinearProgress variant="determinate" value={progress} />
+            </div>
 
-                    <label>Wie soll die Setzliste erstellt werden?</label>
-                    <br />
-                    <FormControl sx={{ minWidth: 260 }}>
-                        <InputLabel>Setzliste</InputLabel>
-                        <Select
-                            value={seeding}
-                            label="Setzliste"
-                            onChange={e => setSeeding(e.target.value)}
-                        >
-                            <MenuItem value="random">Zufällige Auslosung</MenuItem>
-                            <MenuItem value="manual">Manuelle Setzliste</MenuItem>
-                        </Select>
-                    </FormControl>
-                    <br /><br />
-
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={koFormat === "double"}
-                                disabled={!directKoIsPowerOfTwo}
-                                onChange={e => setKoFormat(e.target.checked ? "double" : "single")}
-                            />
-                        }
-                        label="Doppel-KO (Loser-Bracket)"
-                    />
-                    {!directKoIsPowerOfTwo && (
-                        <div style={{ fontSize: "0.85rem", opacity: 0.7, maxWidth: 320 }}>
-                            Doppel-KO ist nur bei einer Teamanzahl verfügbar, die eine Zweierpotenz ist (4, 8, 16, ...).
-                        </div>
-                    )}
-                    {koFormat === "double" && (
-                        <>
-                            <br />
-                            <FormControlLabel
-                                control={
-                                    <Checkbox
-                                        checked={bracketReset}
-                                        onChange={e => setBracketReset(e.target.checked)}
-                                    />
-                                }
-                                label="Bracket Reset im Grand Final (Sieger Loser-Bracket muss WB-Sieger zweimal schlagen)"
-                            />
-                        </>
-                    )}
-                    <br /><br />
-                </>
-            ) : (
-                <>
-                    <label>Wie viele Teams nehmen teil?</label>
-                    <TextField
-                        type="number"
-                        value={numberTeams}
-                        onChange={handleTeamCountChange}
-                        inputProps={{ min: 2 }}
-                        label="Anzahl Teams"
-                    />
-                    <br /><br />
-
-                    {!isPreliminaryOnly && (
-                        <>
-                            <label>In wie viele Gruppen soll die Vorrunde aufgeteilt werden?</label>
-                            <TextField
-                                type="number"
-                                value={groupCount}
-                                onChange={handleGroupCountChange}
-                                inputProps={{ min: 1 }}
-                                label="Anzahl Gruppen"
-                            />
-                            {groupCount > 1 && (
-                                <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: 0.7 }}>
-                                    {numberTeams % groupCount === 0
-                                        ? `${numberTeams / groupCount} Teams pro Gruppe`
-                                        : "Die Teamanzahl muss durch die Gruppenanzahl teilbar sein"}
-                                </div>
-                            )}
-                            <br /><br />
-
-                            {groupCount > 1 && (
-                                <>
-                                    <label>Wie sollen die Spieltage der Vorrunde bestimmt werden?</label>
-                                    <br />
-                                    <FormControl sx={{ minWidth: 280 }}>
-                                        <InputLabel>Vorrundenformat</InputLabel>
-                                        <Select
-                                            value={preliminaryFormat}
-                                            label="Vorrundenformat"
-                                            onChange={e => setPreliminaryFormat(e.target.value)}
-                                        >
-                                            <MenuItem value="full">Jeder gegen Jeden</MenuItem>
-                                            <MenuItem value="fixed">Weniger Spieltage (Gruppengröße muss gerade sein)</MenuItem>
-                                        </Select>
-                                    </FormControl>
-                                    <br /><br />
-                                </>
-                            )}
-                        </>
-                    )}
-
-                    {useFullRoundRobin ? (
-                        <div style={{ marginBottom: 16, fontSize: "0.85rem", opacity: 0.7 }}>
-                            Jeder gegen jeden: {fullRoundRobinMatchdays} Spieltage
-                            {teamsPerGroup % 2 !== 0 && ` (${teamsPerGroup} Teams/Gruppe — ungerade, daher hat pro Spieltag ein Team spielfrei)`}
-                        </div>
-                    ) : (
-                        <>
-                            <label>Wie viele Spieltage soll die Vorrunde haben?</label>
-                            <TextField
-                                type="number"
-                                value={numberMatchdays}
-                                onChange={e => setNumberMatchdays(e.target.value)}
-                                inputProps={{ min: 1, max: Math.max(1, teamsPerGroup - 1) }}
-                                label="Anzahl Spieltage Vorrunde"
-                            />
-                            <br /><br />
-                        </>
-                    )}
-
-                    <label>Wie soll die Vorrunde gewertet werden?</label>
-                    <br />
-                    <FormControl sx={{ minWidth: 220 }}>
-                        <InputLabel>Wertungsmodus Vorrunde</InputLabel>
-                        <Select
-                            value={preliminaryScoreMode}
-                            label="Wertungsmodus Vorrunde"
-                            onChange={e => setPreliminaryScoreMode(e.target.value)}
-                        >
-                            <MenuItem value="points">Punkte</MenuItem>
-                            <MenuItem value="legs">Gewinnlegs</MenuItem>
-                        </Select>
-                    </FormControl>
-                    {preliminaryScoreMode === "legs" && (
-                        <>
-                            <br /><br />
-                            <label>Gewinnlegs: First to</label>
-                            <TextField
-                                type="number"
-                                value={winLegs}
-                                onChange={e => setWinLegs(Number(e.target.value))}
-                                inputProps={{ min: 1 }}
-                                label="Gewinnlegs"
-                            />
-                        </>
-                    )}
-                    <br /><br />
-
-                    {!isPreliminaryOnly && (
-                        useGroups ? (
-                            <>
-                                <label>Wie viele Teams pro Gruppe qualifizieren sich für die KO-Runde?</label>
-                                <TextField
-                                    type="number"
-                                    value={qualifiersPerGroup}
-                                    onChange={e => setQualifiersPerGroup(Math.min(Number(e.target.value), maxQualifiersPerGroup(teamsPerGroup)))}
-                                    inputProps={{ min: 1, max: maxQualifiersPerGroup(teamsPerGroup) }}
-                                    label="Qualifikanten pro Gruppe"
-                                />
-                                <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: groupsKoRoundsValid ? 0.7 : 1, color: groupsKoRoundsValid ? "inherit" : "orange" }}>
-                                    {groupCount} Gruppen × {qualifiersPerGroup} Qualifikanten = {groupsQualifiedTotal} Teams
-                                    {groupsKoRoundsValid
-                                        ? ` → ${koRoundLabel(groupsKoRounds, 1)}`
-                                        : " (muss eine Zweierpotenz ergeben, z.B. 2, 4, 8, 16)"}
-                                </div>
-                            </>
-                        ) : (
-                            <>
-                                <label>Bei welcher Stufe soll die KO-Runde beginnen?</label>
-                                <br />
-                                <FormControl sx={{ minWidth: 220 }}>
-                                    <InputLabel>KO-Runde beginnen bei</InputLabel>
-                                    <Select
-                                        value={koRounds}
-                                        label="KO-Runde beginnen bei"
-                                        onChange={e => setKoRounds(Number(e.target.value))}
-                                    >
-                                        {availableKoOptions.map(opt => (
-                                            <MenuItem key={opt.rounds} value={opt.rounds}>
-                                                {opt.label}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                                <div style={{ marginTop: 8, fontSize: "0.85rem", opacity: 0.7 }}>
-                                    {qualifiedTeams} Teams qualifizieren sich für die KO-Runde
-                                </div>
-                            </>
-                        )
-                    )}
-                    <br />
-                </>
+            {currentStep && (
+                <Paper elevation={2} sx={{ p: 4, width: "100%", maxWidth: 480, display: "flex", flexDirection: "column", alignItems: "center" }}>
+                    <h2 style={{ marginTop: 0 }}>{currentStep.question}</h2>
+                    {currentStep.render()}
+                </Paper>
             )}
-
-            {(isDirectKO || effectiveKoRounds > 0) && !(isDirectKO && koFormat === "double") && (
-                <>
-                    <FormControlLabel
-                        control={
-                            <Checkbox
-                                checked={hasThirdPlace}
-                                onChange={e => setHasThirdPlace(e.target.checked)}
-                            />
-                        }
-                        label="Spiel um Platz 3"
-                    />
-                    <br />
-                </>
-            )}
-            <br />
-
-            <label>Bitte wähle einen Namen für das Turnier</label>
-            <TextField
-                value={tournamentName}
-                onChange={e => setTournamentName(e.target.value)}
-                label="Turniername"
-            />
-            <br /><br />
-
-            <label>PIN für die Bearbeitung (4 Ziffern)</label>
-            <TextField
-                type="password"
-                value={pin}
-                onChange={handlePinChange}
-                label="PIN"
-                inputProps={{ inputMode: "numeric", maxLength: 4 }}
-                helperText="Nur Ziffern, genau 4 Stellen"
-            />
-
-            <TextField
-                type="password"
-                value={pinConfirm}
-                onChange={handlePinConfirmChange}
-                label="PIN bestätigen"
-                inputProps={{ inputMode: "numeric", maxLength: 4 }}
-            />
-            <br /><br />
-
-            <Button type="submit">Turnier erstellen</Button>
 
             {errorMessage && (
-                <div style={{ color: "red", marginTop: "10px" }}>{errorMessage}</div>
+                <div style={{ color: "red", marginTop: "20px" }}>{errorMessage}</div>
             )}
         </form>
+    );
+}
+
+// Frage mit numerischer Eingabe: eigener "Weiter"-Button statt Auto-Advance, da hier
+// (anders als bei Auswahl-Fragen) erst getippt werden muss, bevor die Antwort feststeht.
+function NumberQuestion({ value, min, max, onChange, onConfirm, label, hint }) {
+    const isValid = (min === undefined || value >= min) && (max === undefined || value <= max);
+
+    return (
+        <Stack spacing={2} sx={{ width: "100%", maxWidth: 320, alignItems: "center" }}>
+            <TextField
+                type="number"
+                autoFocus
+                value={value}
+                onChange={e => onChange(Number(e.target.value))}
+                inputProps={{ min, max }}
+                label={label}
+                fullWidth
+                onKeyDown={e => { if (e.key === "Enter" && isValid) { e.preventDefault(); onConfirm(); } }}
+            />
+            {hint && <div style={{ fontSize: "0.85rem", opacity: 0.7 }}>{hint}</div>}
+            <Button variant="contained" onClick={onConfirm} disabled={!isValid}>Weiter</Button>
+        </Stack>
     );
 }
