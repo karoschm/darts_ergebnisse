@@ -28,6 +28,10 @@ export default function NewTournamentSetup() {
     const [winLegs, setWinLegs] = useState(3);
     const [groupCount, setGroupCount] = useState(1);
     const [qualifiersPerGroup, setQualifiersPerGroup] = useState(1);
+    // Nur bei Gruppen relevant: "fixed" = feste, frei wählbare Spieltaganzahl (Gruppengröße
+    // muss gerade sein), "full" = jeder gegen jeden (Spieltaganzahl ergibt sich aus der
+    // Gruppengröße, auch ungerade Gruppengröße möglich — ein Team pro Runde spielfrei).
+    const [preliminaryFormat, setPreliminaryFormat] = useState("full");
     const [pin, setPin] = useState("");
     const [pinConfirm, setPinConfirm] = useState("");
     const [mode, setMode] = useState("roundrobin");
@@ -131,6 +135,18 @@ export default function NewTournamentSetup() {
     const groupsKoRoundsValid = groupsQualifiedTotal > 0 && Number.isInteger(Math.log2(groupsQualifiedTotal));
     const groupsKoRounds = groupsKoRoundsValid ? Math.log2(groupsQualifiedTotal) : 0;
 
+    // "Jeder gegen jeden": Spieltaganzahl ergibt sich aus der Gruppengröße statt frei wählbar
+    // zu sein — dadurch ist auch eine ungerade Gruppengröße möglich (ein Team pro Runde
+    // spielfrei, rotierend). Kein eigenes Freilos-Team nötig: "BYE" wird beim Erzeugen des
+    // Spielplans (Preliminary.js) rein als String-Marker in die Team-ID-Liste eingefügt,
+    // saveSchedule/addTeamGame (firestoreService.js) behandeln ihn bereits überall als reinen
+    // Sentinel statt als echte Team-Entität.
+    const useFullRoundRobin = useGroups && preliminaryFormat === "full";
+    const fullRoundRobinMatchdays = teamsPerGroup > 0
+        ? (teamsPerGroup % 2 === 0 ? Math.max(1, teamsPerGroup - 1) : teamsPerGroup)
+        : 1;
+    const effectiveNumberMatchdays = useFullRoundRobin ? fullRoundRobinMatchdays : numberMatchdays;
+
     const effectiveKoRounds = isDirectKO
         ? directKoRounds
         : isPreliminaryOnly
@@ -150,8 +166,8 @@ export default function NewTournamentSetup() {
             if (numberTeams % groupCount !== 0) {
                 return showError("Die Teamanzahl muss durch die Gruppenanzahl teilbar sein (gleich große Gruppen).");
             }
-            if (teamsPerGroup % 2 !== 0) {
-                return showError("Jede Gruppe muss eine gerade Anzahl Teams haben.");
+            if (!useFullRoundRobin && teamsPerGroup % 2 !== 0) {
+                return showError("Jede Gruppe muss eine gerade Anzahl Teams haben (oder \"Jeder gegen jeden\" wählen).");
             }
             if (qualifiersPerGroup > teamsPerGroup) {
                 return showError("Qualifikanten pro Gruppe darf nicht größer als die Gruppengröße sein.");
@@ -165,7 +181,7 @@ export default function NewTournamentSetup() {
         const effectiveGroupCount = isDirectKO ? 1 : groupCount;
 
         const tournamentID = await addTournament(
-            trimmedName, effectiveTeamCount, numberMatchdays, effectiveKoRounds, hasThirdPlace, pin,
+            trimmedName, effectiveTeamCount, effectiveNumberMatchdays, effectiveKoRounds, hasThirdPlace, pin,
             preliminaryScoreMode, winLegs, mode, seeding, effectiveGroupCount, qualifiersPerGroup
         );
 
@@ -273,18 +289,46 @@ export default function NewTournamentSetup() {
                                 </div>
                             )}
                             <br /><br />
+
+                            {groupCount > 1 && (
+                                <>
+                                    <label>Wie sollen die Spieltage der Vorrunde bestimmt werden?</label>
+                                    <br />
+                                    <FormControl sx={{ minWidth: 280 }}>
+                                        <InputLabel>Vorrundenformat</InputLabel>
+                                        <Select
+                                            value={preliminaryFormat}
+                                            label="Vorrundenformat"
+                                            onChange={e => setPreliminaryFormat(e.target.value)}
+                                        >
+                                            <MenuItem value="full">Jeder gegen Jeden</MenuItem>
+                                            <MenuItem value="fixed">Weniger Spieltage (Gruppengröße muss gerade sein)</MenuItem>
+                                        </Select>
+                                    </FormControl>
+                                    <br /><br />
+                                </>
+                            )}
                         </>
                     )}
 
-                    <label>Wie viele Spieltage soll die Vorrunde haben?</label>
-                    <TextField
-                        type="number"
-                        value={numberMatchdays}
-                        onChange={e => setNumberMatchdays(e.target.value)}
-                        inputProps={{ min: 1, max: Math.max(1, teamsPerGroup - 1) }}
-                        label="Anzahl Spieltage Vorrunde"
-                    />
-                    <br /><br />
+                    {useFullRoundRobin ? (
+                        <div style={{ marginBottom: 16, fontSize: "0.85rem", opacity: 0.7 }}>
+                            Jeder gegen jeden: {fullRoundRobinMatchdays} Spieltage
+                            {teamsPerGroup % 2 !== 0 && ` (${teamsPerGroup} Teams/Gruppe — ungerade, daher hat pro Spieltag ein Team spielfrei)`}
+                        </div>
+                    ) : (
+                        <>
+                            <label>Wie viele Spieltage soll die Vorrunde haben?</label>
+                            <TextField
+                                type="number"
+                                value={numberMatchdays}
+                                onChange={e => setNumberMatchdays(e.target.value)}
+                                inputProps={{ min: 1, max: Math.max(1, teamsPerGroup - 1) }}
+                                label="Anzahl Spieltage Vorrunde"
+                            />
+                            <br /><br />
+                        </>
+                    )}
 
                     <label>Wie soll die Vorrunde gewertet werden?</label>
                     <br />

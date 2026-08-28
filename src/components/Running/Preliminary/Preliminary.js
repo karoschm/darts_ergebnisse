@@ -144,7 +144,14 @@ export default function Preliminary({ isViewMode }) {
         const schedulesByGroup = [];
         for (let g = 0; g < groupCount; g++) {
             const groupTeamIDs = teams.filter(t => !t.isBye && (t.group ?? 0) === g).map(t => t.id);
-            let groupSchedule = generateRoundRobinSchedule(groupTeamIDs);
+            // Ungerade Gruppengröße ("Jeder gegen jeden" in NewTournamentSetup.js): mit einem
+            // reinen String-Sentinel auffüllen statt einem echten Firestore-Team — saveSchedule/
+            // addTeamGame (firestoreService.js) behandeln "BYE" bereits überall als Marker, nie
+            // als echte Team-Entität, ein Dokument dafür ist nicht nötig.
+            const scheduleTeamIDs = groupTeamIDs.length % 2 !== 0
+                ? [...groupTeamIDs, "BYE"]
+                : groupTeamIDs;
+            let groupSchedule = generateRoundRobinSchedule(scheduleTeamIDs);
             groupSchedule = shuffleSchedule(groupSchedule);
             schedulesByGroup.push(groupSchedule);
         }
@@ -167,6 +174,8 @@ export default function Preliminary({ isViewMode }) {
         saveSchedule(currentTournamentId, newSchedule, preliminaryScoreMode, winLegs);
         newSchedule.forEach((matchList, matchday) => {
             Object.values(matchList).forEach(({ team1, team2 }) => {
+                // Freilos bekommt bewusst nie einen Team-Statistik-Eintrag (siehe addTeamGame).
+                if (team1 === "BYE" || team2 === "BYE") return;
                 addTeamGame(currentTournamentId, team1, team2, matchday, preliminaryScoreMode, winLegs);
             });
         });

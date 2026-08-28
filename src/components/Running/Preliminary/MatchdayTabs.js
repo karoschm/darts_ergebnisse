@@ -121,12 +121,17 @@ export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", win
         );
     }
 
-    const matchEntries = groupCount > 1
-        ? Object.keys(matches).sort((a, b) => {
+    // Sortierung: erst nach Gruppe (falls vorhanden), dann Freilos-Spiele ans Ende
+    // (statt an ihrer zufälligen Spielplan-Position), zuletzt nach Match-Key.
+    const matchEntries = Object.keys(matches).sort((a, b) => {
+        if (groupCount > 1) {
             const groupDiff = (matches[a].group ?? 0) - (matches[b].group ?? 0);
-            return groupDiff !== 0 ? groupDiff : a.localeCompare(b);
-        })
-        : Object.keys(matches).sort((a, b) => a.localeCompare(b));
+            if (groupDiff !== 0) return groupDiff;
+        }
+        const byeDiff = (matches[a].isByeMatch ? 1 : 0) - (matches[b].isByeMatch ? 1 : 0);
+        if (byeDiff !== 0) return byeDiff;
+        return a.localeCompare(b);
+    });
 
     // Gruppenüberschrift rendern, sobald sich die Gruppe zur vorigen Zeile ändert
     // (mehrere Gruppen teilen sich denselben Spieltag, ohne das wäre unklar, wer gegen wen spielt)

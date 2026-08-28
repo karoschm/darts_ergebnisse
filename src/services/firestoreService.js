@@ -319,29 +319,11 @@ function computeTeamStats(matches, scoreMode = "points") {
     return { wins, losses, own_score: ownScore, opponent_score: opponentScore };
 }
 
+// Nur für echte Spiele (kein Freilos) — ein Freilos bekommt bewusst nie einen Eintrag in
+// teams/{id}.matches: jedes Team hat in einer ungerade großen Gruppe genau einmal spielfrei,
+// das soll in Sieg-/Niederlage-/Score-Statistik komplett unsichtbar bleiben, kein künstlicher
+// Sieg für irgendjemanden (siehe Preliminary.js generateSchedule/handleMakeSchedule).
 export async function addTeamGame(tournamentID, team1ID, team2ID, matchday, scoreMode = "points", winLegs = 3) {
-    const isByeMatch = team1ID === "BYE" || team2ID === "BYE";
-    const realTeam = team1ID === "BYE" ? team2ID : team1ID;
-    const byeTeam = team1ID === "BYE" ? team1ID : team2ID;
-
-    if (isByeMatch) {
-        // Echtes Team bekommt Sieg (Punktemodus: 0:1, niedriger gewinnt. Legsmodus: winLegs:0, höher gewinnt)
-        const realTeamRef = doc(db, "tournaments", tournamentID, "teams", realTeam);
-        await runTransaction(db, async (transaction) => {
-            const realTeamSnap = await transaction.get(realTeamRef);
-            const matches = { ...realTeamSnap.data().matches };
-            matches[matchday + 1] = {
-                opponent: byeTeam,
-                own_score: scoreMode === "legs" ? winLegs : 0,
-                opponent_score: scoreMode === "legs" ? 0 : 1
-            };
-            transaction.update(realTeamRef, { matches, ...computeTeamStats(matches, scoreMode) });
-        });
-        // BYE-Team wird nicht aktualisiert
-        return;
-    }
-
-    // Normales Spiel — unverändert
     const team1Ref = doc(db, "tournaments", tournamentID, "teams", team1ID);
     const team2Ref = doc(db, "tournaments", tournamentID, "teams", team2ID);
     await runTransaction(db, async (transaction) => {
