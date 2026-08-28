@@ -70,11 +70,6 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
     const statusKey = bracket === "winner" ? koStatusKey(roundIndex) : loserStatusKey(roundIndex);
     const matchCount = Math.pow(2, koRounds - roundIndex); // z.B. koRounds=3, round=1 → 4 Matches
     const label = bracket === "winner" ? koRoundLabel(koRounds, roundIndex) : loserRoundLabel(koRounds, roundIndex);
-    // Im Doppel-KO wird die Editierbarkeit pro Runde über roundFinished gesteuert
-    // (WB/LB laufen parallel, der globale Turnier-Status ist dafür nicht linear genug) —
-    // im Single-Elim bleibt der bestehende status===statusKey-Vergleich maßgeblich.
-    const roundGateBlocked = koFormat === "double" ? !!roundData.roundFinished : status !== statusKey;
-    const editingDisabled = roundGateBlocked || isViewMode;
 
     // Hauptmatches ohne Platz-3
     const mainMatches = Object.entries(roundData.matches || {})
@@ -83,6 +78,15 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
     const place3Match = roundData.matches?.place3;
 
     const roundReady = mainMatches.length > 0 && mainMatches[0][1]?.team1;
+
+    // Im Doppel-KO wird die Editierbarkeit pro Runde über roundFinished gesteuert
+    // (WB/LB laufen parallel, der globale Turnier-Status ist dafür nicht linear genug) —
+    // zusätzlich muss die Runde bereits generiert sein (roundReady), sonst ließe sich
+    // z.B. das Gewinnlegs-Feld einer noch gar nicht erreichten Runde bearbeiten, obwohl
+    // roundFinished dort noch nie gesetzt wurde (Default falsy). Im Single-Elim bleibt
+    // der bestehende status===statusKey-Vergleich maßgeblich.
+    const roundGateBlocked = koFormat === "double" ? (!roundReady || !!roundData.roundFinished) : status !== statusKey;
+    const editingDisabled = roundGateBlocked || isViewMode;
 
     const koStageMatchMap = {
         1: [

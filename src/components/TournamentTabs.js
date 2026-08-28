@@ -5,7 +5,11 @@ import { Tabs, Tab, Box, useTheme, useMediaQuery } from "@mui/material";
 // WB-/LB-Runden-Tabs. Ab dann wird horizontal gescrollt statt gleichmäßig verteilt.
 const SCROLLABLE_TAB_THRESHOLD = 6;
 
-export default function TournamentTabs({ value, onChange, tabs }) {
+// `top`/`zIndex` erlauben, mehrere TournamentTabs-Leisten übereinander zu stapeln
+// (z.B. Übertabs "Gewinner-/Verlierer-Bracket" mit einer darunterliegenden
+// Rundenauswahl-Leiste bei Doppel-KO-Turnieren) — die untere Leiste bekommt einen
+// größeren `top`-Wert (unterhalb der oberen Leiste) und einen niedrigeren `zIndex`.
+export default function TournamentTabs({ value, onChange, tabs, top = 72, zIndex = 9 }) {
     const theme = useTheme();
     const isMobile = useMediaQuery(theme.breakpoints.down("sm"));
     const useScrollable = isMobile || tabs.length > SCROLLABLE_TAB_THRESHOLD;
@@ -14,8 +18,8 @@ export default function TournamentTabs({ value, onChange, tabs }) {
         <Box
             sx={{
                 position: "sticky",
-                top: 72,
-                zIndex: 9,
+                top,
+                zIndex,
                 backgroundColor: "background.paper",
             }}
         >

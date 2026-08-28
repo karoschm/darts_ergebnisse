@@ -39,6 +39,10 @@ export default function Running() {
     const isDoubleElim = tournamentMode === "directko" && koFormat === "double";
     const lbSchedule = isDoubleElim ? getLbSchedule(koRounds) : [];
 
+    const wbStages = Array.from({ length: koRounds }, (_, i) => koStageKey(i + 1));
+    const lbStages = lbSchedule.map((_, i) => loserStageKey(i + 1));
+    const gfStages = isDoubleElim ? [GRAND_FINAL_STAGE, ...(bracketReset ? [GRAND_FINAL_RESET_STAGE] : [])] : [];
+
     const statusLabelMap = {
         group: "Vorrunde",
         finished: "Beendet",
@@ -70,26 +74,37 @@ export default function Running() {
         } : {})
     };
 
-    // Tabs dynamisch aufbauen
-    // [ { label, stage } ]
-    const tabs = [
+    // Nicht-Doppel-KO: flache Tab-Leiste wie bisher (Vorrunde + eine Reihe WB-Runden).
+    const flatTabs = [
         ...(tournamentMode === "directko" ? [] : [{ label: "Vorrunde", stage: "preliminary" }]),
-        ...Array.from({ length: koRounds }, (_, i) => ({
-            label: koRoundLabel(koRounds, i + 1),
-            stage: koStageKey(i + 1)
-        })),
-        ...(isDoubleElim ? lbSchedule.map((_, i) => ({
-            label: loserRoundLabel(koRounds, i + 1),
-            stage: loserStageKey(i + 1)
-        })) : []),
-        ...(isDoubleElim ? [
-            { label: "Grand Final", stage: GRAND_FINAL_STAGE },
-            ...(bracketReset ? [{ label: "Grand Final (Reset)", stage: GRAND_FINAL_RESET_STAGE }] : [])
-        ] : []),
+        ...wbStages.map((s, i) => ({ label: koRoundLabel(koRounds, i + 1), stage: s })),
         { label: "Abschlusstabelle", stage: "standings" }
     ];
+    const flatTabValue = flatTabs.findIndex(t => t.stage === stage);
 
-    const tabValue = tabs.findIndex(t => t.stage === stage) ?? 0;
+    // Doppel-KO: zweistufige Tab-Navigation — Übertabs für Gewinner-/Verlierer-
+    // Bracket/Grand Final/Abschlusstabelle, darunter eine Rundenauswahl-Leiste für
+    // die jeweils aktive Gruppe. Vermeidet eine einzelne, bei großen Turnieren sehr
+    // lange Tab-Leiste und macht "WB kommt vor LB" durch die reine Gruppierung
+    // trivial (kein Interleaving der einzelnen Runden mehr nötig).
+    const topLevelTabs = [
+        { label: "Gewinner-Bracket", stage: "wb-group" },
+        { label: "Verlierer-Bracket", stage: "lb-group" },
+        { label: "Grand Final", stage: "gf-group" },
+        { label: "Abschlusstabelle", stage: "standings" }
+    ];
+    const activeGroup = wbStages.includes(stage) ? "wb"
+        : lbStages.includes(stage) ? "lb"
+        : gfStages.includes(stage) ? "gf"
+        : stage === "standings" ? "standings"
+        : "wb";
+    const topLevelValue = topLevelTabs.findIndex(t => t.stage === (activeGroup === "standings" ? "standings" : `${activeGroup}-group`));
+
+    const wbSubTabs = wbStages.map((s, i) => ({ label: koRoundLabel(koRounds, i + 1), stage: s }));
+    const lbSubTabs = lbStages.map((s, i) => ({ label: loserRoundLabel(koRounds, i + 1), stage: s }));
+    const gfSubTabs = gfStages.map(s => ({ label: s === GRAND_FINAL_STAGE ? "Grand Final" : "Grand Final (Reset)", stage: s }));
+    const activeSubTabs = activeGroup === "wb" ? wbSubTabs : activeGroup === "lb" ? lbSubTabs : activeGroup === "gf" ? gfSubTabs : [];
+    const subTabValue = activeSubTabs.findIndex(t => t.stage === stage);
 
     useEffect(() => {
         if (!currentTournamentId) return;
@@ -108,9 +123,23 @@ export default function Running() {
         return () => unsubscribe();
     }, [currentTournamentId]);
 
-    const handleTabChange = (_, newTabValue) => {
-        const newStage = tabs[newTabValue]?.stage ?? "preliminary";
+    const handleFlatTabChange = (_, newTabValue) => {
+        const newStage = flatTabs[newTabValue]?.stage ?? "preliminary";
         navigate(`/tournament/${tournamentId}/${mode}/running/${newStage}`);
+    };
+
+    const handleTopLevelChange = (_, newIndex) => {
+        const group = topLevelTabs[newIndex];
+        let targetStage = "standings";
+        if (group.stage === "wb-group") targetStage = wbStages[0] ?? "standings";
+        else if (group.stage === "lb-group") targetStage = lbStages[0] ?? GRAND_FINAL_STAGE;
+        else if (group.stage === "gf-group") targetStage = GRAND_FINAL_STAGE;
+        navigate(`/tournament/${tournamentId}/${mode}/running/${targetStage}`);
+    };
+
+    const handleSubTabChange = (_, newIndex) => {
+        const newStage = activeSubTabs[newIndex]?.stage;
+        if (newStage) navigate(`/tournament/${tournamentId}/${mode}/running/${newStage}`);
     };
 
     const handleExport = async () => {
@@ -127,14 +156,32 @@ export default function Running() {
                 isViewMode={isViewMode}
             />
 
-            <TournamentTabs
-                value={tabValue === -1 ? 0 : tabValue}
-                onChange={handleTabChange}
-                tabs={tabs}
-                variant={isMobile ? "scrollable" : "fullWidth"}
-                scrollButtons="auto"
-                sx={{ width: "100%" }}
-            />
+            {isDoubleElim ? (
+                <>
+                    <TournamentTabs
+                        value={topLevelValue === -1 ? 0 : topLevelValue}
+                        onChange={handleTopLevelChange}
+                        tabs={topLevelTabs}
+                        top={72}
+                        zIndex={10}
+                    />
+                    {activeSubTabs.length > 0 && (
+                        <TournamentTabs
+                            value={subTabValue === -1 ? 0 : subTabValue}
+                            onChange={handleSubTabChange}
+                            tabs={activeSubTabs}
+                            top={120}
+                            zIndex={9}
+                        />
+                    )}
+                </>
+            ) : (
+                <TournamentTabs
+                    value={flatTabValue === -1 ? 0 : flatTabValue}
+                    onChange={handleFlatTabChange}
+                    tabs={flatTabs}
+                />
+            )}
 
             <Box mt={3}>
                 {stage === "preliminary" && (

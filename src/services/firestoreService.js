@@ -106,15 +106,16 @@ export function getLbSchedule(koRounds) {
 }
 
 // Bezeichnung einer Loser-Bracket-Runde. Die letzte LB-Runde (LB-Champion) heißt
-// immer "Loser-Finale", alle anderen orientieren sich an der Anzahl teilnehmender
-// Teams (analog KO_ROUND_NAMES), mit "(Loser-Bracket)"-Zusatz.
+// immer "Loser-Finale", alle anderen laufend durchnummeriert ("Loser-Runde N").
+// Bewusst NICHT von der Teamanzahl abgeleitet (analog KO_ROUND_NAMES/koRoundLabel):
+// eine "reduce"- und die direkt folgende "drop"-Runde derselben Welle haben oft
+// dieselbe Teamanzahl (z.B. beide 4 Teams bei 8 Teams gesamt), was mit einer von
+// der Teamanzahl abgeleiteten Bezeichnung zu zwei Runden mit identischem Tab-Titel
+// führen würde — für den Nutzer nicht von echten Duplikaten zu unterscheiden.
 export function loserRoundLabel(koRounds, lbRoundIndex) {
     const schedule = getLbSchedule(koRounds);
-    const round = schedule[lbRoundIndex - 1];
-    if (!round) return `Loser-Runde ${lbRoundIndex}`;
     if (lbRoundIndex === schedule.length) return "Loser-Finale";
-    const roundsFromFinal = Math.ceil(Math.log2(round.teamsIn));
-    return `${KO_ROUND_NAMES[roundsFromFinal] ?? `Loser-Runde ${lbRoundIndex}`} (Loser-Bracket)`;
+    return `Loser-Runde ${lbRoundIndex}`;
 }
 
 /**
