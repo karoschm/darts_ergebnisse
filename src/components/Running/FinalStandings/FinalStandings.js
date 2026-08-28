@@ -55,7 +55,8 @@ export default function FinalStandings() {
             flexDirection: "column",
             alignItems: "center",
             textAlign: "center",
-            padding: "60px"
+            padding: "60px",
+            fontStyle: "italic"
         }}>
             Turnier ist noch nicht beendet
         </div>
