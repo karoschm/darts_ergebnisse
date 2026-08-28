@@ -62,15 +62,23 @@ export default function FinalTab({ isViewMode }) {
         };
     }, [status, currentTournamentId]);
 
-    function handleLegScoreChange(matchKey, team, newScore, opponent) {
+    // rawValue ist während der Eingabe bewusst der rohe String (auch ""), damit das
+    // Feld beim Löschen des alten Werts leer angezeigt wird statt sofort auf "0" zu
+    // springen. Ein leeres Feld wird noch nicht gespeichert, sondern erst sobald wieder
+    // eine Zahl eingegeben wurde.
+    function handleLegScoreChange(matchKey, team, rawValue, opponent) {
         setFinals(prev => ({
             ...prev,
-            [matchKey]: {
-                ...prev[matchKey],
-                [`score_${team}`]: newScore
+            matches: {
+                ...prev.matches,
+                [matchKey]: {
+                    ...prev.matches[matchKey],
+                    [`legs_${team}`]: rawValue
+                }
             }
         }));
-        saveKOScore(currentTournamentId, "final", matchKey, team, newScore, opponent, winLegs);
+        if (rawValue === "") return;
+        saveKOScore(currentTournamentId, "final", matchKey, team, Number(rawValue), opponent, winLegs);
     }
 
     function handleWinLegsChange(newWinLegs) {
@@ -149,7 +157,7 @@ export default function FinalTab({ isViewMode }) {
                                 handleLegScoreChange(
                                     "final",
                                     finals.matches.final.team1,
-                                    Number(e.target.value),
+                                    e.target.value,
                                     finals.matches.final.team2
                                 )
                             }
@@ -189,7 +197,7 @@ export default function FinalTab({ isViewMode }) {
                                 handleLegScoreChange(
                                     "final",
                                     finals.matches.final.team2,
-                                    Number(e.target.value),
+                                    e.target.value,
                                     finals.matches.final.team1
                                 )
                             }
@@ -254,7 +262,7 @@ export default function FinalTab({ isViewMode }) {
                                 handleLegScoreChange(
                                     "place3",
                                     finals.matches.place3.team1,
-                                    Number(e.target.value),
+                                    e.target.value,
                                     finals.matches.place3.team2
                                 )
                             }
@@ -294,7 +302,7 @@ export default function FinalTab({ isViewMode }) {
                                 handleLegScoreChange(
                                     "place3",
                                     finals.matches.place3.team2,
-                                    Number(e.target.value),
+                                    e.target.value,
                                     finals.matches.place3.team1
                                 )
                             }
@@ -403,7 +411,7 @@ export default function FinalTab({ isViewMode }) {
                                                 handleLegScoreChange(
                                                     "final",
                                                     finals.matches.final.team1,
-                                                    Number(e.target.value),
+                                                    e.target.value,
                                                     finals.matches.final.team2
                                                 )
                                             }
@@ -466,7 +474,7 @@ export default function FinalTab({ isViewMode }) {
                                                 handleLegScoreChange(
                                                     "final",
                                                     finals.matches.final.team2,
-                                                    Number(e.target.value),
+                                                    e.target.value,
                                                     finals.matches.final.team1
                                                 )
                                             }
@@ -533,7 +541,7 @@ export default function FinalTab({ isViewMode }) {
                                                 handleLegScoreChange(
                                                     "place3",
                                                     finals.matches.place3.team1,
-                                                    Number(e.target.value),
+                                                    e.target.value,
                                                     finals.matches.place3.team2
                                                 )
                                             }
@@ -596,7 +604,7 @@ export default function FinalTab({ isViewMode }) {
                                                 handleLegScoreChange(
                                                     "place3",
                                                     finals.matches.place3.team2,
-                                                    Number(e.target.value),
+                                                    e.target.value,
                                                     finals.matches.place3.team1
                                                 )
                                             }

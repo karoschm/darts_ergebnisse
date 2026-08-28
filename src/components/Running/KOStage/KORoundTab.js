@@ -609,6 +609,11 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
 
 // ─── Hilfkomponenten ──────────────────────────────────────────────────────────
 
+// Leeres Feld (Nutzer löscht gerade den alten Wert) zählt als 0 statt NaN.
+function toScore(raw) {
+    return raw === "" ? 0 : Number(raw);
+}
+
 export function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs, disabled, onScoreChange, onScoreFocus, onScoreBlur, showMatchId = true, beingEditedByOther = false }) {
     const team1 = match.team1;
     const team2 = match.team2;
@@ -629,9 +634,9 @@ export function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs
                     type="number"
                     value={match[`legs_${team1}`]}
                     disabled={disabled}
-                    onChange={e => onScoreChange(matchId, team1, Number(e.target.value))}
+                    onChange={e => onScoreChange(matchId, team1, e.target.value)}
                     onFocus={() => onScoreFocus(matchId)}
-                    onBlur={e => onScoreBlur(matchId, team1, Number(e.target.value), team2)}
+                    onBlur={e => onScoreBlur(matchId, team1, toScore(e.target.value), team2)}
                     fullWidth
                     inputProps={{ min: 0, max: winLegs }}
                 />
@@ -650,9 +655,9 @@ export function MobileMatchCard({ matchId, matchLabel, match, teamNames, winLegs
                     type="number"
                     value={match[`legs_${team2}`]}
                     disabled={disabled}
-                    onChange={e => onScoreChange(matchId, team2, Number(e.target.value))}
+                    onChange={e => onScoreChange(matchId, team2, e.target.value)}
                     onFocus={() => onScoreFocus(matchId)}
-                    onBlur={e => onScoreBlur(matchId, team2, Number(e.target.value), team1)}
+                    onBlur={e => onScoreBlur(matchId, team2, toScore(e.target.value), team1)}
                     fullWidth
                     inputProps={{ min: 0, max: winLegs }}
                 />
@@ -680,9 +685,9 @@ export function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs
                             type="number"
                             value={match[`legs_${team1}`]}
                             disabled={disabled}
-                            onChange={e => onScoreChange(matchId, team1, Number(e.target.value))}
+                            onChange={e => onScoreChange(matchId, team1, e.target.value)}
                             onFocus={() => onScoreFocus(matchId)}
-                            onBlur={e => onScoreBlur(matchId, team1, Number(e.target.value), team2)}
+                            onBlur={e => onScoreBlur(matchId, team1, toScore(e.target.value), team2)}
                             inputProps={{ min: 0, max: winLegs }}
                         />
                     </span>
@@ -727,9 +732,9 @@ export function DesktopMatchRow({ matchId, matchLabel, match, teamNames, winLegs
                             type="number"
                             value={match[`legs_${team2}`]}
                             disabled={disabled}
-                            onChange={e => onScoreChange(matchId, team2, Number(e.target.value))}
+                            onChange={e => onScoreChange(matchId, team2, e.target.value)}
                             onFocus={() => onScoreFocus(matchId)}
-                            onBlur={e => onScoreBlur(matchId, team2, Number(e.target.value), team1)}
+                            onBlur={e => onScoreBlur(matchId, team2, toScore(e.target.value), team1)}
                             inputProps={{ min: 0, max: winLegs }}
                         />
                     </span>

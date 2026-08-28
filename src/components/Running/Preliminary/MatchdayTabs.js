@@ -55,9 +55,17 @@ export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", win
         };
     }, [currentTournamentId, md]);
 
+    // Wandelt den rohen Eingabewert in eine Zahl um; ein leeres Feld (Nutzer löscht
+    // gerade den alten Wert) wird als 0 gewertet statt einen NaN-Absturz zu riskieren.
+    function toScore(raw) {
+        return raw === "" ? 0 : Number(raw);
+    }
+
     // Nur lokalen State aktualisieren — Speichern erfolgt erst bei onBlur (handleScoreBlur),
     // damit nicht bei jedem Tastendruck/Pfeiltasten-Klick eine eigene Transaktion feuert
     // (führte sonst zu überholenden Schreibvorgängen und sichtbarem Zurückspringen des Scores).
+    // newScore ist während der Eingabe bewusst der rohe String (auch ""), damit das Feld
+    // beim Löschen des alten Werts leer angezeigt wird statt sofort auf "0" zu springen.
     function handleScoreChange(matchKey, team, newScore) {
         markDirty(matchKey, `${fieldPrefix}_${team}`, newScore);
         setMatches(prev => ({
@@ -178,9 +186,9 @@ export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", win
                                         type="number"
                                         value={match[`${fieldPrefix}_${team1}`]}
                                         disabled={status !== "group" || isViewMode}
-                                        onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value))}
+                                        onChange={e => handleScoreChange(mNumber, team1, e.target.value)}
                                         onFocus={() => handleScoreFocus(mNumber)}
-                                        onBlur={e => handleScoreBlur(mNumber, team1, Number(e.target.value), team2)}
+                                        onBlur={e => handleScoreBlur(mNumber, team1, toScore(e.target.value), team2)}
                                         fullWidth
                                         inputProps={{ min: 0, max: maxScore }}
                                     />
@@ -201,9 +209,9 @@ export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", win
                                         type="number"
                                         value={match[`${fieldPrefix}_${team2}`]}
                                         disabled={status !== "group" || isViewMode}
-                                        onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value))}
+                                        onChange={e => handleScoreChange(mNumber, team2, e.target.value)}
                                         onFocus={() => handleScoreFocus(mNumber)}
-                                        onBlur={e => handleScoreBlur(mNumber, team2, Number(e.target.value), team1)}
+                                        onBlur={e => handleScoreBlur(mNumber, team2, toScore(e.target.value), team1)}
                                         fullWidth
                                         inputProps={{ min: 0, max: maxScore }}
                                     />
@@ -270,9 +278,9 @@ export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", win
                                             style={{ width: "60px" }}
                                             disabled={status !== "group" || isViewMode}
                                             value={scoreTeam1}
-                                            onChange={e => handleScoreChange(mNumber, team1, Number(e.target.value))}
+                                            onChange={e => handleScoreChange(mNumber, team1, e.target.value)}
                                             onFocus={() => handleScoreFocus(mNumber)}
-                                            onBlur={e => handleScoreBlur(mNumber, team1, Number(e.target.value), team2)}
+                                            onBlur={e => handleScoreBlur(mNumber, team1, toScore(e.target.value), team2)}
                                             inputProps={{ min: 0, max: maxScore }}
                                         />
                                     </span>
@@ -297,9 +305,9 @@ export default function MatchdayTabs({ md, isViewMode, scoreMode = "points", win
                                             style={{ width: "60px" }}
                                             disabled={status !== "group" || isViewMode}
                                             value={scoreTeam2}
-                                            onChange={e => handleScoreChange(mNumber, team2, Number(e.target.value))}
+                                            onChange={e => handleScoreChange(mNumber, team2, e.target.value)}
                                             onFocus={() => handleScoreFocus(mNumber)}
-                                            onBlur={e => handleScoreBlur(mNumber, team2, Number(e.target.value), team1)}
+                                            onBlur={e => handleScoreBlur(mNumber, team2, toScore(e.target.value), team1)}
                                             inputProps={{ min: 0, max: maxScore }}
                                         />
                                     </span>
