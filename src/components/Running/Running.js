@@ -3,6 +3,7 @@ import { useNavigate, useParams } from "react-router-dom";
 import { Box, useTheme, useMediaQuery } from "@mui/material";
 import Fab from "@mui/material/Fab";
 import DownloadIcon from "@mui/icons-material/Download";
+import PrintIcon from "@mui/icons-material/Print";
 
 import { useTournament } from "../../context/TournamentContext";
 import {
@@ -143,7 +144,11 @@ export default function Running() {
     };
 
     const handleExport = async () => {
-        exportTournamentResults(currentTournamentId, status);
+        exportTournamentResults(currentTournamentId);
+    };
+
+    const handlePrint = () => {
+        window.open(`/tournament/${tournamentId}/print`, "_blank", "noopener,noreferrer");
     };
 
     return (
@@ -238,6 +243,13 @@ export default function Running() {
                 sx={{ position: "fixed", bottom: 24, right: 24, zIndex: 1000 }}
             >
                 <DownloadIcon />
+            </Fab>
+            <Fab
+                color="primary"
+                onClick={handlePrint}
+                sx={{ position: "fixed", bottom: 88, right: 24, zIndex: 1000 }}
+            >
+                <PrintIcon />
             </Fab>
         </PageContainer>
     );

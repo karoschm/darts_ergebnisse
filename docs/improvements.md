@@ -349,7 +349,7 @@ Diese `groupOrder` wird nicht mehr erst bei der KO-Rundengenerierung zufällig b
 
 **Verifikation:** Direkt-KO-Turnier mit 4 und mit 8 Teams im Doppel-KO-Modus komplett durchspielen — insbesondere den Fall, dass ein Team erst im Loser-Bracket ausscheidet, sowie das Grand Final (einmal mit, einmal ohne ausgelösten Bracket Reset, je einmal mit `bracketReset` aktiviert und deaktiviert im Setup). Regressionstest: Single-Elim-Turniere (mit und ohne bestehendes `koFormat`-Feld) unverändert durchspielen.
 
-### Phase 4 – PDF/Print-Export + Excel-Fix
+### Phase 4 – PDF/Print-Export + Excel-Fix ✅ Umgesetzt (2026-08-28)
 
 **Ansatz: CSS-Print** (`@media print` + `window.print()`) statt Client-PDF-Lib — keine neue Abhängigkeit, nutzt dieselben React-Komponenten, geringerer Wartungsaufwand.
 
@@ -365,6 +365,10 @@ Diese `groupOrder` wird nicht mehr erst bei der KO-Rundengenerierung zufällig b
 **Nicht im Scope:** serverseitige PDF-Generierung, pixelgenaues Custom-Layout, E-Mail-Versand.
 
 **Verifikation:** Turnier mit Gruppen + Legs-Modus + Platz-3-Spiel durchspielen, Excel-Inhalt prüfen; Druckansicht als PDF speichern testen.
+
+**Umsetzung:** `exportService.js` verlässt sich nicht mehr auf den übergebenen Turnierstatus, um Sheets ein-/auszublenden, sondern lädt `getTournamentData` selbst und prüft pro möglicher Runde/Stage per `getKnockout`, ob dort bereits Matches existieren (`appendKORound` überspringt leere/ungenerierte Runden intern) — dadurch funktioniert der Export unabhängig von `koRounds`, Gruppen, Direkt-KO und Doppel-KO, ohne die frühere feste `quarterfinals`/`semifinals`/`final`-Namensliste. Winner-Bracket-Runden werden über `koStageKey(r)`/`koRoundLabel` durchiteriert (`r = 1..koRounds`), bei `mode === "directko" && koFormat === "double"` zusätzlich das Loser-Bracket (`getLbSchedule`/`loserStageKey`/`loserRoundLabel`) sowie Grand Final/Grand Final Reset. Die Vorrunden-Sheets ("Vorrunde_Ergebnisse"/"Vorrunde_Tabelle") werden nur bei `mode !== "directko"` erzeugt und bekommen bei `groupCount > 1` eine zusätzliche "Gruppe"-Spalte (Tabelle: eine gemeinsame Sheet-Liste, pro Gruppe separat sortiert). `Running.js`s `handleExport` ruft `exportTournamentResults` jetzt nur noch mit der Turnier-ID auf (kein `status`-Parameter mehr nötig).
+
+Für den Druck-Export wurde bewusst keine neue Komponente pro Ansicht wiederverwendet (StandingsTable/KORoundTab sind MUI-/Theme-gebunden und für eine A4-Druckseite ungeeignet), sondern `TournamentPrintView.js` rendert alle Abschnitte (Abschlussplatzierungen, Teams, Vorrunden-Spielplan/-Tabelle je Gruppe, Winner-/Loser-Bracket, Grand Final) mit eigenen einfachen HTML-Tabellen, deren Look ausschließlich über `print.css` (unabhängig vom aktuell aktiven Dark/Light-MUI-Theme) gesteuert wird — Abschnitte ohne Daten (z.B. Vorrunde bei Direkt-KO, LB/Grand Final bei Single-Elim) werden komplett ausgeblendet. Die Route `print` liegt als `mode`-loses Geschwister von `teams`/`seeding` unter `TournamentLayout`/`RequireTournament` — dadurch nur ein Existenz-Check, aber kein PIN-Zwang (rein lesend) und keine Stage-Validierung/-Umleitung. `Running.js` bekommt einen zweiten Fab-Button (`PrintIcon`, über dem bestehenden Excel-Download-Button), der die Druckansicht in einem neuen Tab öffnet (`window.open`, damit die laufende Turnieransicht nicht verloren geht).
 
 ### Übergreifende Test-/Verifikationsstrategie
 
