@@ -67,6 +67,7 @@ export const getTheme = (mode) =>
                 defaultProps: {
                     variant: "standard",
                     size: "small",
+                    autoComplete: "off",
                 },
             },
             MuiTabs: {

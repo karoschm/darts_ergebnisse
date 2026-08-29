@@ -46,6 +46,7 @@ function NumberField({ id: idProp, label, error, size = "medium", ...other }) {
         render={(props, state) => (
           <OutlinedInput
             label={label}
+            autoComplete="off"
             inputRef={props.ref}
             value={state.inputValue}
             onBlur={props.onBlur}
