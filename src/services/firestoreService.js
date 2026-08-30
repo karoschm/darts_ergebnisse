@@ -119,6 +119,26 @@ export function loserRoundLabel(koRounds, lbRoundIndex) {
 }
 
 /**
+ * Herkunfts-Bezeichnung für Position `position` (1-basiert, in Erzeugungsreihenfolge —
+ * siehe generateBracketRound/advanceLoserBracket) innerhalb der LB-Runde `lbRoundIndex`,
+ * bevor diese generiert wurde. Analog zu winnerPlaceholderLabel im WB (KORoundTab.js),
+ * nur dass es hier keine Setzliste/Seeding-Tabelle braucht: die LB-Runden werden immer
+ * in exakt der Reihenfolge gepaart, in der advanceLoserBracket die Teams zusammenstellt
+ * (erst die Sieger der vorherigen LB-Runde, bei "drop"-Runden danach die frischen
+ * WB-Verlierer) — siehe getLbSchedule für die Herleitung von reduce/drop.
+ */
+export function lbSlotLabel(koRounds, lbRoundIndex, position) {
+    if (lbRoundIndex === 1) return `Verlierer ${koRoundLabel(koRounds, 1)} ${position}`;
+    const schedule = getLbSchedule(koRounds);
+    const round = schedule[lbRoundIndex - 1];
+    const survivorsCount = schedule[lbRoundIndex - 2].teamsIn / 2;
+    if (position <= survivorsCount) {
+        return `Sieger ${loserRoundLabel(koRounds, lbRoundIndex - 1)} ${position}`;
+    }
+    return `Verlierer ${koRoundLabel(koRounds, round.sourceWb)} ${position - survivorsCount}`;
+}
+
+/**
  * Rang, ab dem die Verlierer der LB-Runde `lbRoundIndex` eingeordnet werden
  * (mehrere gleichzeitige Verlierer bekommen fortlaufende Ränge ab hier, analog zur
  * bestehenden WB-Verlierer-Formel). Herleitung: von den insgesamt 2^koRounds Teams

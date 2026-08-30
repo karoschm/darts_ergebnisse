@@ -23,6 +23,7 @@ import {
     loserStatusKey,
     loserRoundLabel,
     getLbSchedule,
+    lbSlotLabel,
     finishDoubleElimWbRound,
     finishLoserBracketRound,
     groupLabel,
@@ -280,16 +281,24 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
         return `Verlierer ${koRoundLabel(koRounds, roundIndex - 1)} ${id}`;
     }
 
-    // Herkunft der Teilnehmer einer noch nicht generierten LB-Runde: LB-Runde 1
-    // bekommt ausschließlich die Verlierer aus WB-Runde 1, spätere "reduce"-Runden
-    // ausschließlich die Sieger der vorherigen LB-Runde, "drop"-Runden zusätzlich die
-    // frischen Verlierer der jeweiligen WB-Runde (siehe getLbSchedule).
-    function lbOriginLabel() {
+    // Platzhalter-Zeilen einer noch nicht generierten LB-Runde, mit exakter Herkunft
+    // pro Position (siehe lbSlotLabel) — Paarung analog generateBracketRound: Position i
+    // gegen Position (teamsIn - i + 1).
+    function renderLbPlaceholders() {
         const round = getLbSchedule(koRounds)[roundIndex - 1];
-        if (!round) return "";
-        if (roundIndex === 1) return `Verlierer ${koRoundLabel(koRounds, 1)}`;
-        if (round.type === "reduce") return `Sieger ${loserRoundLabel(koRounds, roundIndex - 1)}`;
-        return `Sieger ${loserRoundLabel(koRounds, roundIndex - 1)} und Verlierer ${koRoundLabel(koRounds, round.sourceWb)}`;
+        if (!round) return [];
+        const matchCount = round.teamsIn / 2;
+        const rows = [];
+        for (let i = 0; i < matchCount; i++) {
+            const id1 = i + 1;
+            const id2 = round.teamsIn - i;
+            rows.push({ id1, id2, key: `lb_placeholder_${i}` });
+        }
+        return rows;
+    }
+
+    function lbPlaceholderLabel(id) {
+        return lbSlotLabel(koRounds, roundIndex, id);
     }
 
     function matchLabel(id) {
@@ -419,16 +428,14 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                     </div>
                 ) : (
                     <div>
-                        {bracket === "loser" ? (
-                            <Card sx={{ width: "90vw", mx: "auto", mb: 2, p: 2 }}>
-                                <Typography color="text.secondary" fontStyle="italic" variant="body2">
-                                    Teilnehmer stehen erst nach Abschluss der vorherigen Runde(n) fest
-                                </Typography>
-                                <Typography color="text.secondary">
-                                    {lbOriginLabel()}
-                                </Typography>
+                        {bracket === "loser" ? renderLbPlaceholders().map(({ id1, id2, key }) => (
+                            <Card key={key} sx={{ width: "90vw", mx: "auto", mb: 2 }}>
+                                <div style={{ textAlign: "left", margin: "2px" }}>{matchLabel(id1)}</div>
+                                <div>{lbPlaceholderLabel(id1)}</div>
+                                <div style={{ textAlign: "left", margin: "6px 5%" }}>vs</div>
+                                <div>{lbPlaceholderLabel(id2)}</div>
                             </Card>
-                        ) : renderPlaceholders().map(({ id1, id2, key }) => (
+                        )) : renderPlaceholders().map(({ id1, id2, key }) => (
                             <Card key={key} sx={{ width: "90vw", mx: "auto", mb: 2 }}>
                                 {!isFinal && <div style={{ textAlign: "left", margin: "2px" }}>{matchLabel(id1)}</div>}
                                 <div>{winnerPlaceholderLabel(id1)}</div>
@@ -526,18 +533,16 @@ export default function KORoundTab({ roundIndex, koRounds, hasThirdPlace, stageK
                     </TableBody>
                 ) : (
                     <TableBody>
-                        {bracket === "loser" ? (
-                            <TableRow>
-                                <TableCell colSpan={5} align="center">
-                                    <Typography color="text.secondary" fontStyle="italic" variant="body2">
-                                        Teilnehmer stehen erst nach Abschluss der vorherigen Runde(n) fest
-                                    </Typography>
-                                    <Typography color="text.secondary">
-                                        {lbOriginLabel()}
-                                    </Typography>
-                                </TableCell>
+                        {bracket === "loser" ? renderLbPlaceholders().map(({ id1, id2, key }) => (
+                            <TableRow key={key}>
+                                <TableCell align="center">{matchLabel(id1)}</TableCell>
+                                <TableCell />
+                                <TableCell align="right">{lbPlaceholderLabel(id1)}</TableCell>
+                                <TableCell align="center">vs</TableCell>
+                                <TableCell>{lbPlaceholderLabel(id2)}</TableCell>
+                                <TableCell />
                             </TableRow>
-                        ) : renderPlaceholders().map(({ id1, id2, key }) => (
+                        )) : renderPlaceholders().map(({ id1, id2, key }) => (
                             <TableRow key={key}>
                                 {!isFinal && (<TableCell align="center">{matchLabel(id1)}</TableCell>)}
                                 <TableCell />
