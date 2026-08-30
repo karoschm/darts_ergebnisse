@@ -124,7 +124,7 @@ export default function NewTournamentSetup() {
         const perGroup = groupCount > 0 ? newCount / groupCount : newCount;
         const maxMatchdays = Math.max(1, perGroup - 1);
         setNumberMatchdays(prev => Math.min(Number(prev) || 1, maxMatchdays));
-        const maxQualifiers = perGroup > 0 ? Math.pow(2, Math.floor(Math.log2(perGroup))) : 1;
+        const maxQualifiers = perGroup >= 1 ? Math.pow(2, Math.floor(Math.log2(perGroup))) : 1;
         setQualifiersPerGroup(prev => Math.min(Number(prev) || 1, maxQualifiers));
     };
 
@@ -133,7 +133,7 @@ export default function NewTournamentSetup() {
         const perGroup = newGroupCount > 0 ? numberTeams / newGroupCount : numberTeams;
         const maxMatchdays = Math.max(1, perGroup - 1);
         setNumberMatchdays(prev => Math.min(Number(prev) || 1, maxMatchdays));
-        const maxQualifiers = perGroup > 0 ? Math.pow(2, Math.floor(Math.log2(perGroup))) : 1;
+        const maxQualifiers = perGroup >= 1 ? Math.pow(2, Math.floor(Math.log2(perGroup))) : 1;
         setQualifiersPerGroup(prev => Math.min(Number(prev) || 1, maxQualifiers));
     };
 
@@ -195,7 +195,10 @@ export default function NewTournamentSetup() {
                     onChange={handleDirectKoTeamCountChange}
                     onConfirm={goNext}
                     label="Anzahl Teams"
-                    hint={`${koRoundLabel(directKoRounds, 1)} startet direkt mit ${directKoBracketSize} Plätzen${directKoByeCount > 0 ? ` (${directKoByeCount} Freilos${directKoByeCount > 1 ? "e" : ""} für die bestplatzierten Teams)` : ""}`}
+                    hint={`${koRoundLabel(directKoRounds, 1)} startet direkt mit ${directKoBracketSize} Plätzen${directKoByeCount > 0 ? ` (${directKoByeCount} Freilos${directKoByeCount > 1 ? "e" : ""} für die bestplatzierten Teams)` : ""}`
+                        + (directKoIsPowerOfTwo
+                            ? " – Doppel-KO ist mit dieser Teamanzahl möglich."
+                            : " – Doppel-KO ist mit dieser Teamanzahl nicht möglich (dafür wird eine Zweierpotenz ab 4 Teams ohne Freilose benötigt).")}
                 />
             ),
         },
@@ -256,20 +259,31 @@ export default function NewTournamentSetup() {
             id: "groupCount",
             visible: !isDirectKO && !isPreliminaryOnly,
             question: "In wie viele Gruppen soll die Vorrunde aufgeteilt werden?",
-            render: () => (
-                <NumberQuestion
-                    value={groupCount}
-                    min={1}
-                    onChange={handleGroupCountChange}
-                    onConfirm={goNext}
-                    label="Anzahl Gruppen"
-                    hint={groupCount > 1
-                        ? (numberTeams % groupCount === 0
-                            ? `${numberTeams / groupCount} Teams pro Gruppe`
-                            : "Die Teamanzahl muss durch die Gruppenanzahl teilbar sein")
-                        : undefined}
-                />
-            ),
+            render: () => {
+                const maxGroupCount = Math.max(1, Math.floor(numberTeams / 2));
+                const groupCountValid = groupCount <= 1 || (
+                    numberTeams % groupCount === 0 &&
+                    Number.isInteger(Math.log2(groupCount))
+                );
+                return (
+                    <NumberQuestion
+                        value={groupCount}
+                        min={1}
+                        max={maxGroupCount}
+                        valid={groupCountValid}
+                        onChange={handleGroupCountChange}
+                        onConfirm={goNext}
+                        label="Anzahl Gruppen"
+                        hint={groupCount > 1
+                            ? (numberTeams % groupCount !== 0
+                                ? "Die Teamanzahl muss durch die Gruppenanzahl teilbar sein"
+                                : !Number.isInteger(Math.log2(groupCount))
+                                    ? `Mit ${groupCount} Gruppen ist keine gültige KO-Runde möglich, egal wie viele Qualifikanten pro Gruppe du wählst – die Gruppenanzahl selbst muss eine Zweierpotenz sein (1, 2, 4, 8, …)`
+                                    : `${numberTeams / groupCount} Teams pro Gruppe`)
+                            : undefined}
+                    />
+                );
+            },
         },
         {
             id: "preliminaryFormat",
@@ -280,8 +294,9 @@ export default function NewTournamentSetup() {
                     <ChoiceButton label="Jeder gegen Jeden" selected={preliminaryFormat === "full"} onClick={() => { setPreliminaryFormat("full"); goNext(); }} />
                     <ChoiceButton
                         label="Weniger Spieltage"
-                        hint="Gruppengröße muss gerade sein"
+                        hint={teamsPerGroup % 2 !== 0 ? "Nicht möglich – Gruppengröße muss gerade sein" : undefined}
                         selected={preliminaryFormat === "fixed"}
+                        disabled={teamsPerGroup % 2 !== 0}
                         onClick={() => { setPreliminaryFormat("fixed"); goNext(); }}
                     />
                 </Stack>
@@ -332,12 +347,13 @@ export default function NewTournamentSetup() {
             visible: !isDirectKO && !isPreliminaryOnly && useGroups,
             question: "Wie viele Teams pro Gruppe qualifizieren sich für die KO-Runde?",
             render: () => {
-                const max = teamsPerGroup > 0 ? Math.pow(2, Math.floor(Math.log2(teamsPerGroup))) : 1;
+                const max = teamsPerGroup >= 1 ? Math.pow(2, Math.floor(Math.log2(teamsPerGroup))) : 1;
                 return (
                     <NumberQuestion
                         value={qualifiersPerGroup}
                         min={1}
                         max={max}
+                        valid={groupsKoRoundsValid}
                         onChange={setQualifiersPerGroup}
                         onConfirm={goNext}
                         label="Qualifikanten pro Gruppe"
@@ -508,8 +524,8 @@ export default function NewTournamentSetup() {
 
 // Frage mit numerischer Eingabe: eigener "Weiter"-Button statt Auto-Advance, da hier
 // (anders als bei Auswahl-Fragen) erst getippt werden muss, bevor die Antwort feststeht.
-function NumberQuestion({ value, min, max, onChange, onConfirm, label, hint }) {
-    const isValid = (min === undefined || value >= min) && (max === undefined || value <= max);
+function NumberQuestion({ value, min, max, onChange, onConfirm, label, hint, valid }) {
+    const isValid = (min === undefined || value >= min) && (max === undefined || value <= max) && valid !== false;
 
     return (
         <Stack spacing={2} sx={{ width: "100%", maxWidth: 320, alignItems: "center" }}>
